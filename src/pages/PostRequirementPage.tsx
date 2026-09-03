@@ -3,29 +3,195 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Category, Subcategory, IndianState, City } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { CheckCircle2, ChevronRight, MapPin, IndianRupee, Calendar, ShieldCheck, Clock } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronRight,
+  MapPin,
+  IndianRupee,
+  Calendar,
+  ShieldCheck,
+  Clock,
+  HeartHandshake,
+  Dumbbell,
+  ChefHat,
+  Cross,
+  GraduationCap,
+  Baby,
+  Activity,
+  Sparkles,
+  ArrowRight,
+  Star,
+} from 'lucide-react';
+
+const iconMap: Record<string, React.ReactNode> = {
+  HeartHandshake: <HeartHandshake className="w-5 h-5 text-black" />,
+  Dumbbell: <Dumbbell className="w-5 h-5 text-black" />,
+  ChefHat: <ChefHat className="w-5 h-5 text-black" />,
+  Cross: <Cross className="w-5 h-5 text-black" />,
+  GraduationCap: <GraduationCap className="w-5 h-5 text-black" />,
+  Baby: <Baby className="w-5 h-5 text-black" />,
+  Activity: <Activity className="w-5 h-5 text-black" />,
+  Sparkles: <Sparkles className="w-5 h-5 text-black" />,
+};
+
+const categoryThumbnails: Record<string, string> = {
+  'elderly-caregiver': 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=400&q=80',
+  'fitness-trainer': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=400&q=80',
+  'home-cook-chef': 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=400&q=80',
+  'home-nurse': 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=400&q=80',
+  'home-tutor': 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=400&q=80',
+  'nanny-baby-care': 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=400&q=80',
+  'physiotherapist': 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=400&q=80',
+  'yoga-instructor': 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?auto=format&fit=crop&w=400&q=80',
+};
+
+// Complete offline-ready fallback catalog so page never displays an error even before backend wakes up
+const defaultMasterCategories: Category[] = [
+  {
+    id: 'cat-1',
+    name: 'Elderly Caregiver',
+    slug: 'elderly-caregiver',
+    description: 'Compassionate assistance for senior citizens, dementia care, post-op recovery',
+    icon: 'HeartHandshake',
+    subcategories: [
+      { id: 'sub-1', name: 'Dementia Care', slug: 'dementia-care' },
+      { id: 'sub-2', name: 'Elderly Companion', slug: 'elderly-companion' },
+      { id: 'sub-3', name: 'Full-Time Caregiver', slug: 'full-time-caregiver' },
+      { id: 'sub-4', name: 'Live-In Caregiver', slug: 'live-in-caregiver' },
+      { id: 'sub-5', name: 'Part-Time Caregiver', slug: 'part-time-caregiver' },
+      { id: 'sub-6', name: 'Post-Hospital Care', slug: 'post-hospital-care' },
+    ],
+  },
+  {
+    id: 'cat-2',
+    name: 'Fitness Trainer',
+    slug: 'fitness-trainer',
+    description: 'Personalized in-home gym training, weight loss, mobility coaching',
+    icon: 'Dumbbell',
+    subcategories: [
+      { id: 'sub-7', name: 'Personal Trainer', slug: 'personal-trainer' },
+      { id: 'sub-8', name: 'Weight Loss Coach', slug: 'weight-loss-coach' },
+      { id: 'sub-9', name: 'Strength Training', slug: 'strength-training' },
+      { id: 'sub-10', name: 'Home Workout', slug: 'home-workout' },
+      { id: 'sub-11', name: 'Senior Fitness', slug: 'senior-fitness' },
+      { id: 'sub-12', name: 'Sports Conditioning', slug: 'sports-conditioning' },
+    ],
+  },
+  {
+    id: 'cat-3',
+    name: 'Home Cook / Chef',
+    slug: 'home-cook-chef',
+    description: 'Hygienic daily meals, regional specialties, party catering',
+    icon: 'ChefHat',
+    subcategories: [
+      { id: 'sub-13', name: 'Daily Home Cook', slug: 'daily-home-cook' },
+      { id: 'sub-14', name: 'North Indian Chef', slug: 'north-indian-chef' },
+      { id: 'sub-15', name: 'South Indian Cook', slug: 'south-indian-cook' },
+      { id: 'sub-16', name: 'Jain Food Cook', slug: 'jain-food-cook' },
+      { id: 'sub-17', name: 'Diet & Healthy Meals', slug: 'diet-healthy-meals' },
+      { id: 'sub-18', name: 'Party Chef', slug: 'party-chef' },
+    ],
+  },
+  {
+    id: 'cat-4',
+    name: 'Home Nurse',
+    slug: 'home-nurse',
+    description: 'Certified clinical nurses for injections, catheter care, post-op vitals',
+    icon: 'Cross',
+    subcategories: [
+      { id: 'sub-19', name: 'General Nursing', slug: 'general-nursing' },
+      { id: 'sub-20', name: 'Post-Operative Care', slug: 'post-operative-care' },
+      { id: 'sub-21', name: 'ICU at Home', slug: 'icu-at-home' },
+      { id: 'sub-22', name: 'Injection / IV Drip', slug: 'injection-iv-drip' },
+      { id: 'sub-23', name: 'Wound Dressing', slug: 'wound-dressing' },
+      { id: 'sub-24', name: 'Catheter & Ryles Tube', slug: 'catheter-ryles-tube' },
+    ],
+  },
+  {
+    id: 'cat-5',
+    name: 'Home Tutor',
+    slug: 'home-tutor',
+    description: 'Expert private academic tutoring for CBSE, ICSE, IIT-JEE, and languages',
+    icon: 'GraduationCap',
+    subcategories: [
+      { id: 'sub-25', name: 'School Tutor (1-10)', slug: 'school-tutor' },
+      { id: 'sub-26', name: 'Mathematics Specialist', slug: 'mathematics' },
+      { id: 'sub-27', name: 'Science & Physics', slug: 'science' },
+      { id: 'sub-28', name: 'English Grammar & Lit', slug: 'english' },
+      { id: 'sub-29', name: 'Competitive Exams', slug: 'competitive-exam' },
+      { id: 'sub-30', name: 'Language Tutor', slug: 'language-tutor' },
+    ],
+  },
+  {
+    id: 'cat-6',
+    name: 'Nanny & Baby Care',
+    slug: 'nanny-baby-care',
+    description: 'Police-verified newborn caregivers, babysitters, and daytime nannies',
+    icon: 'Baby',
+    subcategories: [
+      { id: 'sub-31', name: 'Newborn Care (Japa)', slug: 'newborn-care' },
+      { id: 'sub-32', name: 'Daytime Babysitter', slug: 'babysitter' },
+      { id: 'sub-33', name: 'Full-Time Nanny', slug: 'full-time-nanny' },
+      { id: 'sub-34', name: 'Part-Time Nanny', slug: 'part-time-nanny' },
+      { id: 'sub-35', name: 'Night Baby Care', slug: 'night-care' },
+    ],
+  },
+  {
+    id: 'cat-7',
+    name: 'Physiotherapist',
+    slug: 'physiotherapist',
+    description: 'Licensed BPT/MPT doctors for stroke, ortho, back pain, and sports recovery',
+    icon: 'Activity',
+    subcategories: [
+      { id: 'sub-36', name: 'Home Physiotherapy', slug: 'home-physiotherapy' },
+      { id: 'sub-37', name: 'Post-Surgery Rehab', slug: 'post-surgery-physiotherapy' },
+      { id: 'sub-38', name: 'Back & Neck Pain', slug: 'pain-management' },
+      { id: 'sub-39', name: 'Elderly Mobility Rehab', slug: 'elderly-physiotherapy' },
+      { id: 'sub-40', name: 'Sports Injury Therapy', slug: 'sports-physiotherapy' },
+    ],
+  },
+  {
+    id: 'cat-8',
+    name: 'Yoga Instructor',
+    slug: 'yoga-instructor',
+    description: 'Certified yoga masters for home classes, weight management, and prenatal yoga',
+    icon: 'Sparkles',
+    subcategories: [
+      { id: 'sub-41', name: 'Home Yoga Session', slug: 'home-yoga' },
+      { id: 'sub-42', name: 'Weight Loss Yoga', slug: 'weight-loss-yoga' },
+      { id: 'sub-43', name: 'Meditation & Pranayama', slug: 'meditation' },
+      { id: 'sub-44', name: 'Prenatal Yoga', slug: 'prenatal-yoga' },
+      { id: 'sub-45', name: 'Senior Gentle Yoga', slug: 'senior-yoga' },
+    ],
+  },
+];
+
+const defaultCities: City[] = [
+  { id: 'city-1', stateId: 'KA', name: 'Bengaluru', slug: 'bengaluru', isActive: true },
+  { id: 'city-2', stateId: 'MH', name: 'Mumbai', slug: 'mumbai', isActive: true },
+  { id: 'city-3', stateId: 'MH', name: 'Pune', slug: 'pune', isActive: true },
+  { id: 'city-4', stateId: 'DL', name: 'Delhi NCR', slug: 'delhi-ncr', isActive: true },
+  { id: 'city-5', stateId: 'TS', name: 'Hyderabad', slug: 'hyderabad', isActive: true },
+];
 
 export const PostRequirementPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, openAuthModal } = useAuth();
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [states, setStates] = useState<IndianState[]>([]);
-  const [cities, setCities] = useState<City[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>(defaultMasterCategories);
+  const [cities, setCities] = useState<City[]>(defaultCities);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form State
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [selectedSubcategory, setSelectedSubcategory] = useState<Subcategory | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Category>(defaultMasterCategories[0]);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<Subcategory>(defaultMasterCategories[0].subcategories[0]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [budgetType, setBudgetType] = useState<'FIXED' | 'RANGE'>('FIXED');
   const [budgetMin, setBudgetMin] = useState<number>(5000);
   const [budgetMax, setBudgetMax] = useState<number>(8000);
-  const [selectedStateId, setSelectedStateId] = useState('');
-  const [selectedCityId, setSelectedCityId] = useState('');
+  const [selectedCityId, setSelectedCityId] = useState(defaultCities[0].id);
   const [pincode, setPincode] = useState('560038');
   const [preferredDate, setPreferredDate] = useState('');
   const [preferredTime, setPreferredTime] = useState('Morning (9 AM - 12 PM)');
@@ -37,66 +203,41 @@ export const PostRequirementPage: React.FC = () => {
   const [step, setStep] = useState(1);
 
   useEffect(() => {
-    const loadMasterData = async () => {
-      try {
-        setLoading(true);
-        const [catRes, stateRes] = await Promise.all([
-          api.getCategories(),
-          api.getStates(),
-        ]);
-        if (catRes.data?.data) {
+    // Attempt to load dynamic data from API; if not responding, fallback seamlessly
+    api.getCategories()
+      .then((catRes) => {
+        if (catRes.data?.data && catRes.data.data.length > 0) {
           setCategories(catRes.data.data);
-          if (catRes.data.data.length > 0) {
-            setSelectedCategory(catRes.data.data[0]);
-            if (catRes.data.data[0].subcategories?.length > 0) {
-              setSelectedSubcategory(catRes.data.data[0].subcategories[0]);
-            }
+          setSelectedCategory(catRes.data.data[0]);
+          if (catRes.data.data[0].subcategories?.length > 0) {
+            setSelectedSubcategory(catRes.data.data[0].subcategories[0]);
           }
         }
-        if (stateRes.data?.data) {
-          setStates(stateRes.data.data);
-          if (stateRes.data.data.length > 0) {
-            setSelectedStateId(stateRes.data.data[0].id);
-            const cityRes = await api.getCitiesByState(stateRes.data.data[0].id);
-            if (cityRes.data?.data) {
-              setCities(cityRes.data.data);
-              if (cityRes.data.data.length > 0) {
-                setSelectedCityId(cityRes.data.data[0].id);
-              }
-            }
-          }
-        }
-      } catch (err: any) {
-        setError('Failed to load category and location catalog.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadMasterData();
-  }, []);
+      })
+      .catch(() => {
+        // Retain default master catalog silently
+      });
 
-  const handleStateChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const stateId = e.target.value;
-    setSelectedStateId(stateId);
-    try {
-      const cityRes = await api.getCitiesByState(stateId);
-      if (cityRes.data?.data) {
-        setCities(cityRes.data.data);
-        if (cityRes.data.data.length > 0) {
-          setSelectedCityId(cityRes.data.data[0].id);
+    api.getStates()
+      .then((stateRes) => {
+        if (stateRes.data?.data && stateRes.data.data.length > 0) {
+          api.getCitiesByState(stateRes.data.data[0].id).then((cRes) => {
+            if (cRes.data?.data && cRes.data.data.length > 0) {
+              setCities(cRes.data.data);
+              setSelectedCityId(cRes.data.data[0].id);
+            }
+          });
         }
-      }
-    } catch {
-      // fallback
-    }
-  };
+      })
+      .catch(() => {
+        // Retain default cities silently
+      });
+  }, []);
 
   const handleCategorySelect = (cat: Category) => {
     setSelectedCategory(cat);
     if (cat.subcategories && cat.subcategories.length > 0) {
       setSelectedSubcategory(cat.subcategories[0]);
-    } else {
-      setSelectedSubcategory(null);
     }
   };
 
@@ -107,7 +248,7 @@ export const PostRequirementPage: React.FC = () => {
       return;
     }
 
-    if (!selectedCategory || !selectedSubcategory || !title || !description || !selectedCityId) {
+    if (!selectedCategory || !selectedSubcategory || !title.trim() || !description.trim() || !selectedCityId) {
       setError('Please fill all mandatory fields marked with an asterisk (*).');
       return;
     }
@@ -119,12 +260,11 @@ export const PostRequirementPage: React.FC = () => {
       const payload = {
         categoryId: selectedCategory.id,
         subcategoryId: selectedSubcategory.id,
-        title,
-        description,
+        title: title.trim(),
+        description: description.trim(),
         budgetType,
         budgetMin: Number(budgetMin),
         budgetMax: budgetType === 'RANGE' ? Number(budgetMax) : Number(budgetMin),
-        stateId: selectedStateId || undefined,
         cityId: selectedCityId,
         pincode: pincode || '560038',
         preferredDate: preferredDate || undefined,
@@ -147,120 +287,148 @@ export const PostRequirementPage: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-4xl mx-auto py-16 px-4 text-center">
-        <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-emerald-600 border-t-transparent"></div>
-        <p className="mt-4 text-gray-600 font-medium">Loading Vaziro service catalog...</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
+    <div className="max-w-4xl mx-auto py-10 px-4 sm:px-6">
       {/* Header */}
       <div className="text-center mb-8">
-        <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full mb-3 border border-emerald-200">
+        <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-black bg-neutral-100 px-3.5 py-1.5 rounded-full mb-3 border border-neutral-300">
           <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          Zero Upfront Booking Fee • Verified Professionals
+          <span>Reverse Auction • Zero Middleman Fee</span>
         </span>
-        <h1 className="text-3xl font-extrabold text-gray-900 sm:text-4xl tracking-tight">
-          Post Your Requirement
+        <h1 className="text-3xl sm:text-4xl font-black text-black tracking-tight">
+          Post Your Service Requirement
         </h1>
-        <p className="mt-2 text-gray-600 text-sm sm:text-base max-w-xl mx-auto">
-          Describe what you need, set your budget in INR, and receive tailored quotations from verified professionals across India.
+        <p className="mt-2 text-sm text-neutral-600 font-medium">
+          State your scope, set your budget in ₹ INR, and receive competitive quotes from verified independent professionals.
         </p>
-      </div>
 
-      {/* Steps Progress Indicator */}
-      <div className="flex items-center justify-center mb-8">
-        <div className="flex items-center space-x-2 sm:space-x-4">
+        {/* Step Indicator (Urban Company Minimalist) */}
+        <div className="mt-8 flex items-center justify-center gap-2">
           <button
             onClick={() => setStep(1)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition ${
-              step === 1 ? 'bg-emerald-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              step === 1 ? 'bg-black text-white shadow-md' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
             }`}
           >
-            <span>1. Service Category</span>
+            1. Select Category
           </button>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
+          <ChevronRight className="w-4 h-4 text-neutral-400" />
           <button
             onClick={() => setStep(2)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition ${
-              step === 2 ? 'bg-emerald-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              step === 2 ? 'bg-black text-white shadow-md' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
             }`}
           >
-            <span>2. Scope & Location</span>
+            2. Scope & Location
           </button>
-          <ChevronRight className="w-4 h-4 text-gray-400" />
+          <ChevronRight className="w-4 h-4 text-neutral-400" />
           <button
             onClick={() => setStep(3)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition ${
-              step === 3 ? 'bg-emerald-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              step === 3 ? 'bg-black text-white shadow-md' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
             }`}
           >
-            <span>3. Budget & Schedule</span>
+            3. Budget & Schedule
           </button>
         </div>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded text-red-700 text-sm">
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-xs font-semibold">
           {error}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
+      <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-sm border border-neutral-200 p-6 sm:p-8">
+        
         {/* STEP 1: CATEGORY SELECTION */}
         {step === 1 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-1">Select Service Category</h2>
-              <p className="text-sm text-gray-500">Choose one of the 8 verified Vaziro service domains.</p>
+              <h2 className="text-xl font-black text-black">Choose a Service Category</h2>
+              <p className="text-xs text-neutral-500 mt-1">Select from our 8 verified home and healthcare disciplines.</p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => handleCategorySelect(cat)}
-                  className={`p-4 rounded-xl border text-left flex flex-col justify-between transition-all ${
-                    selectedCategory?.id === cat.id
-                      ? 'border-emerald-600 bg-emerald-50/60 ring-2 ring-emerald-500'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="text-2xl mb-2">{cat.icon || '💼'}</div>
-                  <div className="font-semibold text-gray-900 text-sm">{cat.name}</div>
-                  <div className="text-xs text-gray-500 mt-1 line-clamp-1">{cat.subcategories?.length || 6} options</div>
-                </button>
-              ))}
+            {/* 8 Photo / Icon Category Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {categories.map((cat) => {
+                const isSelected = selectedCategory?.id === cat.id;
+                const photo = categoryThumbnails[cat.slug] || 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=400&q=80';
+
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => handleCategorySelect(cat)}
+                    className={`rounded-2xl overflow-hidden border-2 text-left flex flex-col justify-between transition-all group ${
+                      isSelected
+                        ? 'border-black bg-neutral-50 shadow-lg ring-2 ring-black/10'
+                        : 'border-neutral-200 hover:border-neutral-400 bg-white'
+                    }`}
+                  >
+                    {/* Thumbnail Image */}
+                    <div className="relative h-28 w-full overflow-hidden bg-neutral-100">
+                      <img
+                        src={photo}
+                        alt={cat.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      
+                      <div className="absolute bottom-2 left-2.5 right-2 flex items-center justify-between text-white">
+                        <div className="w-7 h-7 rounded-lg bg-white/90 backdrop-blur-sm flex items-center justify-center">
+                          {iconMap[cat.icon] || <Sparkles className="w-4 h-4 text-black" />}
+                        </div>
+                        {isSelected && (
+                          <span className="w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-black">
+                            ✓
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Text Details */}
+                    <div className="p-3">
+                      <div className="font-black text-black text-xs group-hover:text-neutral-900 leading-tight">
+                        {cat.name}
+                      </div>
+                      <div className="text-[10px] text-neutral-400 mt-1 font-semibold">
+                        {cat.subcategories?.length || 6} options
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
+            {/* Subcategories */}
             {selectedCategory && selectedCategory.subcategories && (
-              <div className="mt-6 pt-6 border-t border-gray-100">
-                <h3 className="text-base font-semibold text-gray-900 mb-3">
-                  Specific Subcategory for {selectedCategory.name}
+              <div className="mt-8 pt-6 border-t border-neutral-100">
+                <h3 className="text-sm font-black text-black mb-3">
+                  Specific Subdiscipline for {selectedCategory.name} *
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                  {selectedCategory.subcategories.map((sub) => (
-                    <button
-                      key={sub.id}
-                      type="button"
-                      onClick={() => setSelectedSubcategory(sub)}
-                      className={`p-3 rounded-lg border text-left text-sm transition flex items-center justify-between ${
-                        selectedSubcategory?.id === sub.id
-                          ? 'border-emerald-600 bg-emerald-50 font-semibold text-emerald-900'
-                          : 'border-gray-200 text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span>{sub.name}</span>
-                      {selectedSubcategory?.id === sub.id && (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      )}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                  {selectedCategory.subcategories.map((sub) => {
+                    const isSubSelected = selectedSubcategory?.id === sub.id;
+                    return (
+                      <button
+                        key={sub.id}
+                        type="button"
+                        onClick={() => setSelectedSubcategory(sub)}
+                        className={`p-3 rounded-xl border text-left text-xs font-bold transition flex items-center justify-between ${
+                          isSubSelected
+                            ? 'border-black bg-black text-white shadow-sm'
+                            : 'border-neutral-200 text-neutral-800 hover:bg-neutral-50'
+                        }`}
+                      >
+                        <span>{sub.name}</span>
+                        {isSubSelected && (
+                          <CheckCircle2 className="w-4 h-4 text-white" />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -269,9 +437,9 @@ export const PostRequirementPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-2.5 rounded-lg transition"
+                className="inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white font-bold text-xs px-6 py-3 rounded-xl transition shadow-sm"
               >
-                Continue to Scope & Location
+                <span>Continue to Scope & Location</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -282,121 +450,70 @@ export const PostRequirementPage: React.FC = () => {
         {step === 2 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-1">Requirement Details & Location</h2>
-              <p className="text-sm text-gray-500">Provide clear instructions so professionals can quote accurately.</p>
+              <h2 className="text-xl font-black text-black">Requirement Details & Location</h2>
+              <p className="text-xs text-neutral-500 mt-1">Provide clear expectations so professionals can quote accurately.</p>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
+              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
                 Requirement Title *
               </label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Experienced Home Physiotherapist needed for post-surgery rehabilitation"
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                placeholder="e.g. Experienced Home Physiotherapist needed for post-knee surgery rehabilitation"
+                className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-xs font-semibold text-black placeholder:text-neutral-400 transition"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
+              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
                 Detailed Scope & Instructions *
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
-                placeholder="Describe your patient/home situation, daily responsibilities, specific skills required, preferred timings, and any relevant details..."
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
+                placeholder="Describe daily responsibilities, patient/household condition, timing flexibility, and any specific preferences..."
+                className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-xs font-semibold text-black placeholder:text-neutral-400 transition"
                 required
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  State / UT *
-                </label>
-                <select
-                  value={selectedStateId}
-                  onChange={handleStateChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
-                >
-                  {states.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
                   City *
                 </label>
                 <select
                   value={selectedCityId}
                   onChange={(e) => setSelectedCityId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-xs font-bold text-black bg-white"
+                  required
                 >
-                  {cities.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
+                  {cities.map((city) => (
+                    <option key={city.id} value={city.id}>
+                      {city.name}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Pincode (6-Digit) *
+                <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                  6-Digit Pincode *
                 </label>
-                <div className="relative">
-                  <MapPin className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={pincode}
-                    onChange={(e) => setPincode(e.target.value)}
-                    placeholder="560038"
-                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Gender Preference
-                </label>
-                <select
-                  value={genderPreference}
-                  onChange={(e) => setGenderPreference(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
-                >
-                  <option value="NO_PREFERENCE">No Preference</option>
-                  <option value="FEMALE_ONLY">Female Professional Preferred</option>
-                  <option value="MALE_ONLY">Male Professional Preferred</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Service Frequency
-                </label>
-                <select
-                  value={frequency}
-                  onChange={(e) => setFrequency(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
-                >
-                  <option value="ONE_TIME">One-Time Service</option>
-                  <option value="DAILY">Daily Service (Monthly Subscription)</option>
-                  <option value="WEEKLY">Weekly Sessions</option>
-                  <option value="MONTHLY">Monthly Retainer</option>
-                </select>
+                <input
+                  type="text"
+                  maxLength={6}
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                  placeholder="560038"
+                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-xs font-bold text-black"
+                  required
+                />
               </div>
             </div>
 
@@ -404,16 +521,23 @@ export const PostRequirementPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="px-5 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition"
+                className="text-xs font-bold text-neutral-600 hover:text-black py-2.5 px-4"
               >
-                Back
+                ← Back
               </button>
               <button
                 type="button"
-                onClick={() => setStep(3)}
-                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-6 py-2.5 rounded-lg transition"
+                onClick={() => {
+                  if (!title.trim() || !description.trim()) {
+                    setError('Please fill in title and detailed description.');
+                    return;
+                  }
+                  setError(null);
+                  setStep(3);
+                }}
+                className="inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white font-bold text-xs px-6 py-3 rounded-xl transition shadow-sm"
               >
-                Continue to Budget & Schedule
+                <span>Continue to Budget & Schedule</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -424,155 +548,171 @@ export const PostRequirementPage: React.FC = () => {
         {step === 3 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-1">Set Your Budget & Timeline</h2>
-              <p className="text-sm text-gray-500">
-                Vaziro is a quotation marketplace. State your expected budget in INR (₹) to guide professional proposals.
-              </p>
+              <h2 className="text-xl font-black text-black">Budget & Service Schedule</h2>
+              <p className="text-xs text-neutral-500 mt-1">Set your transparent price expectation in Indian Rupees (₹).</p>
             </div>
 
-            {/* Budget Mode Toggle */}
-            <div className="flex gap-4">
-              <label
-                className={`flex-1 p-4 rounded-xl border cursor-pointer transition ${
-                  budgetType === 'FIXED'
-                    ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-500'
-                    : 'border-gray-200 hover:bg-gray-50'
+            {/* Budget Type Toggle */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-neutral-100 rounded-xl max-w-sm">
+              <button
+                type="button"
+                onClick={() => setBudgetType('FIXED')}
+                className={`py-2 text-xs font-bold rounded-lg transition ${
+                  budgetType === 'FIXED' ? 'bg-black text-white shadow-sm' : 'text-neutral-600 hover:text-black'
                 }`}
               >
-                <input
-                  type="radio"
-                  name="budgetType"
-                  value="FIXED"
-                  checked={budgetType === 'FIXED'}
-                  onChange={() => setBudgetType('FIXED')}
-                  className="sr-only"
-                />
-                <div className="font-semibold text-gray-900 text-sm">Fixed Budget</div>
-                <p className="text-xs text-gray-500 mt-1">Specific target amount in INR (e.g. ₹10,000)</p>
-              </label>
-
-              <label
-                className={`flex-1 p-4 rounded-xl border cursor-pointer transition ${
-                  budgetType === 'RANGE'
-                    ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-500'
-                    : 'border-gray-200 hover:bg-gray-50'
+                Fixed Budget (₹)
+              </button>
+              <button
+                type="button"
+                onClick={() => setBudgetType('RANGE')}
+                className={`py-2 text-xs font-bold rounded-lg transition ${
+                  budgetType === 'RANGE' ? 'bg-black text-white shadow-sm' : 'text-neutral-600 hover:text-black'
                 }`}
               >
-                <input
-                  type="radio"
-                  name="budgetType"
-                  value="RANGE"
-                  checked={budgetType === 'RANGE'}
-                  onChange={() => setBudgetType('RANGE')}
-                  className="sr-only"
-                />
-                <div className="font-semibold text-gray-900 text-sm">Budget Range</div>
-                <p className="text-xs text-gray-500 mt-1">Flexible span in INR (e.g. ₹8,000 – ₹12,000)</p>
-              </label>
+                Budget Range (Min - Max)
+              </button>
             </div>
 
             {/* Budget Inputs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {budgetType === 'FIXED' ? (
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  {budgetType === 'FIXED' ? 'Budget Amount (₹ INR) *' : 'Minimum Budget (₹ INR) *'}
+                <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                  Target Budget Amount (₹ INR) *
                 </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-gray-500 font-semibold text-sm">₹</span>
+                <div className="relative flex items-center max-w-sm">
+                  <span className="absolute left-4 text-neutral-500 font-bold">₹</span>
                   <input
                     type="number"
-                    min={100}
+                    min={500}
                     step={100}
                     value={budgetMin}
                     onChange={(e) => setBudgetMin(Number(e.target.value))}
-                    className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm font-semibold"
+                    className="w-full pl-8 pr-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-sm font-black text-black"
                     required
                   />
                 </div>
               </div>
-
-              {budgetType === 'RANGE' && (
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Maximum Budget (₹ INR) *
+                  <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                    Minimum Budget (₹) *
                   </label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-gray-500 font-semibold text-sm">₹</span>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-4 text-neutral-500 font-bold">₹</span>
+                    <input
+                      type="number"
+                      min={500}
+                      step={100}
+                      value={budgetMin}
+                      onChange={(e) => setBudgetMin(Number(e.target.value))}
+                      className="w-full pl-8 pr-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-sm font-black text-black"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                    Maximum Budget (₹) *
+                  </label>
+                  <div className="relative flex items-center">
+                    <span className="absolute left-4 text-neutral-500 font-bold">₹</span>
                     <input
                       type="number"
                       min={budgetMin}
                       step={100}
                       value={budgetMax}
                       onChange={(e) => setBudgetMax(Number(e.target.value))}
-                      className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm font-semibold"
+                      className="w-full pl-8 pr-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-sm font-black text-black"
                       required
                     />
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Dates & Timing */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Preferred Date & Timing */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Preferred Start Date
+                <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                  Expected Start Date
                 </label>
-                <div className="relative">
-                  <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
-                  <input
-                    type="date"
-                    value={preferredDate}
-                    onChange={(e) => setPreferredDate(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
-                  />
-                </div>
+                <input
+                  type="date"
+                  value={preferredDate}
+                  onChange={(e) => setPreferredDate(e.target.value)}
+                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-xs font-bold text-black"
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Preferred Time Slot
+                <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                  Preferred Time Window
                 </label>
-                <div className="relative">
-                  <Clock className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
-                  <input
-                    type="text"
-                    value={preferredTime}
-                    onChange={(e) => setPreferredTime(e.target.value)}
-                    placeholder="e.g. Morning 8 AM - 11 AM"
-                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
-                  />
-                </div>
+                <select
+                  value={preferredTime}
+                  onChange={(e) => setPreferredTime(e.target.value)}
+                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-xs font-bold text-black bg-white"
+                >
+                  <option value="Morning (8 AM - 12 PM)">Morning (8 AM - 12 PM)</option>
+                  <option value="Afternoon (12 PM - 4 PM)">Afternoon (12 PM - 4 PM)</option>
+                  <option value="Evening (4 PM - 8 PM)">Evening (4 PM - 8 PM)</option>
+                  <option value="Full Day (24x7 / Live-in)">Full Day (24x7 / Live-in)</option>
+                </select>
               </div>
             </div>
 
-            {/* Trust Assurance Banner */}
-            <div className="p-4 bg-emerald-50/80 rounded-xl border border-emerald-200 flex items-start gap-3">
-              <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-              <div className="text-xs text-emerald-950 leading-relaxed">
-                <span className="font-semibold text-emerald-900 block mb-0.5">Vaziro Buyer Protection Guarantee</span>
-                Your requirement will be broadcast to verified local professionals. You can compare profiles, check DigiLocker credentials, and hire only when satisfied. You pay nothing to receive quotes.
+            {/* Service Frequency */}
+            <div>
+              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                Engagement Frequency
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { key: 'ONE_TIME', label: 'One-Time Visit' },
+                  { key: 'WEEKLY', label: 'Weekly Sessions' },
+                  { key: 'MONTHLY', label: 'Monthly Contract' },
+                ].map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setFrequency(item.key)}
+                    className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition ${
+                      frequency === item.key
+                        ? 'border-black bg-black text-white shadow-sm'
+                        : 'border-neutral-200 text-neutral-700 hover:bg-neutral-50'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="flex justify-between pt-4">
+            {/* Submit Bar */}
+            <div className="flex justify-between pt-6 border-t border-neutral-100">
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="px-5 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition"
+                className="text-xs font-bold text-neutral-600 hover:text-black py-2.5 px-4"
               >
-                Back
+                ← Back
               </button>
+
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3 rounded-lg shadow-md transition disabled:opacity-50"
+                className="inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white font-bold text-sm px-8 py-3.5 rounded-xl transition shadow-md disabled:opacity-50"
               >
-                {submitting ? 'Publishing Requirement...' : 'Publish Requirement (Get Quotes)'}
+                {submitting ? 'Publishing...' : 'Publish Requirement & Receive Quotes'}
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
         )}
+
       </form>
     </div>
   );
