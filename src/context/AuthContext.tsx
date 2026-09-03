@@ -46,13 +46,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem('vaziro_user', JSON.stringify(res.data.data.user));
           }
         })
-        .catch(() => {
-          // If network error, preserve saved user from localStorage
+        .catch((err: any) => {
+          if (err.response?.status === 401) {
+            // Token is dead/expired: clear stale state immediately
+            localStorage.removeItem('vaziro_token');
+            localStorage.removeItem('vaziro_user');
+            setUser(null);
+          }
         })
         .finally(() => setIsLoading(false));
     } else {
       setIsLoading(false);
     }
+
+    const handleAuthExpired = () => {
+      setUser(null);
+    };
+
+    window.addEventListener('vaziro:auth_expired', handleAuthExpired);
+    return () => {
+      window.removeEventListener('vaziro:auth_expired', handleAuthExpired);
+    };
   }, []);
 
   const login = async (identifier: string, password: string) => {

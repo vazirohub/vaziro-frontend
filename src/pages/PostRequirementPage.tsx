@@ -21,6 +21,7 @@ import {
   Sparkles,
   ArrowRight,
   Star,
+  AlertTriangle,
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -287,7 +288,16 @@ export const PostRequirementPage: React.FC = () => {
         setError('Could not publish requirement. Please try again.');
       }
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || err.message || 'Failed to post requirement.');
+      const msg = err.response?.data?.error?.message || err.message || 'Failed to post requirement.';
+      setError(msg);
+      if (
+        err.response?.status === 401 ||
+        msg.toLowerCase().includes('token') ||
+        msg.toLowerCase().includes('expired') ||
+        msg.toLowerCase().includes('auth')
+      ) {
+        openAuthModal('CUSTOMER');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -340,8 +350,23 @@ export const PostRequirementPage: React.FC = () => {
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-xs font-semibold">
-          {error}
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-2 text-red-800 text-xs font-bold">
+            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+            <span>{error}</span>
+          </div>
+          {(error.toLowerCase().includes('expired') ||
+            error.toLowerCase().includes('token') ||
+            error.toLowerCase().includes('authentication') ||
+            !isAuthenticated) && (
+            <button
+              type="button"
+              onClick={() => openAuthModal('CUSTOMER')}
+              className="shrink-0 px-4 py-2 bg-black hover:bg-neutral-800 text-white rounded-xl text-xs font-black shadow transition cursor-pointer"
+            >
+              Sign In & Publish
+            </button>
+          )}
         </div>
       )}
 

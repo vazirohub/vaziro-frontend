@@ -33,6 +33,29 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const code = error.response?.data?.error?.code;
+      const message = error.response?.data?.error?.message || '';
+      if (
+        code === 'TOKEN_EXPIRED_OR_INVALID' ||
+        code === 'AUTH_REQUIRED' ||
+        message.toLowerCase().includes('expired') ||
+        message.toLowerCase().includes('invalid')
+      ) {
+        localStorage.removeItem('vaziro_token');
+        localStorage.removeItem('vaziro_user');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('vaziro:auth_expired', { detail: { code, message } }));
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export const api = {
   // Auth
   login: (identifier: string, password: string) =>
