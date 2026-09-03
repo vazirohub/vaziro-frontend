@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { Category, Subcategory, IndianState, City } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +22,7 @@ import {
   ArrowRight,
   Star,
   AlertTriangle,
+  Briefcase,
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -316,6 +317,47 @@ export const PostRequirementPage: React.FC = () => {
       setSubmitting(false);
     }
   };
+
+  const isProfessional = user?.roles?.includes('PROFESSIONAL');
+  const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
+
+  // Service Professionals apply for jobs; they do not post requirements
+  if (isAuthenticated && isProfessional && !isAdmin) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center p-4 bg-neutral-50">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-neutral-200 shadow-xl text-center space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center mx-auto shadow-sm">
+            <Briefcase className="w-8 h-8" />
+          </div>
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+              Service Professional Account
+            </span>
+            <h1 className="text-2xl font-black text-black tracking-tight mt-3">
+              Partners Apply for Customer Jobs
+            </h1>
+            <p className="text-xs text-neutral-500 mt-2 leading-relaxed font-medium">
+              You are currently logged in as a verified service professional. Requirements are posted by customers seeking your services.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col gap-2.5">
+            <Link
+              to="/requirements"
+              className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition cursor-pointer"
+            >
+              Browse Open Jobs in Delhi NCR
+            </Link>
+            <Link
+              to="/credits"
+              className="w-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 py-3 rounded-2xl font-bold text-xs transition cursor-pointer"
+            >
+              Manage My Credit Wallet
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto py-10 px-4 sm:px-6">

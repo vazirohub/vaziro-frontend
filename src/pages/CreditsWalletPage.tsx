@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { CreditWallet, CreditPlan } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -119,6 +120,45 @@ export const CreditsWalletPage: React.FC = () => {
         >
           Sign In / Register
         </button>
+      </div>
+    );
+  }
+
+  const isProfessional = user?.roles?.includes('PROFESSIONAL');
+  const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
+
+  // Customers should NEVER see credit wallets, packs, or pricing
+  if (user && !isProfessional && !isAdmin) {
+    return (
+      <div className="max-w-xl mx-auto my-16 p-8 bg-white rounded-3xl border border-neutral-200 text-center shadow-xl space-y-5">
+        <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-100">
+          <ShieldCheck className="w-8 h-8" />
+        </div>
+        <div>
+          <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+            Customer Account
+          </span>
+          <h1 className="text-2xl font-black text-black tracking-tight mt-3">
+            Posting Requirements is 100% Free
+          </h1>
+          <p className="text-xs text-neutral-500 mt-2 leading-relaxed font-medium">
+            Credit wallets and application packs are used exclusively by <strong>Service Professionals</strong> to submit quotes. As a customer, you never pay to post requirements or receive verified quotes.
+          </p>
+        </div>
+        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link
+            to="/post-requirement"
+            className="w-full sm:w-auto bg-black hover:bg-neutral-800 text-white px-6 py-3.5 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-md transition"
+          >
+            Post a Requirement (Free)
+          </Link>
+          <Link
+            to="/dashboard"
+            className="w-full sm:w-auto bg-neutral-100 hover:bg-neutral-200 text-neutral-800 px-6 py-3.5 rounded-2xl font-bold text-xs transition"
+          >
+            My Dashboard
+          </Link>
+        </div>
       </div>
     );
   }

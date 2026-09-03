@@ -5,7 +5,9 @@ import { useAuth } from '../context/AuthContext';
 
 export const Hero: React.FC = () => {
   const navigate = useNavigate();
-  const { openAuthModal } = useAuth();
+  const { user, openAuthModal } = useAuth();
+  const isProfessional = user?.roles?.includes('PROFESSIONAL');
+  const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
   const [selectedCity, setSelectedCity] = useState('Delhi');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -14,7 +16,11 @@ export const Hero: React.FC = () => {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate(`/post-requirement?city=${encodeURIComponent(selectedCity)}`);
+    if (isProfessional && !isAdmin) {
+      navigate(`/requirements?city=${encodeURIComponent(selectedCity)}&q=${encodeURIComponent(searchQuery)}`);
+    } else {
+      navigate(`/post-requirement?city=${encodeURIComponent(selectedCity)}`);
+    }
   };
 
   return (
@@ -76,12 +82,12 @@ export const Hero: React.FC = () => {
                   />
                 </div>
 
-                {/* Get Quotes Button */}
+                {/* Get Quotes / Find Jobs Button */}
                 <button
                   type="submit"
-                  className="w-full sm:w-auto bg-black hover:bg-neutral-800 text-white text-xs font-bold px-6 py-3 rounded-xl transition flex items-center justify-center gap-1.5 shrink-0 shadow-md"
+                  className="w-full sm:w-auto bg-black hover:bg-neutral-800 text-white text-xs font-bold px-6 py-3 rounded-xl transition flex items-center justify-center gap-1.5 shrink-0 shadow-md cursor-pointer"
                 >
-                  <span>Get Quotes</span>
+                  <span>{isProfessional && !isAdmin ? 'Browse Jobs' : 'Get Quotes'}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>

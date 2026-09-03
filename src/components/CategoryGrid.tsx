@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Category } from '../types';
+import { useAuth } from '../context/AuthContext';
 import {
   ArrowRight,
   Star,
@@ -79,8 +80,19 @@ const indianCategoryPhotoMap: Record<string, CategoryPhotoMeta> = {
 
 export const CategoryGrid: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isProfessional = user?.roles?.includes('PROFESSIONAL');
+  const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const handleCategoryAction = (catId?: string) => {
+    if (isProfessional && !isAdmin) {
+      navigate(catId ? `/requirements?categoryId=${encodeURIComponent(catId)}` : '/requirements');
+    } else {
+      navigate('/post-requirement');
+    }
+  };
 
   useEffect(() => {
     api.getCategories()
@@ -113,10 +125,10 @@ export const CategoryGrid: React.FC = () => {
           </div>
 
           <button
-            onClick={() => navigate('/post-requirement')}
-            className="mt-4 md:mt-0 text-xs font-extrabold text-black hover:underline flex items-center gap-1.5 shrink-0"
+            onClick={() => handleCategoryAction()}
+            className="mt-4 md:mt-0 text-xs font-extrabold text-black hover:underline flex items-center gap-1.5 shrink-0 cursor-pointer"
           >
-            <span>View All NCR Subdisciplines</span>
+            <span>{isProfessional && !isAdmin ? 'Browse All Open Jobs' : 'View All NCR Subdisciplines'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
@@ -143,7 +155,7 @@ export const CategoryGrid: React.FC = () => {
               return (
                 <div
                   key={cat.id}
-                  onClick={() => navigate('/post-requirement')}
+                  onClick={() => handleCategoryAction(cat.id)}
                   className="group cursor-pointer bg-white rounded-2xl overflow-hidden border border-neutral-200 shadow-sm hover:shadow-2xl hover:border-black transition-all duration-300 flex flex-col justify-between"
                 >
                   {/* Photo Header */}

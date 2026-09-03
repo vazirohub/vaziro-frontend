@@ -40,17 +40,28 @@ export const Navbar: React.FC = () => {
             />
           </Link>
 
-          {/* Center Navigation Links (Urban Company clean typography) */}
+          {/* Center Navigation Links (Role-aware) */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-neutral-700">
             <Link to="/requirements" className="hover:text-black transition-colors flex items-center gap-1.5">
               <Briefcase className="w-4 h-4 text-neutral-500" />
               <span>Browse Jobs</span>
             </Link>
 
-            <Link to="/post-requirement" className="hover:text-black transition-colors flex items-center gap-1.5">
-              <PlusCircle className="w-4 h-4 text-neutral-900" />
-              <span>Post Requirement</span>
-            </Link>
+            {/* Customers & Admins post requirements; Professionals do not */}
+            {(!isProfessional || isAdmin) && (
+              <Link to="/post-requirement" className="hover:text-black transition-colors flex items-center gap-1.5">
+                <PlusCircle className="w-4 h-4 text-neutral-900" />
+                <span>Post Requirement</span>
+              </Link>
+            )}
+
+            {/* Professionals have direct access to their credit wallet */}
+            {isProfessional && !isAdmin && (
+              <Link to="/credits" className="hover:text-black transition-colors flex items-center gap-1.5">
+                <Coins className="w-4 h-4 text-amber-500" />
+                <span>Credit Wallet</span>
+              </Link>
+            )}
 
             <Link to="/chat" className="hover:text-black transition-colors flex items-center gap-1.5">
               <MessageSquare className="w-4 h-4 text-neutral-500" />
@@ -70,13 +81,23 @@ export const Navbar: React.FC = () => {
 
           {/* Right Action Buttons */}
           <div className="flex items-center gap-3">
-            <Link
-              to="/post-requirement"
-              className="hidden sm:inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Post Requirement</span>
-            </Link>
+            {isProfessional && !isAdmin ? (
+              <Link
+                to="/requirements"
+                className="hidden sm:inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition"
+              >
+                <Briefcase className="w-4 h-4" />
+                <span>Browse Jobs</span>
+              </Link>
+            ) : (
+              <Link
+                to="/post-requirement"
+                className="hidden sm:inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Post Requirement</span>
+              </Link>
+            )}
 
             {user ? (
               <div className="relative">
@@ -131,14 +152,16 @@ export const Navbar: React.FC = () => {
                       <span>Edit Profile & Password</span>
                     </Link>
 
-                    <Link
-                      to="/credits"
-                      onClick={() => setDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2.5 text-neutral-700 hover:bg-neutral-50 font-semibold"
-                    >
-                      <Coins className="w-4 h-4 text-amber-500" />
-                      <span>Credit Wallet</span>
-                    </Link>
+                    {(isProfessional || isAdmin) && (
+                      <Link
+                        to="/credits"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-neutral-700 hover:bg-neutral-50 font-semibold"
+                      >
+                        <Coins className="w-4 h-4 text-amber-500" />
+                        <span>Credit Wallet</span>
+                      </Link>
+                    )}
 
                     <Link
                       to="/chat"
