@@ -3,7 +3,7 @@ import { X, Loader2, Eye, EyeOff, ShieldCheck, MapPin } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const PhoneOtpModal: React.FC = () => {
-  const { isAuthModalOpen, closeAuthModal, login, register, defaultRole } = useAuth();
+  const { isAuthModalOpen, closeAuthModal, login, register, defaultRole, initialIdentifier } = useAuth();
 
   const [mode, setMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
   const [role, setRole] = useState<'CUSTOMER' | 'PROFESSIONAL'>(defaultRole);
@@ -23,12 +23,13 @@ export const PhoneOtpModal: React.FC = () => {
     setRole(defaultRole);
     setMode('LOGIN');
     setName('');
-    setIdentifier('');
+    const rememberedId = initialIdentifier || (typeof window !== 'undefined' ? localStorage.getItem('vaziro_last_login_id') || '' : '');
+    setIdentifier(rememberedId);
     setPhone('');
     setEmail('');
     setPassword('');
     setErrorMessage(null);
-  }, [isAuthModalOpen, defaultRole]);
+  }, [isAuthModalOpen, defaultRole, initialIdentifier]);
 
   if (!isAuthModalOpen) return null;
 
@@ -50,6 +51,9 @@ export const PhoneOtpModal: React.FC = () => {
     try {
       setIsLoading(true);
       await login(cleanIdentifier, password);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('vaziro_last_login_id', cleanIdentifier);
+      }
     } catch (err: any) {
       setErrorMessage(err.message || 'Invalid mobile/email or password.');
     } finally {
@@ -205,9 +209,16 @@ export const PhoneOtpModal: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-black hover:bg-neutral-800 text-white py-4 rounded-2xl font-black text-sm shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-3"
+              className="w-full bg-black hover:bg-neutral-800 text-white py-4 rounded-2xl font-black text-sm shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-3 cursor-pointer"
             >
-              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Sign In</span>}
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Signing In...</span>
+                </>
+              ) : (
+                <span>Sign In</span>
+              )}
             </button>
           </form>
         ) : (

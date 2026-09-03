@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   User,
   LogOut,
@@ -14,8 +14,15 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 export const Navbar: React.FC = () => {
+  const navigate = useNavigate();
   const { user, logout, openAuthModal } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  const handleSignOut = () => {
+    setDropdownOpen(false);
+    logout();
+    navigate('/');
+  };
 
   const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
   const isProfessional = user?.roles?.includes('PROFESSIONAL');
@@ -43,11 +50,6 @@ export const Navbar: React.FC = () => {
             <Link to="/post-requirement" className="hover:text-black transition-colors flex items-center gap-1.5">
               <PlusCircle className="w-4 h-4 text-neutral-900" />
               <span>Post Requirement</span>
-            </Link>
-
-            <Link to="/credits" className="hover:text-black transition-colors flex items-center gap-1.5">
-              <Coins className="w-4 h-4 text-amber-500" />
-              <span>Credits & Plans</span>
             </Link>
 
             <Link to="/chat" className="hover:text-black transition-colors flex items-center gap-1.5">
@@ -160,11 +162,8 @@ export const Navbar: React.FC = () => {
 
                     <div className="border-t border-neutral-100 my-1 pt-1">
                       <button
-                        onClick={() => {
-                          setDropdownOpen(false);
-                          logout();
-                        }}
-                        className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 font-bold"
+                        onClick={handleSignOut}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 font-bold cursor-pointer transition-colors"
                       >
                         <LogOut className="w-4 h-4" />
                         <span>Sign Out</span>

@@ -47,7 +47,7 @@ export const Hero: React.FC = () => {
                   <MapPin className="w-4 h-4 text-black shrink-0" />
                   <div className="flex flex-col text-left">
                     <span className="text-[9px] uppercase tracking-wider text-neutral-400 font-bold leading-none mb-0.5">
-                      NCR Service Zone
+                      Select Your NCR Service Zone:
                     </span>
                     <select
                       value={selectedCity}

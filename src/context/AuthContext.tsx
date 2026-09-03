@@ -12,10 +12,11 @@ interface AuthContextType {
   loginWithOtp: (payload: any) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
-  openAuthModal: (role?: 'CUSTOMER' | 'PROFESSIONAL') => void;
+  openAuthModal: (role?: 'CUSTOMER' | 'PROFESSIONAL', initialIdentifier?: string) => void;
   closeAuthModal: () => void;
   isAuthModalOpen: boolean;
   defaultRole: 'CUSTOMER' | 'PROFESSIONAL';
+  initialIdentifier: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,9 +33,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     return null;
   });
-  const [isLoading, setIsLoading] = useState(true);
+  // Instant load: If user is already cached in localStorage, don't stall UI with full-screen spinner
+  const [isLoading, setIsLoading] = useState(() => {
+    const hasToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('vaziro_token'));
+    const hasUser = typeof window !== 'undefined' && Boolean(localStorage.getItem('vaziro_user'));
+    return hasToken && !hasUser;
+  });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [defaultRole, setDefaultRole] = useState<'CUSTOMER' | 'PROFESSIONAL'>('CUSTOMER');
+  const [initialIdentifier, setInitialIdentifier] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('vaziro_token');
@@ -77,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.data.success && res.data.data) {
         localStorage.setItem('vaziro_token', res.data.data.accessToken);
         localStorage.setItem('vaziro_user', JSON.stringify(res.data.data.user));
+        localStorage.setItem('vaziro_last_login_id', cleanId);
         setUser(res.data.data.user);
         setIsAuthModalOpen(false);
         return;
@@ -186,8 +194,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
-  const openAuthModal = (role: 'CUSTOMER' | 'PROFESSIONAL' = 'CUSTOMER') => {
+  const openAuthModal = (role: 'CUSTOMER' | 'PROFESSIONAL' = 'CUSTOMER', initialId?: string) => {
     setDefaultRole(role);
+    setInitialIdentifier(initialId || '');
     setIsAuthModalOpen(true);
   };
 
@@ -214,6 +223,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         closeAuthModal,
         isAuthModalOpen,
         defaultRole,
+        initialIdentifier,
       }}
     >
       {children}

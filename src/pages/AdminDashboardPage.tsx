@@ -403,7 +403,7 @@ export const AdminDashboardPage: React.FC = () => {
             </p>
           </div>
           <button
-            onClick={() => openAuthModal('CUSTOMER')}
+            onClick={() => openAuthModal('CUSTOMER', 'admin@vaziro.in')}
             className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition cursor-pointer"
           >
             Sign In as Administrator
