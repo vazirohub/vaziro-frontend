@@ -3,6 +3,7 @@ import { api } from '../services/api';
 import { CreditWallet, CreditPlan } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Coins, Check, ShieldCheck, ArrowUpRight, ArrowDownLeft, Sparkles, CreditCard, RefreshCw } from 'lucide-react';
+import { openRazorpayCheckout } from '../utils/razorpay';
 
 export const CreditsWalletPage: React.FC = () => {
   const { user, isAuthenticated, openAuthModal } = useAuth();
@@ -48,13 +49,46 @@ export const CreditsWalletPage: React.FC = () => {
       setPurchasingPlan(plan.id);
       setMessage(null);
 
-      const res = await api.purchaseCreditPlan(plan.id);
-      if (res.data?.success) {
-        setMessage(`Successfully purchased ${plan.name} plan! +${plan.creditsCount} Credits added.`);
+      // 1. Create Razorpay order on backend
+      const orderRes = await api.createCreditOrder(plan.id);
+      if (!orderRes.data?.data) {
+        throw new Error('Could not initiate payment order.');
+      }
+
+      const { orderId, amount, keyId, user: userInfo } = orderRes.data.data;
+
+      // 2. Open official Razorpay Checkout modal
+      const paymentResponse = await openRazorpayCheckout({
+        keyId,
+        orderId,
+        amount,
+        name: 'Vaziro™ Partner Credits',
+        description: `${plan.name} Pack — ${plan.creditsCount} Application Credits`,
+        prefill: {
+          name: userInfo?.name || `${user?.firstName} ${user?.lastName}`,
+          email: userInfo?.email || user?.email,
+          contact: userInfo?.phone || user?.phone,
+        },
+      });
+
+      // 3. Cryptographically verify signature on backend and award credits
+      const verifyRes = await api.verifyCreditPayment({
+        orderId: paymentResponse.razorpay_order_id,
+        paymentId: paymentResponse.razorpay_payment_id,
+        signature: paymentResponse.razorpay_signature,
+        planId: plan.id,
+      });
+
+      if (verifyRes.data?.success) {
+        setMessage(`🎉 Payment Successful! Added +${plan.creditsCount} Credits to your Vaziro Wallet.`);
         await fetchData();
       }
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || err.message || 'Failed to purchase plan');
+      if (err.message?.includes('cancelled')) {
+        setMessage('Payment was cancelled. No amount was charged.');
+      } else {
+        alert(err.response?.data?.error?.message || err.message || 'Failed to complete credit purchase');
+      }
     } finally {
       setPurchasingPlan(null);
     }

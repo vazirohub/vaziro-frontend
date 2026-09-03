@@ -85,6 +85,9 @@ export const api = {
   calculateCreditFee: (budgetMin: number, budgetMax?: number) =>
     apiClient.post<ApiResponse<{ creditsRequired: number; nominalCostInr: number }>>('/credits/calculate-fee', { budgetMin, budgetMax }),
   purchaseCreditPlan: (planId: string) => apiClient.post<ApiResponse<any>>('/credits/purchase', { planId }),
+  createCreditOrder: (planId: string) => apiClient.post<ApiResponse<any>>('/credits/create-order', { planId }),
+  verifyCreditPayment: (data: { orderId: string; paymentId: string; signature: string; planId: string }) =>
+    apiClient.post<ApiResponse<any>>('/credits/verify-payment', data),
 
   // Chat & Calling
   getChatThreads: () => apiClient.get<ApiResponse<ChatThread[]>>('/chat/threads'),
@@ -93,8 +96,11 @@ export const api = {
   initiateMaskedCall: (jobId: string) => apiClient.post<ApiResponse<any>>('/calls/initiate', { jobId }),
 
   // Payments & Payouts
+  getPaymentConfig: () => apiClient.get<ApiResponse<{ keyId: string; currency: string }>>('/payments/config'),
   createPaymentOrder: (jobId: string, amount: number, paymentMethod?: string) =>
     apiClient.post<ApiResponse<any>>('/payments/create-order', { jobId, amount, paymentMethod }),
+  verifyJobPayment: (data: { orderId: string; paymentId: string; signature: string; jobId: string; internalPaymentId?: string }) =>
+    apiClient.post<ApiResponse<any>>('/payments/verify-payment', data),
   mockPaymentWebhook: (paymentId: string, amount: number) =>
     apiClient.post<ApiResponse<any>>('/payments/webhook', {
       payload: { paymentId, amount, providerRefId: `mock_ref_${Date.now()}` },

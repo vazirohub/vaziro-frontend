@@ -17,7 +17,10 @@ import {
   ChevronRight,
   Send,
   X,
+  CreditCard,
+  Sparkles,
 } from 'lucide-react';
+import { openRazorpayCheckout } from '../utils/razorpay';
 
 const LIFECYCLE_STEPS = [
   { key: 'HIRED', label: 'Hired', desc: 'Agreement finalized' },
@@ -39,6 +42,8 @@ export const JobTrackerPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [payingEscrow, setPayingEscrow] = useState(false);
+  const [escrowMessage, setEscrowMessage] = useState<string | null>(null);
 
   // Masked Call Modal
   const [callModal, setCallModal] = useState(false);
@@ -80,8 +85,64 @@ export const JobTrackerPage: React.FC = () => {
     fetchJob();
   }, [id]);
 
-  const isCustomer = user?.id === job?.customer?.user && true; // or customer profile link
+  const isCustomer = user?.id === (job?.customer as any)?.userId || user?.id === (job?.customer as any)?.user || user?.roles?.includes('CUSTOMER');
   const isProfessional = user?.roles?.includes('PROFESSIONAL');
+  const isPaymentSecured = Boolean(
+    job?.payments?.some((p: any) => p.status === 'SECURED' || p.status === 'COMPLETED') ||
+    (job as any)?.paymentProtection?.status === 'HELD'
+  );
+
+  const handleDepositEscrow = async () => {
+    if (!job) return;
+    try {
+      setPayingEscrow(true);
+      setEscrowMessage(null);
+
+      // 1. Create order on backend
+      const orderRes = await api.createPaymentOrder(job.id, job.agreedPrice, 'RAZORPAY');
+      if (!orderRes.data?.data) {
+        throw new Error('Failed to create payment order.');
+      }
+
+      const { orderId, amount, keyId, customerName, email, phone, paymentId: internalPaymentId } = orderRes.data.data;
+
+      // 2. Open official Razorpay Checkout modal
+      const paymentResponse = await openRazorpayCheckout({
+        keyId,
+        orderId,
+        amount,
+        name: 'Vaziro™ Escrow Deposit',
+        description: `100% Escrow Protection for Job #${job.id.substring(0, 8).toUpperCase()}`,
+        prefill: {
+          name: customerName,
+          email,
+          contact: phone,
+        },
+      });
+
+      // 3. Cryptographically verify signature and secure funds in escrow
+      const verifyRes = await api.verifyJobPayment({
+        orderId: paymentResponse.razorpay_order_id,
+        paymentId: paymentResponse.razorpay_payment_id,
+        signature: paymentResponse.razorpay_signature,
+        jobId: job.id,
+        internalPaymentId,
+      });
+
+      if (verifyRes.data?.success) {
+        setEscrowMessage('🎉 Escrow Payment Secured! Your funds are safely held until service completion.');
+        await fetchJob();
+      }
+    } catch (err: any) {
+      if (err.message?.includes('cancelled')) {
+        setEscrowMessage('Payment was cancelled. You can deposit escrow whenever you are ready.');
+      } else {
+        alert(err.response?.data?.error?.message || err.message || 'Payment failed.');
+      }
+    } finally {
+      setPayingEscrow(false);
+    }
+  };
 
   const handleUpdateStatus = async (newStatus: string) => {
     if (!job) return;
@@ -297,6 +358,73 @@ export const JobTrackerPage: React.FC = () => {
       {error && (
         <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded text-red-700 text-sm">
           {error}
+        </div>
+      )}
+
+      {escrowMessage && (
+        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-300 rounded-2xl text-emerald-800 text-xs font-semibold flex items-center gap-2 shadow-sm">
+          <Sparkles className="w-5 h-5 text-emerald-600 shrink-0" />
+          <span>{escrowMessage}</span>
+        </div>
+      )}
+
+      {/* Escrow Status Section */}
+      {job.paymentProtectionEnabled && isPaymentSecured && (
+        <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-black text-white rounded-2xl p-6 shadow-md mb-8 border border-emerald-800/40">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-extrabold text-white">100% Escrow Protection Active</span>
+                  <span className="text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/40">
+                    Secured
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1">
+                  ₹{job.agreedPrice.toLocaleString('en-IN')} is safely locked in Vaziro Escrow. Funds are released to the partner only upon your inspection and approval.
+                </p>
+              </div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2.5 border border-white/10 text-right shrink-0">
+              <span className="text-[10px] uppercase tracking-wider text-emerald-300 font-semibold block">Secured Balance</span>
+              <span className="text-xl font-black text-white">₹{job.agreedPrice.toLocaleString('en-IN')}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {job.paymentProtectionEnabled && !isPaymentSecured && job.status !== 'PAYMENT_RELEASED' && (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 shadow-sm mb-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-800 shrink-0 mt-0.5">
+                <ShieldCheck className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-extrabold text-amber-950">Escrow Payment Pending</span>
+                  <span className="text-[10px] uppercase font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">
+                    Action Required
+                  </span>
+                </div>
+                <p className="text-xs text-amber-800 mt-1 max-w-xl leading-relaxed">
+                  Deposit the agreed contract amount of <strong className="font-bold text-amber-950">₹{job.agreedPrice.toLocaleString('en-IN')}</strong> via Razorpay. Your money stays 100% protected in Vaziro Escrow and is never released without your approval.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleDepositEscrow}
+              disabled={payingEscrow}
+              className="w-full sm:w-auto shrink-0 bg-black hover:bg-neutral-800 active:scale-95 text-white font-black text-xs px-6 py-3.5 rounded-xl shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2 border border-black cursor-pointer"
+            >
+              <CreditCard className="w-4 h-4 text-emerald-400" />
+              {payingEscrow ? 'Opening Razorpay...' : `Pay ₹${job.agreedPrice.toLocaleString('en-IN')} with Razorpay`}
+            </button>
+          </div>
         </div>
       )}
 

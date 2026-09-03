@@ -192,6 +192,17 @@ export interface Job {
     rating: number;
     comment?: string;
   } | null;
+  payments?: {
+    id: string;
+    amount: number;
+    status: string;
+    paymentMethod: string;
+  }[];
+  paymentProtection?: {
+    heldAmount: number;
+    platformFeeAmount: number;
+    status: string;
+  } | null;
 }
 
 export interface CreditPlan {
