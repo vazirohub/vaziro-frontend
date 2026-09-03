@@ -35,14 +35,14 @@ apiClient.interceptors.request.use((config) => {
 
 export const api = {
   // Auth
-  requestOtp: (phone: string) =>
-    apiClient.post<ApiResponse<{ phone: string; cooldownSeconds: number }>>('/auth/otp/request', { phone }),
+  login: (identifier: string, password: string) =>
+    apiClient.post<ApiResponse<{ accessToken: string; user: User }>>('/auth/login', { identifier, password }),
 
-  verifyOtp: (payload: { phone: string; otp: string; role: 'CUSTOMER' | 'PROFESSIONAL'; firstName?: string; lastName?: string }) =>
-    apiClient.post<ApiResponse<{ accessToken: string; user: User; isNewUser: boolean }>>('/auth/otp/verify', payload),
+  register: (payload: { name: string; phone: string; email?: string; password: string; role: 'CUSTOMER' | 'PROFESSIONAL' }) =>
+    apiClient.post<ApiResponse<{ accessToken: string; user: User }>>('/auth/register', payload),
 
-  loginWithPassword: (email: string, password: string) =>
-    apiClient.post<ApiResponse<{ accessToken: string; user: User }>>('/auth/login', { email, password }),
+  loginWithPassword: (identifier: string, password: string) =>
+    apiClient.post<ApiResponse<{ accessToken: string; user: User }>>('/auth/login', { identifier, password }),
 
   getMe: () => apiClient.get<ApiResponse<{ user: User }>>('/auth/me'),
 

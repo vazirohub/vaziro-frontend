@@ -6,8 +6,10 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  loginWithOtp: (payload: { phone: string; otp: string; role: 'CUSTOMER' | 'PROFESSIONAL'; firstName?: string; lastName?: string }) => Promise<void>;
-  loginWithPassword: (email: string, password: string) => Promise<void>;
+  login: (identifier: string, password: string) => Promise<void>;
+  register: (payload: { name: string; phone: string; email?: string; password: string; role: 'CUSTOMER' | 'PROFESSIONAL' }) => Promise<void>;
+  loginWithPassword: (identifier: string, password: string) => Promise<void>;
+  loginWithOtp: (payload: any) => Promise<void>;
   logout: () => void;
   openAuthModal: (role?: 'CUSTOMER' | 'PROFESSIONAL') => void;
   closeAuthModal: () => void;
@@ -43,19 +45,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const loginWithOtp = async (payload: { phone: string; otp: string; role: 'CUSTOMER' | 'PROFESSIONAL'; firstName?: string; lastName?: string }) => {
-    const res = await api.verifyOtp(payload);
-    if (res.data.success && res.data.data) {
-      localStorage.setItem('vaziro_token', res.data.data.accessToken);
-      setUser(res.data.data.user);
-      setIsAuthModalOpen(false);
-    } else {
-      throw new Error(res.data.error?.message || 'Verification failed');
-    }
-  };
-
-  const loginWithPassword = async (email: string, password: string) => {
-    const res = await api.loginWithPassword(email, password);
+  const login = async (identifier: string, password: string) => {
+    const res = await api.login(identifier, password);
     if (res.data.success && res.data.data) {
       localStorage.setItem('vaziro_token', res.data.data.accessToken);
       setUser(res.data.data.user);
@@ -63,6 +54,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       throw new Error(res.data.error?.message || 'Login failed');
     }
+  };
+
+  const register = async (payload: { name: string; phone: string; email?: string; password: string; role: 'CUSTOMER' | 'PROFESSIONAL' }) => {
+    const res = await api.register(payload);
+    if (res.data.success && res.data.data) {
+      localStorage.setItem('vaziro_token', res.data.data.accessToken);
+      setUser(res.data.data.user);
+      setIsAuthModalOpen(false);
+    } else {
+      throw new Error(res.data.error?.message || 'Registration failed');
+    }
+  };
+
+  const loginWithPassword = login;
+
+  const loginWithOtp = async () => {
+    // legacy fallback
   };
 
   const logout = () => {
@@ -83,8 +91,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isAuthenticated: Boolean(user),
         isLoading,
-        loginWithOtp,
+        login,
+        register,
         loginWithPassword,
+        loginWithOtp,
         logout,
         openAuthModal,
         closeAuthModal,

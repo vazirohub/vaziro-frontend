@@ -1,86 +1,136 @@
-import React from 'react';
-import { ShieldCheck, ArrowRight, CheckCircle2, IndianRupee } from 'lucide-react';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { ShieldCheck, ArrowRight, CheckCircle2, Search, MapPin, Star, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const Hero: React.FC = () => {
+  const navigate = useNavigate();
   const { openAuthModal } = useAuth();
+  const [selectedCity, setSelectedCity] = useState('Bengaluru');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    navigate('/requirements');
+  };
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-emerald-50/50 via-white to-slate-50 pt-16 pb-24 border-b border-slate-200">
+    <section className="relative bg-white pt-12 pb-20 border-b border-neutral-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto">
-          {/* Top Pill Tag */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-100/80 text-emerald-800 text-xs font-bold tracking-wide uppercase mb-6 shadow-sm">
-            <ShieldCheck className="w-4 h-4 text-emerald-700" />
-            <span>India's Trusted Reverse-Auction Marketplace</span>
+          {/* Trust Badge Pill */}
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-100 border border-neutral-300 text-neutral-900 text-xs font-bold tracking-wide uppercase mb-6 shadow-sm">
+            <ShieldCheck className="w-4 h-4 text-black" />
+            <span>100% DigiLocker Verified Service Partners</span>
           </div>
 
-          {/* Headline (Section 76) */}
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.15]">
-            Tell Us What You Need.{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600">
-              Get Quotes From the Right Professionals.
+          {/* Urban Company Style Headline */}
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-black tracking-tight leading-[1.15]">
+            Home & Personal Care.{' '}
+            <span className="block mt-1 text-neutral-900">
+              Delivered by Verified Experts.
             </span>
           </h1>
 
-          {/* Supporting Text (Section 76) */}
-          <p className="mt-6 text-lg sm:text-xl text-slate-600 font-medium leading-relaxed">
-            Post your requirement, set your budget, compare verified professionals and hire with confidence.
+          {/* Subtitle */}
+          <p className="mt-5 text-base sm:text-lg text-neutral-600 font-medium max-w-2xl mx-auto leading-relaxed">
+            Post your custom requirement in minutes, set your budget in ₹ INR, and receive tailored quotations from verified independent professionals.
           </p>
 
-          {/* Main Action Buttons */}
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          {/* Interactive Search Bar (Urban Company style) */}
+          <div className="mt-8 max-w-2xl mx-auto bg-white p-2 sm:p-2.5 rounded-2xl border-2 border-neutral-900 shadow-xl flex flex-col sm:flex-row items-center gap-2">
+            {/* City Selector */}
+            <div className="flex items-center gap-2 px-3 py-2 border-b sm:border-b-0 sm:border-r border-neutral-200 w-full sm:w-auto text-xs font-bold text-neutral-800">
+              <MapPin className="w-4 h-4 text-black shrink-0" />
+              <select
+                value={selectedCity}
+                onChange={(e) => setSelectedCity(e.target.value)}
+                className="bg-transparent focus:outline-none cursor-pointer font-bold text-black"
+              >
+                <option value="Bengaluru">Bengaluru, KA</option>
+                <option value="Mumbai">Mumbai, MH</option>
+                <option value="Pune">Pune, MH</option>
+                <option value="Delhi NCR">Delhi NCR</option>
+                <option value="Hyderabad">Hyderabad, TS</option>
+              </select>
+            </div>
+
+            {/* Query Input */}
+            <div className="flex-1 flex items-center gap-2 px-3 w-full">
+              <Search className="w-4 h-4 text-neutral-400 shrink-0" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search for Physiotherapist, Cook, Trainer, Nurse..."
+                className="w-full text-xs font-semibold text-black placeholder:text-neutral-400 focus:outline-none py-2"
+              />
+            </div>
+
+            {/* Submit Button */}
             <button
-              onClick={() => openAuthModal('CUSTOMER')}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-xl font-bold text-base shadow-xl shadow-emerald-600/25 hover:shadow-2xl hover:scale-[1.02] transition-all"
+              onClick={() => navigate('/post-requirement')}
+              className="w-full sm:w-auto bg-black hover:bg-neutral-800 text-white text-xs font-bold px-6 py-3 rounded-xl transition flex items-center justify-center gap-1.5 shrink-0 shadow-md"
             >
-              <span>Post a Requirement</span>
-              <ArrowRight className="w-5 h-5" />
+              <span>Get Quotes</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
-            <a
-              href="#categories"
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-800 px-8 py-4 rounded-xl font-bold text-base border border-slate-300 shadow-sm transition-all"
-            >
-              <span>Find a Professional</span>
-            </a>
           </div>
 
-          {/* Professional Callout Banner */}
-          <div className="mt-12 p-4 sm:p-5 rounded-2xl bg-slate-900 text-white text-left flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
+          {/* Main Action Buttons */}
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              to="/post-requirement"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-black hover:bg-neutral-800 text-white px-8 py-3.5 rounded-xl font-bold text-sm shadow-md transition"
+            >
+              <span>Post a Requirement</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+
+            <Link
+              to="/requirements"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-white hover:bg-neutral-100 text-black px-8 py-3.5 rounded-xl font-bold text-sm border-2 border-neutral-900 shadow-sm transition"
+            >
+              <span>Explore Live Requests</span>
+            </Link>
+          </div>
+
+          {/* Partner Callout Banner (Urban Company dark theme) */}
+          <div className="mt-10 p-4 sm:p-5 rounded-2xl bg-black text-white text-left flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg border border-neutral-800">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-                <IndianRupee className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-neutral-800 text-white flex items-center justify-center font-bold">
+                <Sparkles className="w-5 h-5 text-amber-400" />
               </div>
               <div>
-                <div className="font-bold text-sm sm:text-base">Grow Your Business with Vaziro</div>
-                <div className="text-xs text-slate-400">Get More Customers. Pay Only When You Apply.</div>
+                <div className="font-bold text-sm text-white">Join as a Verified Service Professional</div>
+                <div className="text-xs text-neutral-400">Zero fixed commission. Pay nominal credits only when you choose to quote.</div>
               </div>
             </div>
             <button
               onClick={() => openAuthModal('PROFESSIONAL')}
-              className="w-full sm:w-auto whitespace-nowrap bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-5 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wide transition-colors"
+              className="w-full sm:w-auto whitespace-nowrap bg-white hover:bg-neutral-200 text-black px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition"
             >
-              Join as a Professional
+              Partner Sign Up
             </button>
           </div>
 
-          {/* Highlights */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs font-semibold text-slate-500">
+          {/* Key Value Highlights */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs font-semibold text-neutral-600">
             <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <CheckCircle2 className="w-4 h-4 text-black" />
               <span>DigiLocker Verified Pros</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Fixed or Range Budget in ₹</span>
+              <CheckCircle2 className="w-4 h-4 text-black" />
+              <span>Reverse Auction Quotes</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Optional Payment Protection (6%)</span>
+              <CheckCircle2 className="w-4 h-4 text-black" />
+              <span>Payment Protection Escrow (6%)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Masked Calls & Secure Chat</span>
+              <CheckCircle2 className="w-4 h-4 text-black" />
+              <span>Privacy-Masked Calling</span>
             </div>
           </div>
         </div>

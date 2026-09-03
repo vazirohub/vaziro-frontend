@@ -1,244 +1,365 @@
-import React, { useState } from 'react';
-import { X, ShieldCheck, Phone, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ShieldCheck, Phone, ArrowRight, Loader2, Lock, User as UserIcon, Mail, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../services/api';
 
 export const PhoneOtpModal: React.FC = () => {
-  const { isAuthModalOpen, closeAuthModal, loginWithOtp, defaultRole } = useAuth();
+  const { isAuthModalOpen, closeAuthModal, login, register, defaultRole } = useAuth();
+
+  const [mode, setMode] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
   const [role, setRole] = useState<'CUSTOMER' | 'PROFESSIONAL'>(defaultRole);
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [step, setStep] = useState<'PHONE' | 'OTP'>('PHONE');
+
+  // Form Fields
+  const [name, setName] = useState('');
+  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [cooldown, setCooldown] = useState(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setRole(defaultRole);
-    setStep('PHONE');
-    setPhone('');
-    setOtp('');
+    setMode('LOGIN');
+    setName('');
+    setIdentifier('');
+    setEmail('');
+    setPassword('');
     setErrorMessage(null);
   }, [isAuthModalOpen, defaultRole]);
 
-  React.useEffect(() => {
-    let timer: any;
-    if (cooldown > 0) {
-      timer = setInterval(() => setCooldown((c) => c - 1), 1000);
-    }
-    return () => clearInterval(timer);
-  }, [cooldown]);
-
   if (!isAuthModalOpen) return null;
 
-  const handleRequestOtp = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    // Format phone to +91XXXXXXXXXX
-    const cleanPhone = phone.replace(/\D/g, '');
-    let formattedPhone = phone.trim();
-    if (cleanPhone.length === 10) {
-      formattedPhone = `+91${cleanPhone}`;
+    if (!identifier.trim()) {
+      setErrorMessage('Please enter your registered mobile number or email.');
+      return;
     }
 
-    if (!/^\+91[6-9]\d{9}$/.test(formattedPhone)) {
+    if (!password) {
+      setErrorMessage('Please enter your password.');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await login(identifier.trim(), password);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Invalid mobile number/email or password.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+
+    if (!name.trim() || name.trim().length < 2) {
+      setErrorMessage('Full Name is strictly required (minimum 2 characters).');
+      return;
+    }
+
+    const cleanPhone = identifier.replace(/\D/g, '');
+    if (cleanPhone.length !== 10) {
       setErrorMessage('Please enter a valid 10-digit Indian mobile number.');
       return;
     }
 
-    setIsLoading(true);
+    if (!password || password.length < 6) {
+      setErrorMessage('Password is required and must be at least 6 characters.');
+      return;
+    }
+
     try {
-      const res = await api.requestOtp(formattedPhone);
-      if (res.data.success) {
-        setPhone(formattedPhone);
-        setStep('OTP');
-        setCooldown(res.data.data?.cooldownSeconds || 60);
-      } else {
-        setErrorMessage(res.data.error?.message || 'Failed to send OTP.');
-      }
+      setIsLoading(true);
+      await register({
+        name: name.trim(),
+        phone: identifier.trim(),
+        email: email.trim() || undefined,
+        password,
+        role,
+      });
     } catch (err: any) {
-      setErrorMessage(err.response?.data?.error?.message || 'Failed to dispatch OTP. Please try again.');
+      setErrorMessage(err.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleQuickFill = (userType: 'ADMIN' | 'CUSTOMER' | 'PROFESSIONAL') => {
+    setMode('LOGIN');
     setErrorMessage(null);
-
-    if (otp.length !== 6) {
-      setErrorMessage('Please enter the 6-digit verification code.');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await loginWithOtp({
-        phone,
-        otp,
-        role,
-        firstName: firstName.trim() || undefined,
-      });
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Incorrect verification code. Please try again.');
-    } finally {
-      setIsLoading(false);
+    if (userType === 'ADMIN') {
+      setIdentifier('admin@vaziro.in');
+      setPassword('VaziroAdmin2026!');
+    } else if (userType === 'CUSTOMER') {
+      setIdentifier('9999988888');
+      setPassword('VaziroPass2026!');
+    } else {
+      setIdentifier('9876543210');
+      setPassword('VaziroPass2026!');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="relative bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="relative bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl border border-neutral-200 animate-in fade-in zoom-in-95 duration-200">
         {/* Close Button */}
         <button
           onClick={closeAuthModal}
-          className="absolute top-6 right-6 text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100"
+          className="absolute top-5 right-5 text-neutral-400 hover:text-black p-1.5 rounded-full hover:bg-neutral-100 transition"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Modal Header */}
+        {/* Logo & Header */}
         <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-3">
-            <ShieldCheck className="w-7 h-7" />
-          </div>
-          <h3 className="text-2xl font-black text-slate-900">
-            {step === 'PHONE' ? 'Welcome to Vaziro' : 'Enter Verification Code'}
+          <img
+            src="/logo.png"
+            alt="Vaziro"
+            className="h-10 mx-auto object-contain mb-3"
+          />
+          <h3 className="text-2xl font-black text-black tracking-tight">
+            {mode === 'LOGIN' ? 'Sign in to Vaziro' : 'Create an Account'}
           </h3>
-          <p className="text-xs text-slate-500 mt-1">
-            {step === 'PHONE'
-              ? 'Enter your Indian mobile number to sign in or register'
-              : `A 6-digit code was sent via SMS to ${phone}`}
+          <p className="text-xs text-neutral-500 mt-1">
+            {mode === 'LOGIN'
+              ? 'Enter your mobile number or email and password'
+              : 'Join India’s trusted home & personal care marketplace'}
           </p>
         </div>
 
-        {/* Role Toggle */}
-        {step === 'PHONE' && (
-          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl mb-6">
-            <button
-              type="button"
-              onClick={() => setRole('CUSTOMER')}
-              className={`py-2 text-xs font-bold rounded-lg transition-all ${
-                role === 'CUSTOMER' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              I am a Customer
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole('PROFESSIONAL')}
-              className={`py-2 text-xs font-bold rounded-lg transition-all ${
-                role === 'PROFESSIONAL' ? 'bg-white text-emerald-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              I am a Professional
-            </button>
-          </div>
-        )}
+        {/* Mode Toggle Tabs (Urban Company style) */}
+        <div className="flex border-b border-neutral-200 mb-6">
+          <button
+            type="button"
+            onClick={() => {
+              setMode('LOGIN');
+              setErrorMessage(null);
+            }}
+            className={`flex-1 pb-3 text-sm font-bold transition-all border-b-2 text-center ${
+              mode === 'LOGIN'
+                ? 'border-black text-black'
+                : 'border-transparent text-neutral-400 hover:text-neutral-700'
+            }`}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('REGISTER');
+              setErrorMessage(null);
+            }}
+            className={`flex-1 pb-3 text-sm font-bold transition-all border-b-2 text-center ${
+              mode === 'REGISTER'
+                ? 'border-black text-black'
+                : 'border-transparent text-neutral-400 hover:text-neutral-700'
+            }`}
+          >
+            New Account
+          </button>
+        </div>
 
         {errorMessage && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">
+          <div className="mb-5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold leading-relaxed">
             {errorMessage}
           </div>
         )}
 
-        {step === 'PHONE' ? (
-          <form onSubmit={handleRequestOtp} className="space-y-4">
+        {/* LOGIN FORM */}
+        {mode === 'LOGIN' ? (
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
-                Your Full Name (Optional)
+              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                Mobile Number or Email *
               </label>
-              <input
-                type="text"
-                placeholder="Rahul Sharma"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="e.g. 9876543210 or admin@vaziro.in"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+                  required
+                  autoFocus
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
-                Mobile Number
+              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                Password *
               </label>
               <div className="relative flex items-center">
-                <div className="absolute left-4 flex items-center gap-1 text-sm font-bold text-slate-500 border-r border-slate-200 pr-2">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 pr-11 rounded-xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 text-neutral-400 hover:text-black p-1"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-xl font-bold text-sm shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
+            >
+              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Sign In</span>}
+            </button>
+
+            {/* Quick Demo Access Bar */}
+            <div className="pt-4 border-t border-neutral-100">
+              <span className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider text-center mb-2">
+                Quick Demo Login
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuickFill('ADMIN')}
+                  className="py-1.5 px-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-lg text-[11px] font-bold transition"
+                >
+                  👑 Admin
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickFill('CUSTOMER')}
+                  className="py-1.5 px-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-lg text-[11px] font-bold transition"
+                >
+                  👤 Customer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickFill('PROFESSIONAL')}
+                  className="py-1.5 px-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-lg text-[11px] font-bold transition"
+                >
+                  💼 Partner
+                </button>
+              </div>
+            </div>
+          </form>
+        ) : (
+          /* REGISTRATION FORM */
+          <form onSubmit={handleRegister} className="space-y-4">
+            {/* Account Role Toggle */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-neutral-100 rounded-xl mb-4">
+              <button
+                type="button"
+                onClick={() => setRole('CUSTOMER')}
+                className={`py-2 text-xs font-bold rounded-lg transition ${
+                  role === 'CUSTOMER' ? 'bg-black text-white shadow-sm' : 'text-neutral-500 hover:text-black'
+                }`}
+              >
+                I am a Customer
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('PROFESSIONAL')}
+                className={`py-2 text-xs font-bold rounded-lg transition ${
+                  role === 'PROFESSIONAL' ? 'bg-black text-white shadow-sm' : 'text-neutral-500 hover:text-black'
+                }`}
+              >
+                I am a Service Partner
+              </button>
+            </div>
+
+            {/* Name is STRICTLY REQUIRED */}
+            <div>
+              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                Full Name <span className="text-red-600 font-black">* (Required)</span>
+              </label>
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  placeholder="e.g. Rahul Sharma"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+                  required
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                Mobile Number <span className="text-red-600 font-black">* (Required)</span>
+              </label>
+              <div className="relative flex items-center">
+                <div className="absolute left-3.5 flex items-center gap-1 text-sm font-bold text-neutral-600 border-r border-neutral-200 pr-2.5">
                   <span>🇮🇳</span>
                   <span>+91</span>
                 </div>
                 <input
                   type="tel"
                   placeholder="98765 43210"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full pl-20 pr-4 py-3 rounded-xl border border-slate-300 text-sm font-semibold tracking-wider focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  maxLength={10}
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value.replace(/\D/g, ''))}
+                  className="w-full pl-22 pr-4 py-3 rounded-xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
                   required
                 />
               </div>
-              <p className="text-[11px] text-slate-400 mt-1.5">
-                We'll send an OTP to verify your mobile number.
-              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
+                Email Address (Optional)
+              </label>
+              <input
+                type="email"
+                placeholder="rahul@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                Create Password <span className="text-red-600 font-black">* (Min 6 chars)</span>
+              </label>
+              <div className="relative flex items-center">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Create a strong password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 pr-11 rounded-xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+                  required
+                  minLength={6}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 text-neutral-400 hover:text-black p-1"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold text-sm shadow-md transition-all disabled:opacity-50"
+              className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-xl font-bold text-sm shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
             >
-              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><span>Continue</span><ArrowRight className="w-4 h-4" /></>}
+              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Create Account & Continue</span>}
             </button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1.5 uppercase tracking-wide">
-                6-Digit OTP Code
-              </label>
-              <input
-                type="text"
-                maxLength={6}
-                placeholder="• • • • • •"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
-                className="w-full text-center tracking-[0.5em] text-2xl font-black py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                autoFocus
-                required
-              />
-            </div>
-
-            <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-xs text-emerald-800 font-semibold">
-              <span>Demo Testing: Enter <strong>123456</strong> to verify</span>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading || otp.length !== 6}
-              className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-xl font-bold text-sm shadow-md transition-all disabled:opacity-50"
-            >
-              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify & Enter Platform'}
-            </button>
-
-            <div className="flex items-center justify-between pt-2 text-xs">
-              <button
-                type="button"
-                onClick={() => setStep('PHONE')}
-                className="text-slate-500 hover:text-slate-800"
-              >
-                Change mobile number
-              </button>
-
-              <button
-                type="button"
-                disabled={cooldown > 0 || isLoading}
-                onClick={handleRequestOtp}
-                className="text-emerald-600 font-bold hover:underline disabled:text-slate-400 disabled:no-underline"
-              >
-                {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend OTP'}
-              </button>
-            </div>
           </form>
         )}
       </div>
