@@ -125,10 +125,22 @@ export const api = {
     apiClient.post<ApiResponse<any>>('/reviews', data),
   getProfessionalReviews: (profId: string) => apiClient.get<ApiResponse<any[]>>(`/reviews/professional/${profId}`),
 
-  // Admin Console
+  // Admin Console & Full Web App Control
   getAdminMetrics: () => apiClient.get<ApiResponse<any>>('/admin/metrics'),
   getAdminUsers: () => apiClient.get<ApiResponse<any[]>>('/admin/users'),
+  updateAdminUser: (id: string, data: any) => apiClient.put<ApiResponse<any>>(`/admin/users/${id}`, data),
+  deleteAdminUser: (id: string) => apiClient.delete<ApiResponse<any>>(`/admin/users/${id}`),
   updateUserStatus: (id: string, status: string) => apiClient.patch<ApiResponse<any>>(`/admin/users/${id}/status`, { status }),
+  adjustAdminUserCredits: (id: string, data: { amount: number; mode: 'ADD' | 'DEDUCT' | 'SET'; notes?: string }) =>
+    apiClient.post<ApiResponse<any>>(`/admin/users/${id}/credits`, data),
+  resetAdminUserPassword: (id: string, data: { newPassword: string }) =>
+    apiClient.post<ApiResponse<any>>(`/admin/users/${id}/reset-password`, data),
+  getAdminRequirements: () => apiClient.get<ApiResponse<any[]>>('/admin/requirements'),
+  updateAdminRequirementStatus: (id: string, status: string) =>
+    apiClient.patch<ApiResponse<any>>(`/admin/requirements/${id}/status`, { status }),
+  getAdminJobs: () => apiClient.get<ApiResponse<any[]>>('/admin/jobs'),
+  updateAdminJobStatus: (id: string, status: string, reason?: string) =>
+    apiClient.patch<ApiResponse<any>>(`/admin/jobs/${id}/status`, { status, reason }),
   getAdminVerifications: () => apiClient.get<ApiResponse<any[]>>('/admin/verifications'),
   reviewVerification: (id: string, status: string, rejectionReason?: string) =>
     apiClient.patch<ApiResponse<any>>(`/admin/verifications/${id}`, { status, rejectionReason }),
