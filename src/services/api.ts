@@ -79,6 +79,7 @@ export const api = {
   // Categories & Locations
   getCategories: () => apiClient.get<ApiResponse<Category[]>>('/categories'),
   getStates: () => apiClient.get<ApiResponse<IndianState[]>>('/locations/states'),
+  getCities: (params?: any) => apiClient.get<ApiResponse<City[]>>('/locations/cities', { params }),
   getCitiesByState: (stateId: string) => apiClient.get<ApiResponse<City[]>>(`/locations/cities/${stateId}`),
 
   // Requirements

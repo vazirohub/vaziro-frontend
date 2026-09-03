@@ -168,11 +168,11 @@ const defaultMasterCategories: Category[] = [
 ];
 
 const defaultCities: City[] = [
-  { id: 'city-delhi', stateId: 'DL', name: 'Delhi', slug: 'delhi', isActive: true },
-  { id: 'city-noida', stateId: 'UP', name: 'Noida', slug: 'noida', isActive: true },
-  { id: 'city-gurugram', stateId: 'HR', name: 'Gurugram', slug: 'gurugram', isActive: true },
-  { id: 'city-ghaziabad', stateId: 'UP', name: 'Ghaziabad', slug: 'ghaziabad', isActive: true },
-  { id: 'city-greaternoida', stateId: 'UP', name: 'Greater Noida', slug: 'greater-noida', isActive: true },
+  { id: 'ce9d2ca4-1e47-473b-bab1-6d97c53bc61b', stateId: '88c64a19-46e0-4f7d-baad-e1fc477c519b', name: 'Delhi', slug: 'delhi', isActive: true },
+  { id: '0453b9b5-db67-493c-8aae-21eaf9f4c787', stateId: '88c64a19-46e0-4f7d-baad-e1fc477c519b', name: 'Noida', slug: 'noida', isActive: true },
+  { id: '95a27243-a6db-47d6-bcef-60e7ee5cbc2f', stateId: '88c64a19-46e0-4f7d-baad-e1fc477c519b', name: 'Gurugram', slug: 'gurugram', isActive: true },
+  { id: '419869db-1287-493b-9bc7-7ab69a6b7c66', stateId: '88c64a19-46e0-4f7d-baad-e1fc477c519b', name: 'Ghaziabad', slug: 'ghaziabad', isActive: true },
+  { id: 'c7578c55-b999-4554-8e3e-9ed23cffbf41', stateId: '88c64a19-46e0-4f7d-baad-e1fc477c519b', name: 'Greater Noida', slug: 'greater-noida', isActive: true },
 ];
 
 export const PostRequirementPage: React.FC = () => {
@@ -225,19 +225,33 @@ export const PostRequirementPage: React.FC = () => {
         // Retain default master catalog silently
       });
 
-    api.getStates()
-      .then((stateRes) => {
-        if (stateRes.data?.data && stateRes.data.data.length > 0) {
-          api.getCitiesByState(stateRes.data.data[0].id).then((cRes) => {
-            if (cRes.data?.data && cRes.data.data.length > 0) {
-              setCities(cRes.data.data);
-              setSelectedCityId(cRes.data.data[0].id);
+    api.getCities()
+      .then((cRes) => {
+        if (cRes.data?.data && cRes.data.data.length > 0) {
+          const ncrSlugs = ['delhi', 'new-delhi', 'noida', 'gurugram', 'ghaziabad', 'greater-noida'];
+          const ncrCities = cRes.data.data.filter((c: any) =>
+            ncrSlugs.includes(c.slug?.toLowerCase()) ||
+            ncrSlugs.some((s) => c.name?.toLowerCase().includes(s.replace('-', ' ')))
+          );
+          const finalCities = ncrCities.length > 0 ? ncrCities : cRes.data.data;
+          setCities(finalCities);
+
+          const queryCity = new URLSearchParams(window.location.search).get('city');
+          if (queryCity) {
+            const matched = finalCities.find((c: any) =>
+              c.name.toLowerCase() === queryCity.toLowerCase() ||
+              c.slug.toLowerCase() === queryCity.toLowerCase()
+            );
+            if (matched) {
+              setSelectedCityId(matched.id);
+              return;
             }
-          });
+          }
+          setSelectedCityId(finalCities[0].id);
         }
       })
       .catch(() => {
-        // Retain default cities silently
+        // Retain default cities with real seeded UUIDs
       });
   }, []);
 
