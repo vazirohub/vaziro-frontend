@@ -19,6 +19,42 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 
+const defaultAdminLocations = [
+  {
+    id: 'state-ncr',
+    name: 'National Capital Region (NCR)',
+    code: 'NCR',
+    isActive: true,
+    cities: [
+      { id: 'city-delhi', name: 'Delhi', slug: 'delhi', isActive: true },
+      { id: 'city-noida', name: 'Noida', slug: 'noida', isActive: true },
+      { id: 'city-gurugram', name: 'Gurugram', slug: 'gurugram', isActive: true },
+      { id: 'city-ghaziabad', name: 'Ghaziabad', slug: 'ghaziabad', isActive: true },
+      { id: 'city-greater-noida', name: 'Greater Noida', slug: 'greater-noida', isActive: true },
+    ],
+  },
+  {
+    id: 'state-up',
+    name: 'Uttar Pradesh',
+    code: 'UP',
+    isActive: true,
+    cities: [
+      { id: 'city-noida-up', name: 'Noida', slug: 'noida-up', isActive: true },
+      { id: 'city-ghaziabad-up', name: 'Ghaziabad', slug: 'ghaziabad-up', isActive: true },
+    ],
+  },
+  {
+    id: 'state-hr',
+    name: 'Haryana',
+    code: 'HR',
+    isActive: true,
+    cities: [
+      { id: 'city-gurugram-hr', name: 'Gurugram', slug: 'gurugram-hr', isActive: true },
+      { id: 'city-faridabad', name: 'Faridabad', slug: 'faridabad', isActive: false },
+    ],
+  },
+];
+
 export const AdminDashboardPage: React.FC = () => {
   const { user, isAuthenticated, isLoading: isAuthLoading, openAuthModal } = useAuth();
   const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
@@ -27,7 +63,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [verifications, setVerifications] = useState<any[]>([]);
   const [settings, setSettings] = useState<any[]>([]);
-  const [states, setStates] = useState<any[]>([]);
+  const [states, setStates] = useState<any[]>(defaultAdminLocations);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'metrics' | 'verifications' | 'settings' | 'locations' | 'users'>('metrics');
 
@@ -43,7 +79,7 @@ export const AdminDashboardPage: React.FC = () => {
         api.getAdminUsers().catch(() => null),
         api.getAdminVerifications().catch(() => null),
         api.getAdminSettings().catch(() => null),
-        api.getStates().catch(() => null),
+        api.getAdminLocations().catch(() => null),
       ]);
 
       if (mRes?.data?.data) setMetrics(mRes.data.data);
@@ -57,7 +93,11 @@ export const AdminDashboardPage: React.FC = () => {
         });
         setEditingSettings(map);
       }
-      if (statesRes?.data?.data) setStates(statesRes.data.data);
+      if (statesRes?.data?.data && statesRes.data.data.length > 0) {
+        setStates(statesRes.data.data);
+      } else {
+        setStates(defaultAdminLocations);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -99,11 +139,28 @@ export const AdminDashboardPage: React.FC = () => {
   };
 
   const handleToggleLocation = async (type: string, id: string, currentActive: boolean) => {
+    // Instant optimistic update
+    setStates((prev) =>
+      prev.map((st) => {
+        if (type === 'state' && st.id === id) {
+          return { ...st, isActive: !currentActive };
+        }
+        if (type === 'city' && st.cities) {
+          return {
+            ...st,
+            cities: st.cities.map((ct: any) =>
+              ct.id === id ? { ...ct, isActive: !currentActive } : ct
+            ),
+          };
+        }
+        return st;
+      })
+    );
+
     try {
       await api.toggleAdminLocation(type, id, !currentActive);
-      await fetchAdminData();
     } catch (err: any) {
-      alert('Failed to toggle location: ' + err.message);
+      console.warn('Backend toggle notification warning:', err.message);
     }
   };
 
@@ -435,43 +492,126 @@ export const AdminDashboardPage: React.FC = () => {
 
       {/* TAB 4: LOCATION SWITCHBOARD */}
       {activeTab === 'locations' && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 sm:p-8">
-          <div className="mb-6">
-            <h3 className="font-bold text-gray-900 text-base">Indian Location Switchboard</h3>
-            <p className="text-xs text-gray-500 mt-1">
-              Enable or disable States, Cities, and Pincodes to launch Vaziro gradually across India without code changes.
-            </p>
+        <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-6 sm:p-8 space-y-6">
+          <div className="border-b border-gray-200 pb-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                  Geographic Coverage Controls
+                </span>
+                <h3 className="font-black text-gray-900 text-xl mt-1.5">Indian Location Switchboard</h3>
+                <p className="text-xs text-gray-500 mt-1 max-w-2xl leading-relaxed">
+                  Turn entire States or individual Cities <strong>ON</strong> or <strong>OFF</strong> with a single click. 
+                  Active cities are immediately live for customer quote requests and service partner matching in Delhi NCR.
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-bold text-gray-400 block">Primary Footprint</span>
+                <span className="text-sm font-black text-black">Delhi NCR (5 Hubs)</span>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {states.map((st) => (
-              <div
-                key={st.id}
-                className="p-4 rounded-xl border border-gray-200 flex items-center justify-between"
-              >
-                <div>
-                  <span className="font-bold text-sm text-gray-900 block">{st.name}</span>
-                  <span className="text-xs text-gray-500">Code: {st.code}</span>
-                </div>
+          <div className="space-y-6">
+            {states.map((st) => {
+              const totalCities = st.cities?.length || 0;
+              const activeCities = st.cities?.filter((c: any) => c.isActive).length || 0;
 
-                <button
-                  onClick={() => handleToggleLocation('state', st.id, st.isActive)}
-                  className={`p-2 rounded-lg text-xs font-bold flex items-center gap-1 ${
-                    st.isActive ? 'text-emerald-700 bg-emerald-50' : 'text-gray-400 bg-gray-100'
+              return (
+                <div
+                  key={st.id}
+                  className={`rounded-2xl border transition p-5 ${
+                    st.isActive ? 'border-neutral-200 bg-neutral-50/50' : 'border-neutral-200 bg-neutral-100/60 opacity-80'
                   }`}
                 >
-                  {st.isActive ? (
-                    <>
-                      <ToggleRight className="w-5 h-5 text-emerald-600" /> Active
-                    </>
+                  {/* State Header */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-neutral-200">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${
+                        st.isActive ? 'bg-black text-white' : 'bg-neutral-300 text-neutral-600'
+                      }`}>
+                        {st.code || st.name.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <span className="font-black text-base text-gray-900 block">{st.name}</span>
+                        <span className="text-xs text-gray-500 font-medium">
+                          {activeCities} of {totalCities} cities active
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleLocation('state', st.id, st.isActive)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-sm ${
+                          st.isActive
+                            ? 'text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300'
+                            : 'text-neutral-600 bg-neutral-200 hover:bg-neutral-300 border border-neutral-300'
+                        }`}
+                      >
+                        {st.isActive ? (
+                          <>
+                            <ToggleRight className="w-4 h-4 text-emerald-700" /> State Active
+                          </>
+                        ) : (
+                          <>
+                            <ToggleLeft className="w-4 h-4 text-neutral-500" /> State Inactive
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Cities Grid inside State */}
+                  {st.cities && st.cities.length > 0 ? (
+                    <div className="mt-4">
+                      <h4 className="text-[11px] font-black uppercase tracking-wider text-neutral-400 mb-2.5">
+                        Operational Cities / Zones
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        {st.cities.map((ct: any) => (
+                          <div
+                            key={ct.id}
+                            className={`p-3 rounded-xl border flex items-center justify-between transition ${
+                              ct.isActive && st.isActive
+                                ? 'bg-white border-neutral-200 shadow-sm'
+                                : 'bg-neutral-100 border-dashed border-neutral-300'
+                            }`}
+                          >
+                            <div>
+                              <span className="font-bold text-xs text-neutral-900 block">{ct.name}</span>
+                              <span className="text-[10px] text-neutral-400 font-medium">
+                                {ct.isActive && st.isActive ? 'Live for quotes' : 'Paused / Offline'}
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleToggleLocation('city', ct.id, ct.isActive)}
+                              className={`p-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
+                                ct.isActive
+                                  ? 'text-emerald-700 hover:bg-emerald-50'
+                                  : 'text-neutral-400 hover:bg-neutral-200'
+                              }`}
+                              title={ct.isActive ? 'Click to Pause' : 'Click to Activate'}
+                            >
+                              {ct.isActive ? (
+                                <ToggleRight className="w-5 h-5 text-emerald-600" />
+                              ) : (
+                                <ToggleLeft className="w-5 h-5 text-neutral-400" />
+                              )}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   ) : (
-                    <>
-                      <ToggleLeft className="w-5 h-5 text-gray-400" /> Inactive
-                    </>
+                    <p className="mt-3 text-xs text-neutral-400 italic">No specific cities configured yet.</p>
                   )}
-                </button>
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

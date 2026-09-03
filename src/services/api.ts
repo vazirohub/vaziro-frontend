@@ -128,6 +128,7 @@ export const api = {
     apiClient.patch<ApiResponse<any>>(`/admin/verifications/${id}`, { status, rejectionReason }),
   getAdminSettings: () => apiClient.get<ApiResponse<any[]>>('/admin/settings'),
   updateAdminSetting: (key: string, value: any) => apiClient.put<ApiResponse<any>>('/admin/settings', { key, value }),
+  getAdminLocations: () => apiClient.get<ApiResponse<any[]>>('/admin/locations'),
   toggleAdminLocation: (type: string, id: string, isActive: boolean) =>
     apiClient.patch<ApiResponse<any>>('/admin/locations/toggle', { type, id, isActive }),
 };
