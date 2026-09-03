@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { Category, Subcategory, IndianState, City } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -178,6 +178,12 @@ export const PostRequirementPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, openAuthModal } = useAuth();
 
+  const [searchParams] = useSearchParams();
+  const cityQuery = searchParams.get('city');
+  const matchedCity = defaultCities.find(
+    (c) => c.name.toLowerCase() === cityQuery?.toLowerCase() || c.slug === cityQuery?.toLowerCase()
+  );
+
   const [categories, setCategories] = useState<Category[]>(defaultMasterCategories);
   const [cities, setCities] = useState<City[]>(defaultCities);
   const [submitting, setSubmitting] = useState(false);
@@ -191,8 +197,8 @@ export const PostRequirementPage: React.FC = () => {
   const [budgetType, setBudgetType] = useState<'FIXED' | 'RANGE'>('FIXED');
   const [budgetMin, setBudgetMin] = useState<number>(5000);
   const [budgetMax, setBudgetMax] = useState<number>(8000);
-  const [selectedCityId, setSelectedCityId] = useState(defaultCities[0].id);
-  const [pincode, setPincode] = useState('560038');
+  const [selectedCityId, setSelectedCityId] = useState(matchedCity ? matchedCity.id : defaultCities[0].id);
+  const [pincode, setPincode] = useState('110001');
   const [preferredDate, setPreferredDate] = useState('');
   const [preferredTime, setPreferredTime] = useState('Morning (9 AM - 12 PM)');
   const [frequency, setFrequency] = useState('ONE_TIME');

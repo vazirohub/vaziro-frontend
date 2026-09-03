@@ -69,6 +69,26 @@ export const CreditsWalletPage: React.FC = () => {
     );
   }
 
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-md mx-auto my-24 p-8 bg-white rounded-3xl border border-neutral-200 text-center shadow-xl space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+          <Coins className="w-7 h-7" />
+        </div>
+        <h2 className="text-2xl font-black text-black">Sign In to View Wallet</h2>
+        <p className="text-xs text-neutral-500 leading-relaxed font-medium">
+          Please sign in to view your real-time credit balance, transaction history, and choose a recharge plan.
+        </p>
+        <button
+          onClick={() => openAuthModal('PROFESSIONAL')}
+          className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition"
+        >
+          Sign In / Register
+        </button>
+      </div>
+    );
+  }
+
   const balance = wallet?.balance ?? 10;
 
   return (

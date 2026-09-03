@@ -33,7 +33,7 @@ const LIFECYCLE_STEPS = [
 
 export const JobTrackerPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, isAuthenticated, openAuthModal } = useAuth();
 
   const [job, setJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
@@ -184,6 +184,24 @@ export const JobTrackerPage: React.FC = () => {
       <div className="max-w-5xl mx-auto py-16 px-4 text-center">
         <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-emerald-600 border-t-transparent"></div>
         <p className="mt-4 text-sm text-gray-500 font-medium">Loading service execution tracker...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="max-w-md mx-auto my-24 p-8 bg-white rounded-3xl border border-neutral-200 text-center shadow-xl space-y-4">
+        <ShieldCheck className="w-12 h-12 text-black mx-auto" />
+        <h2 className="text-2xl font-black text-black">Sign In Required</h2>
+        <p className="text-xs text-neutral-500 leading-relaxed font-medium">
+          Please sign in to your account to view this job milestone and tracking details.
+        </p>
+        <button
+          onClick={() => openAuthModal()}
+          className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition"
+        >
+          Sign In
+        </button>
       </div>
     );
   }

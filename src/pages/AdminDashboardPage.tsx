@@ -15,10 +15,13 @@ import {
   ToggleLeft,
   ToggleRight,
   Save,
+  Lock,
+  ShieldAlert,
 } from 'lucide-react';
 
 export const AdminDashboardPage: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading, openAuthModal } = useAuth();
+  const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
 
   const [metrics, setMetrics] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
@@ -63,8 +66,14 @@ export const AdminDashboardPage: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchAdminData();
-  }, []);
+    if (!isAuthLoading) {
+      if (isAuthenticated && isAdmin) {
+        fetchAdminData();
+      } else {
+        setLoading(false);
+      }
+    }
+  }, [isAuthenticated, isAdmin, isAuthLoading]);
 
   const handleReviewVerification = async (id: string, status: 'VERIFIED' | 'FAILED') => {
     try {
@@ -108,11 +117,41 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
 
-  if (loading) {
+  if (isAuthLoading || (loading && isAuthenticated && isAdmin)) {
     return (
-      <div className="max-w-6xl mx-auto py-16 px-4 text-center">
+      <div className="max-w-6xl mx-auto py-24 px-4 text-center">
         <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-emerald-600 border-t-transparent"></div>
-        <p className="mt-4 text-sm text-gray-500 font-medium">Loading Vaziro Administration Console...</p>
+        <p className="mt-4 text-sm text-neutral-500 font-medium">Verifying administrator authorization...</p>
+      </div>
+    );
+  }
+
+  // Strict public lockout: Only logged-in admin users can view the admin console
+  if (!isAuthenticated || !isAdmin) {
+    return (
+      <div className="min-h-[75vh] flex items-center justify-center p-4 bg-neutral-50">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-neutral-200 shadow-xl text-center space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center mx-auto shadow-sm">
+            <Lock className="w-8 h-8" />
+          </div>
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-200">
+              Restricted Area
+            </span>
+            <h1 className="text-2xl font-black text-black tracking-tight mt-3">
+              Administrator Access Required
+            </h1>
+            <p className="text-xs text-neutral-500 mt-1.5 leading-relaxed font-medium">
+              This administrative console is strictly private and restricted to authorized Vaziro operators. Please sign in with administrator credentials.
+            </p>
+          </div>
+          <button
+            onClick={() => openAuthModal('CUSTOMER')}
+            className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition"
+          >
+            Sign In as Administrator
+          </button>
+        </div>
       </div>
     );
   }
