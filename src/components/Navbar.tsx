@@ -27,9 +27,9 @@ export const Navbar: React.FC = () => {
           {/* Official Vaziro Brand Logo */}
           <Link to="/" className="flex items-center gap-3 group">
             <img
-              src="/logo.svg"
+              src="/logo.png"
               alt="Vaziro"
-              className="h-11 w-auto object-contain transition-transform group-hover:scale-[1.02]"
+              className="h-10 md:h-11 w-auto object-contain transition-transform group-hover:scale-[1.02]"
             />
           </Link>
 

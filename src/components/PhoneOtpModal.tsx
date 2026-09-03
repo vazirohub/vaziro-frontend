@@ -110,12 +110,8 @@ export const PhoneOtpModal: React.FC = () => {
           <img
             src="/logo.png"
             alt="Vaziro"
-            className="h-10 mx-auto object-contain mb-2"
+            className="h-10 mx-auto object-contain mb-3"
           />
-          <div className="inline-flex items-center gap-1 text-[11px] font-bold text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full mb-2">
-            <MapPin className="w-3 h-3 text-black" />
-            <span>Delhi • Noida • Gurugram • Ghaziabad • Greater Noida</span>
-          </div>
           <h3 className="text-2xl font-black text-black tracking-tight mt-1">
             {mode === 'LOGIN' ? 'Sign In to Vaziro' : 'Create an Account'}
           </h3>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { ShieldCheck, ArrowRight, CheckCircle2, Search, MapPin, Star, Sparkles, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowRight, CheckCircle2, Search, MapPin, Star, ShieldCheck, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const Hero: React.FC = () => {
@@ -14,7 +14,7 @@ export const Hero: React.FC = () => {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    navigate('/post-requirement');
+    navigate(`/post-requirement?city=${encodeURIComponent(selectedCity)}`);
   };
 
   return (
@@ -24,12 +24,7 @@ export const Hero: React.FC = () => {
           
           {/* LEFT CONTENT COLUMN */}
           <div className="lg:col-span-7 space-y-6 text-left">
-            {/* NCR Geographic Availability Pill */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-neutral-100 border border-neutral-300 text-neutral-900 text-xs font-bold tracking-wide uppercase shadow-sm">
-              <MapPin className="w-3.5 h-3.5 text-black" />
-              <span>Available in Delhi • Noida • Gurugram • Ghaziabad • Greater Noida</span>
-            </div>
-
+            
             {/* Urban Company Style Headline */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-black tracking-tight leading-[1.12]">
               Delhi NCR’s Verified{' '}
@@ -43,36 +38,33 @@ export const Hero: React.FC = () => {
               Post your service requirement across Delhi NCR, name your budget in ₹ INR, and compare transparent quotes from background-checked physiotherapists, nurses, cooks, trainers, and tutors.
             </p>
 
-            {/* 5 NCR City Selection Pills */}
-            <div className="space-y-2 pt-1">
-              <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider block">
-                Select Your NCR Service Zone:
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {ncrCities.map((city) => (
-                  <button
-                    key={city}
-                    onClick={() => setSelectedCity(city)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
-                      selectedCity === city
-                        ? 'bg-black text-white shadow-sm ring-2 ring-black/20'
-                        : 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-                    }`}
-                  >
-                    {city}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Search Bar */}
+            {/* Search Bar with Service Zone Dropdown inside the Get Quotes box */}
             <form onSubmit={handleSearchSubmit} className="pt-2">
               <div className="bg-white p-2 sm:p-2.5 rounded-2xl border-2 border-neutral-900 shadow-xl flex flex-col sm:flex-row items-center gap-2 max-w-xl">
-                <div className="flex items-center gap-2 px-3 py-1.5 border-b sm:border-b-0 sm:border-r border-neutral-200 w-full sm:w-auto text-xs font-bold text-neutral-800">
+                
+                {/* Select Your NCR Service Zone Dropdown */}
+                <div className="flex items-center gap-2 px-3 py-1.5 border-b sm:border-b-0 sm:border-r border-neutral-200 w-full sm:w-auto text-xs font-bold text-neutral-800 shrink-0">
                   <MapPin className="w-4 h-4 text-black shrink-0" />
-                  <span className="font-extrabold text-black">{selectedCity}</span>
+                  <div className="flex flex-col text-left">
+                    <span className="text-[9px] uppercase tracking-wider text-neutral-400 font-bold leading-none mb-0.5">
+                      NCR Service Zone
+                    </span>
+                    <select
+                      value={selectedCity}
+                      onChange={(e) => setSelectedCity(e.target.value)}
+                      aria-label="Select Your NCR Service Zone"
+                      className="bg-transparent text-xs font-black text-black focus:outline-none cursor-pointer pr-2"
+                    >
+                      {ncrCities.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
+                {/* Search Input */}
                 <div className="flex-1 flex items-center gap-2 px-3 w-full">
                   <Search className="w-4 h-4 text-neutral-400 shrink-0" />
                   <input
@@ -84,6 +76,7 @@ export const Hero: React.FC = () => {
                   />
                 </div>
 
+                {/* Get Quotes Button */}
                 <button
                   type="submit"
                   className="w-full sm:w-auto bg-black hover:bg-neutral-800 text-white text-xs font-bold px-6 py-3 rounded-xl transition flex items-center justify-center gap-1.5 shrink-0 shadow-md"

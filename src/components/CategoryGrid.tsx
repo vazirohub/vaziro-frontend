@@ -101,8 +101,8 @@ export const CategoryGrid: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black text-white text-xs font-black uppercase tracking-wider mb-3">
-              <MapPin className="w-3.5 h-3.5 text-amber-400" />
-              <span>Serving Delhi • Noida • Gurugram • Ghaziabad • Greater Noida</span>
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Verified Home & Personal Care</span>
             </div>
             <h2 className="text-3xl sm:text-4xl font-black text-black tracking-tight">
               Verified Personal & Healthcare Disciplines

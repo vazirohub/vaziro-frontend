@@ -12,9 +12,9 @@ export const Footer: React.FC = () => {
           <div className="lg:col-span-6 space-y-3">
             <Link to="/" className="inline-block">
               <img
-                src="/logo-white.svg"
+                src="/logo-white.png"
                 alt="Vaziro"
-                className="h-11 w-auto object-contain"
+                className="h-10 w-auto object-contain"
               />
             </Link>
             <p className="text-xs text-neutral-400 max-w-md leading-relaxed font-medium">
@@ -22,19 +22,13 @@ export const Footer: React.FC = () => {
             </p>
           </div>
 
-          <div className="lg:col-span-6 flex flex-col sm:flex-row items-start sm:items-center justify-start lg:justify-end gap-3">
-            <div className="bg-neutral-900 border border-neutral-800 px-4 py-2.5 rounded-2xl flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-emerald-400 shrink-0" />
-              <div className="text-[11px] font-bold text-white">
-                <span>Serving: Delhi • Noida • Gurugram • Ghaziabad • Greater Noida</span>
-              </div>
-            </div>
+          <div className="lg:col-span-6 flex items-center justify-start lg:justify-end">
             <Link
               to="/post-requirement"
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition flex items-center gap-1.5 shrink-0 shadow-sm"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 py-3 rounded-xl transition flex items-center gap-2 shrink-0 shadow-md"
             >
               <span>Post Requirement</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
         </div>
