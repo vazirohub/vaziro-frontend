@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { CreditWallet, CreditPlan } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +7,7 @@ import { Coins, Check, ShieldCheck, ArrowUpRight, ArrowDownLeft, Sparkles, Credi
 import { openRazorpayCheckout } from '../utils/razorpay';
 
 export const CreditsWalletPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user, isAuthenticated, openAuthModal } = useAuth();
 
   const [wallet, setWallet] = useState<CreditWallet | null>(null);
@@ -81,14 +82,15 @@ export const CreditsWalletPage: React.FC = () => {
       });
 
       if (verifyRes.data?.success) {
-        setMessage(`🎉 Payment Successful! Added +${plan.creditsCount} Credits to your Vaziro Wallet.`);
-        await fetchData();
+        navigate(
+          `/payment/success?paymentId=${encodeURIComponent(paymentResponse.razorpay_payment_id)}&orderId=${encodeURIComponent(paymentResponse.razorpay_order_id)}&amount=${plan.price}&planName=${encodeURIComponent(plan.name)}&type=credits`
+        );
       }
     } catch (err: any) {
       if (err.message?.includes('cancelled')) {
         setMessage('Payment was cancelled. No amount was charged.');
       } else {
-        alert(err.response?.data?.error?.message || err.message || 'Failed to complete credit purchase');
+        setMessage(err.response?.data?.error?.message || err.message || 'Failed to complete credit purchase');
       }
     } finally {
       setPurchasingPlan(null);

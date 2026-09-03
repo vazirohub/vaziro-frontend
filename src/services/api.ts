@@ -132,6 +132,8 @@ export const api = {
     }),
   releasePayment: (jobId: string) => apiClient.post<ApiResponse<any>>(`/payments/${jobId}/release`),
   getInvoice: (jobId: string) => apiClient.get<ApiResponse<any>>(`/payments/invoice/${jobId}`),
+  getPaymentTransactions: (params?: { search?: string; status?: string; page?: number; limit?: number }) =>
+    apiClient.get<ApiResponse<{ payments: any[]; pagination: any }>>('/payments/transactions', { params }),
 
   // Professional Profiles & Verification
   getMyProfessionalProfile: () => apiClient.get<ApiResponse<any>>('/professionals/me'),

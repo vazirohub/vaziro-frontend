@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Job } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -35,6 +35,7 @@ const LIFECYCLE_STEPS = [
 ];
 
 export const JobTrackerPage: React.FC = () => {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const { user, isAuthenticated, openAuthModal } = useAuth();
 
@@ -66,6 +67,9 @@ export const JobTrackerPage: React.FC = () => {
   const [invoiceModal, setInvoiceModal] = useState(false);
   const [invoiceData, setInvoiceData] = useState<any>(null);
 
+  // Payment button progression state
+  const [paymentState, setPaymentState] = useState<'IDLE' | 'CREATING' | 'PROCESSING' | 'SUCCESS' | 'FAILED'>('IDLE');
+
   const fetchJob = async () => {
     if (!id) return;
     try {
@@ -96,6 +100,7 @@ export const JobTrackerPage: React.FC = () => {
     if (!job) return;
     try {
       setPayingEscrow(true);
+      setPaymentState('CREATING');
       setEscrowMessage(null);
 
       // 1. Create order on backend
@@ -107,6 +112,7 @@ export const JobTrackerPage: React.FC = () => {
       const { orderId, amount, keyId, customerName, email, phone, paymentId: internalPaymentId } = orderRes.data.data;
 
       // 2. Open official Razorpay Checkout modal
+      setPaymentState('PROCESSING');
       const paymentResponse = await openRazorpayCheckout({
         keyId,
         orderId,
@@ -121,6 +127,7 @@ export const JobTrackerPage: React.FC = () => {
       });
 
       // 3. Cryptographically verify signature and secure funds in escrow
+      setPaymentState('PROCESSING');
       const verifyRes = await api.verifyJobPayment({
         orderId: paymentResponse.razorpay_order_id,
         paymentId: paymentResponse.razorpay_payment_id,
@@ -130,14 +137,17 @@ export const JobTrackerPage: React.FC = () => {
       });
 
       if (verifyRes.data?.success) {
-        setEscrowMessage('🎉 Escrow Payment Secured! Your funds are safely held until service completion.');
-        await fetchJob();
+        setPaymentState('SUCCESS');
+        navigate(
+          `/payment/success?paymentId=${encodeURIComponent(paymentResponse.razorpay_payment_id)}&orderId=${encodeURIComponent(paymentResponse.razorpay_order_id)}&amount=${job.agreedPrice}&jobId=${job.id}&type=job`
+        );
       }
     } catch (err: any) {
+      setPaymentState('FAILED');
       if (err.message?.includes('cancelled')) {
         setEscrowMessage('Payment was cancelled. You can deposit escrow whenever you are ready.');
       } else {
-        alert(err.response?.data?.error?.message || err.message || 'Payment failed.');
+        setEscrowMessage(err.response?.data?.error?.message || err.message || 'Payment failed.');
       }
     } finally {
       setPayingEscrow(false);
@@ -422,7 +432,15 @@ export const JobTrackerPage: React.FC = () => {
               className="w-full sm:w-auto shrink-0 bg-black hover:bg-neutral-800 active:scale-95 text-white font-black text-xs px-6 py-3.5 rounded-xl shadow-lg hover:shadow-xl transition flex items-center justify-center gap-2 border border-black cursor-pointer"
             >
               <CreditCard className="w-4 h-4 text-emerald-400" />
-              {payingEscrow ? 'Opening Razorpay...' : `Pay ₹${job.agreedPrice.toLocaleString('en-IN')} with Razorpay`}
+              {paymentState === 'CREATING'
+                ? 'Creating secure payment...'
+                : paymentState === 'PROCESSING'
+                ? 'Processing payment...'
+                : paymentState === 'SUCCESS'
+                ? 'Payment Successful'
+                : paymentState === 'FAILED'
+                ? 'Payment Failed — Retry'
+                : `Pay ₹${job.agreedPrice.toLocaleString('en-IN')} with Razorpay`}
             </button>
           </div>
         </div>

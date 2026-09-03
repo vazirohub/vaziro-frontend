@@ -28,6 +28,8 @@ import {
   Check,
   CreditCard,
   Phone,
+  AlertCircle,
+  Clock,
   Mail,
   ShieldAlert,
   FileText,
@@ -80,8 +82,11 @@ export const AdminDashboardPage: React.FC = () => {
   const [verifications, setVerifications] = useState<any[]>([]);
   const [settings, setSettings] = useState<any[]>([]);
   const [states, setStates] = useState<any[]>(defaultAdminLocations);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [paymentFilterStatus, setPaymentFilterStatus] = useState<string>('ALL');
+  const [paymentSearch, setPaymentSearch] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'metrics' | 'users' | 'marketplace' | 'verifications' | 'locations' | 'settings'>('users');
+  const [activeTab, setActiveTab] = useState<'metrics' | 'users' | 'marketplace' | 'verifications' | 'locations' | 'settings' | 'payments'>('users');
   const [marketplaceSubTab, setMarketplaceSubTab] = useState<'requirements' | 'jobs'>('requirements');
 
   // Filter & Search states
@@ -118,7 +123,7 @@ export const AdminDashboardPage: React.FC = () => {
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const [mRes, uRes, reqRes, jobsRes, vRes, sRes, statesRes] = await Promise.all([
+      const [mRes, uRes, reqRes, jobsRes, vRes, sRes, statesRes, payRes] = await Promise.all([
         api.getAdminMetrics().catch(() => null),
         api.getAdminUsers().catch(() => null),
         api.getAdminRequirements().catch(() => null),
@@ -126,6 +131,7 @@ export const AdminDashboardPage: React.FC = () => {
         api.getAdminVerifications().catch(() => null),
         api.getAdminSettings().catch(() => null),
         api.getAdminLocations().catch(() => null),
+        api.getPaymentTransactions().catch(() => null),
       ]);
 
       if (mRes?.data?.data) setMetrics(mRes.data.data);
@@ -133,6 +139,7 @@ export const AdminDashboardPage: React.FC = () => {
       if (reqRes?.data?.data) setRequirements(reqRes.data.data);
       if (jobsRes?.data?.data) setJobs(jobsRes.data.data);
       if (vRes?.data?.data) setVerifications(vRes.data.data);
+      if (payRes?.data?.data?.payments) setPayments(payRes.data.data.payments);
       if (sRes?.data?.data) {
         setSettings(sRes.data.data);
         const map: Record<string, string> = {};
@@ -509,6 +516,17 @@ export const AdminDashboardPage: React.FC = () => {
           }`}
         >
           <Settings className="w-4 h-4" /> Platform & Fees Rules
+        </button>
+
+        <button
+          onClick={() => setActiveTab('payments')}
+          className={`pb-3 px-4 text-xs font-bold transition border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+            activeTab === 'payments'
+              ? 'border-emerald-600 text-emerald-700'
+              : 'border-transparent text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <CreditCard className="w-4 h-4" /> Razorpay Payments & Ledgers ({payments.length})
         </button>
       </div>
 
@@ -1239,6 +1257,184 @@ export const AdminDashboardPage: React.FC = () => {
                 </div>
               ))
             )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 7: RAZORPAY PAYMENTS & TRANSACTIONS */}
+      {activeTab === 'payments' && (
+        <div className="space-y-6">
+          {/* Overview Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Total Transactions</span>
+              <p className="text-2xl font-black text-gray-900 mt-1">{payments.length}</p>
+              <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">Recorded in Ledger</span>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Captured / Paid</span>
+              <p className="text-2xl font-black text-emerald-600 mt-1">
+                {payments.filter((p) => ['CAPTURED', 'SECURED', 'PAID', 'RELEASED'].includes(p.status)).length}
+              </p>
+              <span className="text-[11px] text-gray-500 font-medium mt-1 block">Verified Server-Side</span>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Total Amount Captured</span>
+              <p className="text-2xl font-black text-gray-900 mt-1">
+                ₹{payments
+                  .filter((p) => ['CAPTURED', 'SECURED', 'PAID', 'RELEASED'].includes(p.status))
+                  .reduce((acc, curr) => acc + (curr.amount || 0), 0)
+                  .toLocaleString('en-IN')}
+              </p>
+              <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">Processed via Razorpay</span>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Failed / Incomplete</span>
+              <p className="text-2xl font-black text-rose-600 mt-1">
+                {payments.filter((p) => p.status === 'FAILED').length}
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium mt-1 block">Logged with Failure Code</span>
+            </div>
+          </div>
+
+          {/* Search & Status Toolbar */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex-1 w-full sm:w-auto relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search by Order ID, Razorpay Payment ID, Customer name or contact..."
+                value={paymentSearch}
+                onChange={(e) => setPaymentSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <select
+                value={paymentFilterStatus}
+                onChange={(e) => setPaymentFilterStatus(e.target.value)}
+                className="px-3 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="CAPTURED">CAPTURED / SECURED</option>
+                <option value="CREATED">CREATED / PENDING</option>
+                <option value="FAILED">FAILED</option>
+                <option value="RELEASED">RELEASED</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Payments Table */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 text-gray-500 font-bold border-b border-gray-200">
+                  <tr>
+                    <th className="py-3.5 px-4">Order Reference</th>
+                    <th className="py-3.5 px-4">Customer / User</th>
+                    <th className="py-3.5 px-4">Amount (₹)</th>
+                    <th className="py-3.5 px-4">Razorpay Identifiers</th>
+                    <th className="py-3.5 px-4">Payment Method</th>
+                    <th className="py-3.5 px-4">Status</th>
+                    <th className="py-3.5 px-4">Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
+                  {payments
+                    .filter((p) => {
+                      if (paymentFilterStatus !== 'ALL') {
+                        if (paymentFilterStatus === 'CAPTURED') {
+                          if (!['CAPTURED', 'SECURED', 'PAID', 'RELEASED'].includes(p.status)) return false;
+                        } else if (p.status !== paymentFilterStatus) {
+                          return false;
+                        }
+                      }
+                      if (paymentSearch.trim()) {
+                        const term = paymentSearch.toLowerCase();
+                        const matchOrder = p.orderId?.toLowerCase().includes(term);
+                        const matchRzpOrder = p.razorpayOrderId?.toLowerCase().includes(term);
+                        const matchRzpPay = p.razorpayPaymentId?.toLowerCase().includes(term);
+                        const matchName = `${p.user?.firstName} ${p.user?.lastName}`.toLowerCase().includes(term);
+                        const matchContact = p.contact?.includes(term) || p.email?.toLowerCase().includes(term);
+                        return matchOrder || matchRzpOrder || matchRzpPay || matchName || matchContact;
+                      }
+                      return true;
+                    })
+                    .map((p) => (
+                      <tr key={p.id} className="hover:bg-gray-50/80 transition">
+                        <td className="py-3 px-4">
+                          <span className="font-mono font-bold text-gray-900 block">{p.orderId || p.id.substring(0, 8)}</span>
+                          <span className="text-[10px] text-gray-400 capitalize">{p.description || 'Marketplace Service'}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-bold text-gray-900 block">
+                            {p.user ? `${p.user.firstName} ${p.user.lastName}` : (p.email || 'Direct User')}
+                          </span>
+                          <span className="text-[11px] text-gray-400 block">{p.contact || p.user?.phone || '—'}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-black text-gray-900 text-sm">₹{p.amount?.toLocaleString('en-IN')}</span>
+                          <span className="text-[10px] text-gray-400 block">INR</span>
+                        </td>
+                        <td className="py-3 px-4 font-mono text-[11px]">
+                          <span className="text-gray-900 block font-semibold select-all">
+                            {p.razorpayPaymentId || '—'}
+                          </span>
+                          <span className="text-[10px] text-gray-400 select-all">{p.razorpayOrderId || '—'}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="inline-flex items-center gap-1 font-bold text-gray-800">
+                            <CreditCard className="w-3.5 h-3.5 text-gray-400" />
+                            {p.paymentMethod || 'Razorpay'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                              ['CAPTURED', 'SECURED', 'PAID', 'RELEASED'].includes(p.status)
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : p.status === 'FAILED'
+                                ? 'bg-rose-100 text-rose-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {['CAPTURED', 'SECURED', 'PAID', 'RELEASED'].includes(p.status) ? (
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            ) : p.status === 'FAILED' ? (
+                              <AlertCircle className="w-3 h-3 text-rose-600" />
+                            ) : (
+                              <Clock className="w-3 h-3 text-amber-600" />
+                            )}
+                            {p.status}
+                          </span>
+                          {p.failureReason && (
+                            <span className="text-[10px] text-rose-600 block mt-0.5 max-w-xs truncate">
+                              {p.failureReason}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-[11px] text-gray-500 whitespace-nowrap">
+                          {new Date(p.createdAt).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </td>
+                      </tr>
+                    ))}
+                  {payments.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-gray-400 text-xs">
+                        No Razorpay transactions found yet. Live and test payments will populate here in real-time.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
