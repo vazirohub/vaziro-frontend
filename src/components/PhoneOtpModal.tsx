@@ -209,6 +209,10 @@ export const PhoneOtpModal: React.FC = () => {
               />
             </div>
 
+            <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-xs text-emerald-800 font-semibold">
+              <span>Demo Testing: Enter <strong>123456</strong> to verify</span>
+            </div>
+
             <button
               type="submit"
               disabled={isLoading || otp.length !== 6}
