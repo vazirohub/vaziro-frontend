@@ -4,106 +4,103 @@ import { TrustBadges } from '../components/TrustBadges';
 import { CategoryGrid } from '../components/CategoryGrid';
 import {
   ArrowRight,
-  CheckCircle2,
   ShieldCheck,
   Star,
-  Quote,
-  Sparkles,
-  TrendingUp,
-  Award,
-  PhoneCall,
+  MapPin,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const HomePage: React.FC = () => {
   const { openAuthModal } = useAuth();
 
-  const customerReviews = [
+  // Strictly Delhi NCR customer reviews with authentic Indian avatars
+  const ncrCustomerReviews = [
     {
-      name: 'Priya Narayanan',
-      city: 'Indiranagar, Bengaluru',
+      name: 'Pooja Aggarwal',
+      city: 'Greater Kailash, South Delhi',
       service: 'Elderly Caregiver',
       rating: 5,
       avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80',
       comment:
-        'Finding a trusted, police-verified caregiver for my 78-year-old mother used to take weeks through greedy brokers. On Vaziro, I posted my requirement and got 4 verified quotes within 3 hours. The DigiLocker KYC gave our family absolute peace of mind.',
+        'Finding a reliable, police-verified caregiver for my elderly mother in South Delhi was effortless on Vaziro. Received 4 quotes within 2 hours. DigiLocker KYC gave our family 100% peace of mind.',
     },
     {
-      name: 'Aditya & Neha Deshmukh',
-      city: 'Powai, Mumbai',
+      name: 'Rajat & Megha Bansal',
+      city: 'Sector 50, Noida',
       service: 'Home Cook / Chef',
       rating: 5,
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
       comment:
-        'The reverse auction format is brilliant. We set our monthly budget at ₹7,500 for South Indian & Jain cooking. We compared menus, previous customer ratings, and hired Chef Ramesh. Zero middleman commission!',
+        'The reverse auction format saved us 35% compared to local Noida agencies. We set our budget at ₹6,500/month for vegetarian cooking and hired Chef Manoj. Completely commission-free!',
     },
     {
-      name: 'Dr. Kavita Kulkarni',
-      city: 'Kalyani Nagar, Pune',
+      name: 'Siddharth Rao',
+      city: 'Golf Course Road, Gurugram',
       service: 'Physiotherapist',
       rating: 5,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
       comment:
-        'Post-knee surgery rehab required a licensed BPT specialist. Dr. Arvind was punctual, deeply knowledgeable, and having the payment held in Vaziro Escrow until completion made the whole process stress-free.',
+        'Post-ACL reconstruction rehab at home in Gurugram. Dr. Neeraj was exceptionally skilled and punctual. Vaziro’s 6% escrow held my funds safely until each weekly session was completed.',
     },
   ];
 
-  const featuredPartners = [
+  // Strictly Indian service professionals across Delhi NCR
+  const featuredNcrPartners = [
     {
-      name: 'Dr. Arvind Mehta, BPT',
-      role: 'Clinical Physiotherapist',
+      name: 'Dr. Neeraj Sharma, BPT',
+      role: 'Senior Clinical Physiotherapist',
       exp: '9 Years Exp',
-      location: 'HSR Layout, Bengaluru',
+      location: 'South Delhi & Gurugram',
       rating: '4.98',
-      jobs: '420+ Sessions',
-      photo: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80',
-      quote: 'Vaziro eliminated agency cuts. I keep 100% of my consultation fees and only pay nominal credits to apply for relevant home visits.',
+      jobs: '480+ Sessions',
+      photo: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=600&q=80',
+      quote: 'Vaziro eliminated extortionate agency cuts in NCR. I keep 100% of my consultation fees and pay small credits only when applying for home visits.',
     },
     {
-      name: 'Smt. Rajeshwariamma',
-      role: 'Newborn Care & Nanny',
-      exp: '11 Years Exp',
-      location: 'Bandra West, Mumbai',
+      name: 'Smt. Sunita Devi',
+      role: 'Newborn Care Specialist & Japa',
+      exp: '12 Years Exp',
+      location: 'Noida & Greater Noida',
       rating: '4.96',
-      jobs: '310+ Families',
-      photo: 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=600&q=80',
-      quote: 'Government DigiLocker verification immediately established trust with high-profile families. My monthly earnings have doubled.',
+      jobs: '340+ Families',
+      photo: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=600&q=80',
+      quote: 'DigiLocker verification instantly built trust with young working couples across Noida and Greater Noida. My bookings are filled months in advance.',
     },
     {
-      name: 'Vikramjit Singh',
-      role: 'Elite Personal Fitness Coach',
-      exp: '7 Years Exp',
-      location: 'Gurugram, Delhi NCR',
-      rating: '4.94',
-      jobs: '560+ Clients',
+      name: 'Harpreet Singh',
+      role: 'Certified Strength & Rehab Coach',
+      exp: '8 Years Exp',
+      location: 'Delhi & Ghaziabad',
+      rating: '4.95',
+      jobs: '510+ Clients',
       photo: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=600&q=80',
-      quote: 'Direct chat and privacy-masked calls allow me to understand client fitness goals and give accurate package proposals quickly.',
+      quote: 'In-app chat and privacy-masked calls allow me to coordinate home training schedules easily without sharing personal phone numbers.',
     },
   ];
 
   return (
     <div className="bg-white">
-      {/* Hero Section with Live Real Photography & Floating Metrics */}
+      {/* Hero Section with Live Indian Photography & Delhi NCR City Selector */}
       <Hero />
 
       {/* Trust & Guarantee Badges */}
       <TrustBadges />
 
-      {/* 8-Category Grid with Real Photography Cards */}
+      {/* 8-Category Grid with Real Indian Photography Cards */}
       <CategoryGrid />
 
-      {/* HOW IT WORKS: 3-Step Seamless Reverse Auction Process */}
+      {/* HOW IT WORKS: 3-Step Reverse Auction Process */}
       <section id="how-it-works" className="py-20 bg-white border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <span className="text-xs font-black uppercase tracking-wider text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full">
-              Transparent Marketplace Architecture
+              Transparent NCR Marketplace
             </span>
             <h2 className="text-3xl sm:text-4xl font-black text-black tracking-tight mt-3">
               How the Vaziro Reverse Auction Works
             </h2>
             <p className="mt-3 text-sm text-neutral-600 font-medium">
-              You name your requirements and budget. Verified independent professionals compete transparently to win your business.
+              State your service requirement and budget. Verified independent professionals compete transparently to win your business.
             </p>
           </div>
 
@@ -114,7 +111,7 @@ export const HomePage: React.FC = () => {
               </div>
               <h3 className="text-xl font-black text-black mb-2">Post Your Requirement</h3>
               <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-                Describe your service needs, specify your city/pincode, and define your fixed price or flexible budget range in ₹ INR.
+                Choose your NCR location (Delhi, Noida, Gurugram, Ghaziabad, or Greater Noida), describe your needs, and set your budget in ₹ INR.
               </p>
             </div>
 
@@ -124,7 +121,7 @@ export const HomePage: React.FC = () => {
               </div>
               <h3 className="text-xl font-black text-black mb-2">Compare Verified Quotes</h3>
               <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-                Background-checked pros spend platform credits to submit detailed proposals. Compare their AI compatibility match, experience, and pricing.
+                Background-checked pros spend platform credits to submit proposals. Compare their AI compatibility match, experience, and pricing.
               </p>
             </div>
 
@@ -144,19 +141,19 @@ export const HomePage: React.FC = () => {
               onClick={() => openAuthModal('CUSTOMER')}
               className="inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white px-8 py-4 rounded-xl font-bold text-sm shadow-md transition"
             >
-              <span>Post a Requirement Now</span>
+              <span>Post a Requirement in Delhi NCR</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       </section>
 
-      {/* MEET OUR VERIFIED SERVICE PARTNERS (Real Professionals Showcase) */}
+      {/* MEET OUR VERIFIED SERVICE PARTNERS (Indian Professionals Showcase) */}
       <section className="py-20 bg-neutral-50 border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <span className="text-xs font-black uppercase tracking-wider text-black bg-neutral-200 px-3 py-1 rounded-full">
-              Certified Service Excellence
+              Delhi NCR Certified Excellence
             </span>
             <h2 className="text-3xl sm:text-4xl font-black text-black tracking-tight mt-3">
               Meet Top-Rated Vaziro Professionals
@@ -167,19 +164,19 @@ export const HomePage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {featuredPartners.map((partner, i) => (
+            {featuredNcrPartners.map((partner, i) => (
               <div
                 key={i}
                 className="bg-white rounded-3xl overflow-hidden border border-neutral-200 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
               >
-                <div className="relative h-60 w-full overflow-hidden bg-neutral-900">
+                <div className="relative h-64 w-full overflow-hidden bg-neutral-900">
                   <img
                     src={partner.photo}
                     alt={partner.name}
                     className="w-full h-full object-cover object-center"
                     loading="lazy"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
                   
                   <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-1 text-xs font-black text-black shadow-md">
                     <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
@@ -224,23 +221,23 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* REAL CUSTOMER STORIES (Authentic Social Proof) */}
+      {/* REAL CUSTOMER STORIES (Delhi NCR Social Proof) */}
       <section className="py-20 bg-white border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <span className="text-xs font-black uppercase tracking-wider text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full">
-              Trusted by 15,000+ Indian Households
+              Trusted Across Delhi NCR
             </span>
             <h2 className="text-3xl sm:text-4xl font-black text-black tracking-tight mt-3">
-              Real Experiences, Verified Outcomes
+              Real Experiences from NCR Households
             </h2>
             <p className="mt-2 text-sm text-neutral-600 font-medium">
-              Read honest feedback from customers who hired through Vaziro's reverse auction platform.
+              Read honest feedback from families in Delhi, Noida, Gurugram, Ghaziabad & Greater Noida.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {customerReviews.map((rev, i) => (
+            {ncrCustomerReviews.map((rev, i) => (
               <div
                 key={i}
                 className="p-8 rounded-3xl bg-neutral-50 border border-neutral-200 flex flex-col justify-between hover:border-black transition"
@@ -282,10 +279,10 @@ export const HomePage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-14">
             <span className="text-xs font-black uppercase tracking-wider text-neutral-400 bg-neutral-800 px-3 py-1 rounded-full">
-              The Vaziro Advantage
+              The Vaziro NCR Advantage
             </span>
             <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight mt-3">
-              Why Indian Families Choose Vaziro
+              Why Delhi NCR Chooses Vaziro
             </h2>
           </div>
 
@@ -316,7 +313,7 @@ export const HomePage: React.FC = () => {
             {/* Vaziro Platform */}
             <div className="p-8 rounded-3xl bg-neutral-900 border-2 border-white shadow-2xl relative">
               <div className="absolute -top-3.5 right-6 text-[10px] font-black uppercase tracking-wider bg-white text-black px-3 py-1 rounded-full shadow-lg">
-                Verified Marketplace
+                Verified NCR Marketplace
               </div>
               <h4 className="text-base font-bold text-white mb-4 uppercase tracking-wider">Vaziro Reverse Auction</h4>
               <ul className="space-y-3.5 text-xs text-neutral-200">
@@ -346,10 +343,10 @@ export const HomePage: React.FC = () => {
       <section className="py-16 bg-neutral-100 border-t border-neutral-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
           <h3 className="text-2xl sm:text-3xl font-black text-black">
-            Are You a Certified Professional? Join India’s Best Network.
+            Are You a Certified Professional in Delhi NCR? Join India’s Best Network.
           </h3>
           <p className="text-xs sm:text-sm text-neutral-600 max-w-xl mx-auto">
-            Get more clients without giving up a percentage of your hard-earned income. Keep 100% of your earnings.
+            Get more clients across Delhi, Noida, Gurugram, Ghaziabad & Greater Noida. Keep 100% of your earnings.
           </p>
           <div className="pt-2">
             <button

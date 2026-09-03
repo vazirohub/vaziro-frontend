@@ -35,14 +35,14 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 const categoryThumbnails: Record<string, string> = {
-  'elderly-caregiver': 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=400&q=80',
+  'elderly-caregiver': 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=400&q=80',
   'fitness-trainer': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=400&q=80',
-  'home-cook-chef': 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=400&q=80',
-  'home-nurse': 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=400&q=80',
-  'home-tutor': 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=400&q=80',
-  'nanny-baby-care': 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=400&q=80',
-  'physiotherapist': 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=400&q=80',
-  'yoga-instructor': 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?auto=format&fit=crop&w=400&q=80',
+  'home-cook-chef': 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=400&q=80',
+  'home-nurse': 'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?auto=format&fit=crop&w=400&q=80',
+  'home-tutor': 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=400&q=80',
+  'nanny-baby-care': 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=400&q=80',
+  'physiotherapist': 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=400&q=80',
+  'yoga-instructor': 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=400&q=80',
 };
 
 // Complete offline-ready fallback catalog so page never displays an error even before backend wakes up
@@ -167,11 +167,11 @@ const defaultMasterCategories: Category[] = [
 ];
 
 const defaultCities: City[] = [
-  { id: 'city-1', stateId: 'KA', name: 'Bengaluru', slug: 'bengaluru', isActive: true },
-  { id: 'city-2', stateId: 'MH', name: 'Mumbai', slug: 'mumbai', isActive: true },
-  { id: 'city-3', stateId: 'MH', name: 'Pune', slug: 'pune', isActive: true },
-  { id: 'city-4', stateId: 'DL', name: 'Delhi NCR', slug: 'delhi-ncr', isActive: true },
-  { id: 'city-5', stateId: 'TS', name: 'Hyderabad', slug: 'hyderabad', isActive: true },
+  { id: 'city-delhi', stateId: 'DL', name: 'Delhi', slug: 'delhi', isActive: true },
+  { id: 'city-noida', stateId: 'UP', name: 'Noida', slug: 'noida', isActive: true },
+  { id: 'city-gurugram', stateId: 'HR', name: 'Gurugram', slug: 'gurugram', isActive: true },
+  { id: 'city-ghaziabad', stateId: 'UP', name: 'Ghaziabad', slug: 'ghaziabad', isActive: true },
+  { id: 'city-greaternoida', stateId: 'UP', name: 'Greater Noida', slug: 'greater-noida', isActive: true },
 ];
 
 export const PostRequirementPage: React.FC = () => {

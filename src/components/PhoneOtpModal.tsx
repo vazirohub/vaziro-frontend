@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ShieldCheck, Phone, ArrowRight, Loader2, Lock, User as UserIcon, Mail, Eye, EyeOff } from 'lucide-react';
+import { X, Loader2, Eye, EyeOff, ShieldCheck, MapPin } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const PhoneOtpModal: React.FC = () => {
@@ -11,6 +11,7 @@ export const PhoneOtpModal: React.FC = () => {
   // Form Fields
   const [name, setName] = useState('');
   const [identifier, setIdentifier] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -23,6 +24,7 @@ export const PhoneOtpModal: React.FC = () => {
     setMode('LOGIN');
     setName('');
     setIdentifier('');
+    setPhone('');
     setEmail('');
     setPassword('');
     setErrorMessage(null);
@@ -34,7 +36,8 @@ export const PhoneOtpModal: React.FC = () => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!identifier.trim()) {
+    const cleanIdentifier = identifier.trim();
+    if (!cleanIdentifier) {
       setErrorMessage('Please enter your registered mobile number or email.');
       return;
     }
@@ -46,9 +49,9 @@ export const PhoneOtpModal: React.FC = () => {
 
     try {
       setIsLoading(true);
-      await login(identifier.trim(), password);
+      await login(cleanIdentifier, password);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Invalid mobile number/email or password.');
+      setErrorMessage(err.message || 'Invalid mobile/email or password.');
     } finally {
       setIsLoading(false);
     }
@@ -59,11 +62,11 @@ export const PhoneOtpModal: React.FC = () => {
     setErrorMessage(null);
 
     if (!name.trim() || name.trim().length < 2) {
-      setErrorMessage('Full Name is strictly required (minimum 2 characters).');
+      setErrorMessage('Full Name is required (minimum 2 characters).');
       return;
     }
 
-    const cleanPhone = identifier.replace(/\D/g, '');
+    const cleanPhone = phone.replace(/\D/g, '');
     if (cleanPhone.length !== 10) {
       setErrorMessage('Please enter a valid 10-digit Indian mobile number.');
       return;
@@ -78,7 +81,7 @@ export const PhoneOtpModal: React.FC = () => {
       setIsLoading(true);
       await register({
         name: name.trim(),
-        phone: identifier.trim(),
+        phone: cleanPhone,
         email: email.trim() || undefined,
         password,
         role,
@@ -90,61 +93,51 @@ export const PhoneOtpModal: React.FC = () => {
     }
   };
 
-  const handleQuickFill = (userType: 'ADMIN' | 'CUSTOMER' | 'PROFESSIONAL') => {
-    setMode('LOGIN');
-    setErrorMessage(null);
-    if (userType === 'ADMIN') {
-      setIdentifier('admin@vaziro.in');
-      setPassword('VaziroAdmin2026!');
-    } else if (userType === 'CUSTOMER') {
-      setIdentifier('9999988888');
-      setPassword('VaziroPass2026!');
-    } else {
-      setIdentifier('9876543210');
-      setPassword('VaziroPass2026!');
-    }
-  };
-
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="relative bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl border border-neutral-200 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="relative bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-neutral-200 animate-in fade-in zoom-in-95 duration-200">
+        
         {/* Close Button */}
         <button
           onClick={closeAuthModal}
-          className="absolute top-5 right-5 text-neutral-400 hover:text-black p-1.5 rounded-full hover:bg-neutral-100 transition"
+          className="absolute top-5 right-5 text-neutral-400 hover:text-black p-2 rounded-full hover:bg-neutral-100 transition"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Logo & Header */}
+        {/* Logo & Brand Header */}
         <div className="text-center mb-6">
           <img
             src="/logo.png"
             alt="Vaziro"
-            className="h-10 mx-auto object-contain mb-3"
+            className="h-10 mx-auto object-contain mb-2"
           />
-          <h3 className="text-2xl font-black text-black tracking-tight">
-            {mode === 'LOGIN' ? 'Sign in to Vaziro' : 'Create an Account'}
+          <div className="inline-flex items-center gap-1 text-[11px] font-bold text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full mb-2">
+            <MapPin className="w-3 h-3 text-black" />
+            <span>Delhi • Noida • Gurugram • Ghaziabad • Greater Noida</span>
+          </div>
+          <h3 className="text-2xl font-black text-black tracking-tight mt-1">
+            {mode === 'LOGIN' ? 'Sign In to Vaziro' : 'Create an Account'}
           </h3>
-          <p className="text-xs text-neutral-500 mt-1">
+          <p className="text-xs text-neutral-500 mt-0.5">
             {mode === 'LOGIN'
-              ? 'Enter your mobile number or email and password'
-              : 'Join India’s trusted home & personal care marketplace'}
+              ? 'Enter your mobile number or email to access your account'
+              : 'Join Delhi NCR’s verified home & personal care platform'}
           </p>
         </div>
 
-        {/* Mode Toggle Tabs (Urban Company style) */}
-        <div className="flex border-b border-neutral-200 mb-6">
+        {/* Mode Switcher Tabs */}
+        <div className="flex bg-neutral-100 p-1 rounded-2xl mb-6">
           <button
             type="button"
             onClick={() => {
               setMode('LOGIN');
               setErrorMessage(null);
             }}
-            className={`flex-1 pb-3 text-sm font-bold transition-all border-b-2 text-center ${
+            className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all ${
               mode === 'LOGIN'
-                ? 'border-black text-black'
-                : 'border-transparent text-neutral-400 hover:text-neutral-700'
+                ? 'bg-white text-black shadow-sm'
+                : 'text-neutral-500 hover:text-black'
             }`}
           >
             Sign In
@@ -155,40 +148,39 @@ export const PhoneOtpModal: React.FC = () => {
               setMode('REGISTER');
               setErrorMessage(null);
             }}
-            className={`flex-1 pb-3 text-sm font-bold transition-all border-b-2 text-center ${
+            className={`flex-1 py-2.5 text-xs font-black rounded-xl transition-all ${
               mode === 'REGISTER'
-                ? 'border-black text-black'
-                : 'border-transparent text-neutral-400 hover:text-neutral-700'
+                ? 'bg-white text-black shadow-sm'
+                : 'text-neutral-500 hover:text-black'
             }`}
           >
             New Account
           </button>
         </div>
 
+        {/* Error Notification */}
         {errorMessage && (
-          <div className="mb-5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold leading-relaxed">
+          <div className="mb-5 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold leading-relaxed">
             {errorMessage}
           </div>
         )}
 
-        {/* LOGIN FORM */}
+        {/* SIGN IN FORM */}
         {mode === 'LOGIN' ? (
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
                 Mobile Number or Email *
               </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="e.g. 9876543210 or admin@vaziro.in"
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
-                  required
-                  autoFocus
-                />
-              </div>
+              <input
+                type="text"
+                placeholder="e.g. 9876543210 or admin@vaziro.in"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+                required
+                autoFocus
+              />
             </div>
 
             <div>
@@ -217,45 +209,15 @@ export const PhoneOtpModal: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-xl font-bold text-sm shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
+              className="w-full bg-black hover:bg-neutral-800 text-white py-4 rounded-2xl font-black text-sm shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-3"
             >
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Sign In</span>}
             </button>
-
-            {/* Quick Demo Access Bar */}
-            <div className="pt-4 border-t border-neutral-100">
-              <span className="block text-[11px] font-bold text-neutral-400 uppercase tracking-wider text-center mb-2">
-                Quick Demo Login
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('ADMIN')}
-                  className="py-1.5 px-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-lg text-[11px] font-bold transition"
-                >
-                  👑 Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('CUSTOMER')}
-                  className="py-1.5 px-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-lg text-[11px] font-bold transition"
-                >
-                  👤 Customer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickFill('PROFESSIONAL')}
-                  className="py-1.5 px-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 rounded-lg text-[11px] font-bold transition"
-                >
-                  💼 Partner
-                </button>
-              </div>
-            </div>
           </form>
         ) : (
-          /* REGISTRATION FORM */
+          /* CREATE ACCOUNT FORM */
           <form onSubmit={handleRegister} className="space-y-4">
-            {/* Account Role Toggle */}
+            {/* Account Role Selector */}
             <div className="grid grid-cols-2 gap-2 p-1 bg-neutral-100 rounded-xl mb-4">
               <button
                 type="button"
@@ -282,53 +244,54 @@ export const PhoneOtpModal: React.FC = () => {
               <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
                 Full Name <span className="text-red-600 font-black">* (Required)</span>
               </label>
-              <div className="relative flex items-center">
-                <input
-                  type="text"
-                  placeholder="e.g. Rahul Sharma"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
-                  required
-                  autoFocus
-                />
-              </div>
+              <input
+                type="text"
+                placeholder="e.g. Rahul Sharma"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+                required
+                autoFocus
+              />
             </div>
 
+            {/* Mobile Number - Clean separate prefix */}
             <div>
               <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                Mobile Number <span className="text-red-600 font-black">* (Required)</span>
+                Mobile Number <span className="text-red-600 font-black">* (10-Digit Mobile)</span>
               </label>
-              <div className="relative flex items-center">
-                <div className="absolute left-3.5 flex items-center gap-1 text-sm font-bold text-neutral-600 border-r border-neutral-200 pr-2.5">
+              <div className="flex rounded-xl border border-neutral-300 overflow-hidden focus-within:ring-2 focus-within:ring-black focus-within:border-black transition">
+                <span className="bg-neutral-100 text-neutral-700 px-3.5 py-3 text-sm font-bold flex items-center gap-1 border-r border-neutral-300 shrink-0 select-none">
                   <span>🇮🇳</span>
                   <span>+91</span>
-                </div>
+                </span>
                 <input
                   type="tel"
                   placeholder="98765 43210"
                   maxLength={10}
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value.replace(/\D/g, ''))}
-                  className="w-full pl-22 pr-4 py-3 rounded-xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                  className="w-full px-4 py-3 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none"
                   required
                 />
               </div>
             </div>
 
+            {/* Email Address */}
             <div>
               <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-1.5">
                 Email Address (Optional)
               </label>
               <input
                 type="email"
-                placeholder="rahul@example.com"
+                placeholder="e.g. rahul@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
               />
             </div>
 
+            {/* Password */}
             <div>
               <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
                 Create Password <span className="text-red-600 font-black">* (Min 6 chars)</span>
@@ -336,7 +299,7 @@ export const PhoneOtpModal: React.FC = () => {
               <div className="relative flex items-center">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Create a strong password"
+                  placeholder="Choose a secure password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 pr-11 rounded-xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black focus:border-black transition"
@@ -356,12 +319,13 @@ export const PhoneOtpModal: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-xl font-bold text-sm shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
+              className="w-full bg-black hover:bg-neutral-800 text-white py-4 rounded-2xl font-black text-sm shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-3"
             >
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Create Account & Continue</span>}
             </button>
           </form>
         )}
+
       </div>
     </div>
   );
