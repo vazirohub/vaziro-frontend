@@ -13,6 +13,11 @@ import { JobTrackerPage } from './pages/JobTrackerPage';
 import { CreditsWalletPage } from './pages/CreditsWalletPage';
 import { ChatPage } from './pages/ChatPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
+import { AboutUsPage } from './pages/AboutUsPage';
+import { TermsPage } from './pages/TermsPage';
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { RefundPolicyPage } from './pages/RefundPolicyPage';
+import { DisclaimerPage } from './pages/DisclaimerPage';
 
 export const App: React.FC = () => {
   return (
@@ -31,6 +36,14 @@ export const App: React.FC = () => {
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/admin" element={<AdminDashboardPage />} />
+              
+              {/* Corporate and Legal Policy Pages */}
+              <Route path="/about" element={<AboutUsPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPolicyPage />} />
+              <Route path="/refund-policy" element={<RefundPolicyPage />} />
+              <Route path="/disclaimer" element={<DisclaimerPage />} />
+
               <Route path="*" element={<HomePage />} />
             </Routes>
           </main>
