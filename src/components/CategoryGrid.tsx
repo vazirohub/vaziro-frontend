@@ -3,40 +3,79 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { Category } from '../types';
 import {
-  HeartHandshake,
-  Dumbbell,
-  ChefHat,
-  Cross,
-  GraduationCap,
-  Baby,
-  Activity,
-  Sparkles,
   ArrowRight,
   Star,
   ShieldCheck,
+  Award,
+  Sparkles,
+  Users,
 } from 'lucide-react';
 
-const iconMap: Record<string, React.ReactNode> = {
-  HeartHandshake: <HeartHandshake className="w-5 h-5" />,
-  Dumbbell: <Dumbbell className="w-5 h-5" />,
-  ChefHat: <ChefHat className="w-5 h-5" />,
-  Cross: <Cross className="w-5 h-5" />,
-  GraduationCap: <GraduationCap className="w-5 h-5" />,
-  Baby: <Baby className="w-5 h-5" />,
-  Activity: <Activity className="w-5 h-5" />,
-  Sparkles: <Sparkles className="w-5 h-5" />,
-};
+interface CategoryPhotoMeta {
+  photo: string;
+  rating: string;
+  reviews: string;
+  startingPrice: string;
+  badge: string;
+}
 
-// Ratings to simulate Urban Company verified service metrics
-const categoryMeta: Record<string, { rating: string; reviews: string; startingPrice: string }> = {
-  'elderly-caregiver': { rating: '4.89', reviews: '3,840', startingPrice: '₹12,000/mo' },
-  'fitness-trainer': { rating: '4.92', reviews: '5,120', startingPrice: '₹800/session' },
-  'home-cook-chef': { rating: '4.86', reviews: '7,450', startingPrice: '₹6,000/mo' },
-  'home-nurse': { rating: '4.94', reviews: '2,980', startingPrice: '₹1,500/day' },
-  'home-tutor': { rating: '4.91', reviews: '4,610', startingPrice: '₹500/hr' },
-  'nanny-baby-care': { rating: '4.88', reviews: '6,230', startingPrice: '₹14,000/mo' },
-  'physiotherapist': { rating: '4.95', reviews: '4,890', startingPrice: '₹900/visit' },
-  'yoga-instructor': { rating: '4.90', reviews: '3,410', startingPrice: '₹700/session' },
+const categoryPhotoMap: Record<string, CategoryPhotoMeta> = {
+  'elderly-caregiver': {
+    photo: 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=800&q=80',
+    rating: '4.92',
+    reviews: '3,840',
+    startingPrice: '₹12,000/mo',
+    badge: 'High Demand',
+  },
+  'fitness-trainer': {
+    photo: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=80',
+    rating: '4.95',
+    reviews: '5,120',
+    startingPrice: '₹800/session',
+    badge: 'Certified Trainers',
+  },
+  'home-cook-chef': {
+    photo: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80',
+    rating: '4.88',
+    reviews: '7,450',
+    startingPrice: '₹6,000/mo',
+    badge: 'Hygiene Certified',
+  },
+  'home-nurse': {
+    photo: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=800&q=80',
+    rating: '4.96',
+    reviews: '2,980',
+    startingPrice: '₹1,500/day',
+    badge: 'Clinical Grade',
+  },
+  'home-tutor': {
+    photo: 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?auto=format&fit=crop&w=800&q=80',
+    rating: '4.91',
+    reviews: '4,610',
+    startingPrice: '₹500/hr',
+    badge: 'Top Educators',
+  },
+  'nanny-baby-care': {
+    photo: 'https://images.unsplash.com/photo-1516627145497-ae6968895b74?auto=format&fit=crop&w=800&q=80',
+    rating: '4.89',
+    reviews: '6,230',
+    startingPrice: '₹14,000/mo',
+    badge: 'Police Verified',
+  },
+  'physiotherapist': {
+    photo: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=800&q=80',
+    rating: '4.97',
+    reviews: '4,890',
+    startingPrice: '₹900/visit',
+    badge: 'BPT / MPT Doctors',
+  },
+  'yoga-instructor': {
+    photo: 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?auto=format&fit=crop&w=800&q=80',
+    rating: '4.93',
+    reviews: '3,410',
+    startingPrice: '₹700/session',
+    badge: 'Yoga Alliance',
+  },
 };
 
 export const CategoryGrid: React.FC = () => {
@@ -58,103 +97,128 @@ export const CategoryGrid: React.FC = () => {
   return (
     <section id="categories" className="py-20 bg-neutral-50 border-b border-neutral-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header (Urban Company Style) */}
+        
+        {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
           <div>
-            <span className="text-xs font-black uppercase tracking-wider text-neutral-500 bg-neutral-200 px-3 py-1 rounded-full">
-              Explore Our 8 Service Domains
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-black text-black tracking-tight mt-3">
-              Verified Personal & Home Services
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black text-white text-xs font-black uppercase tracking-wider mb-3">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Explore Verified Disciplines</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-black text-black tracking-tight">
+              Select Your Service Category
             </h2>
-            <p className="mt-2 text-sm text-neutral-600 max-w-xl">
-              Select a category to post your requirement and compare verified quotes from background-checked professionals.
+            <p className="mt-2 text-sm text-neutral-600 max-w-2xl font-medium">
+              Every category is backed by certified independent professionals. Post your exact scope and receive competitive reverse-auction quotes in minutes.
             </p>
           </div>
 
           <button
             onClick={() => navigate('/post-requirement')}
-            className="mt-4 md:mt-0 text-xs font-bold text-black hover:underline flex items-center gap-1.5 shrink-0"
+            className="mt-4 md:mt-0 text-xs font-extrabold text-black hover:underline flex items-center gap-1.5 shrink-0"
           >
-            <span>View All 48 Subcategories</span>
+            <span>Browse All 48 Subdisciplines</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Loading State */}
+        {/* Loading Skeleton */}
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-72 rounded-2xl bg-neutral-200 animate-pulse" />
+              <div key={i} className="h-96 rounded-2xl bg-neutral-200 animate-pulse" />
             ))}
           </div>
         ) : (
-          /* High Quality Urban Company Grid */
+          /* Real Photography Cards Grid */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {categories.map((cat) => {
-              const meta = categoryMeta[cat.slug] || { rating: '4.9', reviews: '2,500', startingPrice: '₹500' };
+              const meta = categoryPhotoMap[cat.slug] || {
+                photo: 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=800&q=80',
+                rating: '4.9',
+                reviews: '2,500',
+                startingPrice: '₹500',
+                badge: 'Verified',
+              };
 
               return (
                 <div
                   key={cat.id}
-                  className="group relative bg-white rounded-2xl p-6 border border-neutral-200 shadow-sm hover:shadow-xl hover:border-black transition-all duration-200 flex flex-col justify-between"
+                  onClick={() => navigate('/post-requirement')}
+                  className="group cursor-pointer bg-white rounded-2xl overflow-hidden border border-neutral-200 shadow-sm hover:shadow-2xl hover:border-black transition-all duration-300 flex flex-col justify-between"
                 >
-                  <div>
-                    {/* Icon & Rating Badge */}
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-12 h-12 rounded-xl bg-neutral-100 text-black flex items-center justify-center font-bold group-hover:bg-black group-hover:text-white transition-colors">
-                        {iconMap[cat.icon] || <Sparkles className="w-6 h-6" />}
-                      </div>
+                  {/* Photo Header */}
+                  <div className="relative h-48 w-full overflow-hidden bg-neutral-900">
+                    <img
+                      src={meta.photo}
+                      alt={cat.name}
+                      className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-500 ease-out"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
-                      <div className="flex items-center gap-1 text-[11px] font-extrabold text-black bg-neutral-100 px-2.5 py-1 rounded-lg">
-                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                    {/* Top Pill Badges */}
+                    <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-wider bg-black/80 backdrop-blur-md text-white px-2.5 py-1 rounded-full border border-white/20">
+                        {meta.badge}
+                      </span>
+                      <div className="flex items-center gap-1 text-[11px] font-black text-black bg-white/95 backdrop-blur-md px-2 py-0.5 rounded-lg shadow-sm">
+                        <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
                         <span>{meta.rating}</span>
-                        <span className="text-neutral-400 font-normal">({meta.reviews})</span>
                       </div>
                     </div>
 
-                    {/* Category Title */}
-                    <h3 className="text-lg font-black text-black group-hover:text-neutral-900 transition-colors">
-                      {cat.name}
-                    </h3>
-
-                    {/* Short Description */}
-                    <p className="text-xs text-neutral-500 mt-1.5 line-clamp-2 leading-relaxed">
-                      {cat.description}
-                    </p>
-
-                    {/* Subcategories Chip List */}
-                    <div className="mt-4 flex flex-wrap gap-1.5">
-                      {cat.subcategories?.slice(0, 3).map((sub) => (
-                        <span
-                          key={sub.id}
-                          className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-700"
-                        >
-                          {sub.name}
-                        </span>
-                      ))}
-                      {cat.subcategories && cat.subcategories.length > 3 && (
-                        <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-neutral-100 text-neutral-500">
-                          +{cat.subcategories.length - 3}
-                        </span>
-                      )}
+                    {/* Category Title on Photo */}
+                    <div className="absolute bottom-3 left-3 right-3 text-white">
+                      <h3 className="text-base font-black tracking-tight leading-tight group-hover:text-amber-200 transition-colors">
+                        {cat.name}
+                      </h3>
+                      <span className="text-[11px] text-neutral-300 font-medium">
+                        {meta.reviews} completed jobs
+                      </span>
                     </div>
                   </div>
 
-                  {/* Card Bottom: Starting Price & Direct Action */}
-                  <div className="mt-6 pt-4 border-t border-neutral-100 flex items-center justify-between">
+                  {/* Body Content */}
+                  <div className="p-5 flex-1 flex flex-col justify-between">
                     <div>
-                      <span className="text-[10px] text-neutral-400 uppercase font-bold block">Typical Cost</span>
-                      <span className="text-xs font-black text-black">{meta.startingPrice}</span>
+                      <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed font-medium">
+                        {cat.description}
+                      </p>
+
+                      {/* Subcategory Pills */}
+                      <div className="mt-3.5 flex flex-wrap gap-1.5">
+                        {cat.subcategories?.slice(0, 3).map((sub) => (
+                          <span
+                            key={sub.id}
+                            className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-700"
+                          >
+                            {sub.name}
+                          </span>
+                        ))}
+                        {cat.subcategories && cat.subcategories.length > 3 && (
+                          <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-neutral-100 text-neutral-500">
+                            +{cat.subcategories.length - 3}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
-                    <button
-                      onClick={() => navigate('/post-requirement')}
-                      className="inline-flex items-center gap-1.5 bg-black group-hover:bg-neutral-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-sm"
-                    >
-                      <span>Get Quotes</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
+                    {/* Card Footer: Price & CTA */}
+                    <div className="mt-5 pt-3.5 border-t border-neutral-100 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-neutral-400 uppercase font-bold block">Typical Cost</span>
+                        <span className="text-xs font-black text-black">{meta.startingPrice}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 bg-black group-hover:bg-neutral-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition shadow-sm"
+                      >
+                        <span>Get Quotes</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -162,40 +226,6 @@ export const CategoryGrid: React.FC = () => {
           </div>
         )}
 
-        {/* Why Vaziro Banner (Urban Company style proof) */}
-        <div className="mt-16 bg-black rounded-3xl p-8 sm:p-10 text-white border border-neutral-800">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-neutral-800 flex items-center justify-center font-bold text-white mb-3">
-                <ShieldCheck className="w-5 h-5 text-emerald-400" />
-              </div>
-              <h4 className="text-base font-black text-white">DigiLocker Government Verified</h4>
-              <p className="text-xs text-neutral-400 leading-relaxed">
-                Every service professional undergoes biometric and government identity validation via DigiLocker before quoting on customer jobs.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-neutral-800 flex items-center justify-center font-bold text-white mb-3">
-                <Star className="w-5 h-5 text-amber-400" />
-              </div>
-              <h4 className="text-base font-black text-white">Reverse Auction Best Rates</h4>
-              <p className="text-xs text-neutral-400 leading-relaxed">
-                State your budget and receive competing transparent proposals. Compare side-by-side on credentials, experience, and pricing.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-neutral-800 flex items-center justify-center font-bold text-white mb-3">
-                <Sparkles className="w-5 h-5 text-blue-400" />
-              </div>
-              <h4 className="text-base font-black text-white">6% Protected Escrow</h4>
-              <p className="text-xs text-neutral-400 leading-relaxed">
-                Your payment is safely held until service delivery is completed and approved by you. Zero surprise charges.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );
