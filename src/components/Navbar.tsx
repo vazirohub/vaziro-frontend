@@ -121,6 +121,15 @@ export const Navbar: React.FC = () => {
                     </Link>
 
                     <Link
+                      to="/profile"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-neutral-700 hover:bg-neutral-50 font-semibold"
+                    >
+                      <User className="w-4 h-4 text-emerald-600" />
+                      <span>Edit Profile & Password</span>
+                    </Link>
+
+                    <Link
                       to="/credits"
                       onClick={() => setDropdownOpen(false)}
                       className="flex items-center gap-2.5 px-4 py-2.5 text-neutral-700 hover:bg-neutral-50 font-semibold"

@@ -18,7 +18,7 @@ export const Footer: React.FC = () => {
               />
             </Link>
             <p className="text-xs text-neutral-400 max-w-md leading-relaxed font-medium">
-              Operated by <strong>Proanta Technologies Private Limited</strong>. India’s transparent reverse-auction marketplace for background-checked personal care, healthcare, and domestic professionals.
+              Operated by <strong>Proanta Technologies Private Limited</strong>. India’s trusted marketplace for background-checked personal care, healthcare, and domestic professionals.
             </p>
           </div>
 

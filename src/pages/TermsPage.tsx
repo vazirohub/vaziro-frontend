@@ -42,7 +42,7 @@ export const TermsPage: React.FC = () => {
         {/* Section 2 */}
         <div className="space-y-3">
           <h2 className="text-lg font-black text-black border-b border-neutral-200 pb-2">
-            2. Reverse Auction & Quotation Mechanics
+            2. Service Quotation & Proposal Mechanics
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-xs text-neutral-600">
             <li>Customers post non-binding service requirements outlining scope, schedule, and budgetary benchmarks in Indian National Rupees (₹ INR).</li>

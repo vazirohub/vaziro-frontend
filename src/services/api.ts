@@ -46,6 +46,12 @@ export const api = {
 
   getMe: () => apiClient.get<ApiResponse<{ user: User }>>('/auth/me'),
 
+  updateProfile: (data: any) =>
+    apiClient.put<ApiResponse<{ user: User }>>('/auth/profile', data),
+
+  changePassword: (data: { currentPassword?: string; newPassword: string }) =>
+    apiClient.put<ApiResponse<{ success: boolean; message: string }>>('/auth/password', data),
+
   // Categories & Locations
   getCategories: () => apiClient.get<ApiResponse<Category[]>>('/categories'),
   getStates: () => apiClient.get<ApiResponse<IndianState[]>>('/locations/states'),

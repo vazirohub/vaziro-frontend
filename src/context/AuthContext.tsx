@@ -11,6 +11,7 @@ interface AuthContextType {
   loginWithPassword: (identifier: string, password: string) => Promise<void>;
   loginWithOtp: (payload: any) => Promise<void>;
   logout: () => void;
+  updateUser: (user: User) => void;
   openAuthModal: (role?: 'CUSTOMER' | 'PROFESSIONAL') => void;
   closeAuthModal: () => void;
   isAuthModalOpen: boolean;
@@ -176,6 +177,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsAuthModalOpen(true);
   };
 
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+    localStorage.setItem('vaziro_user', JSON.stringify(updatedUser));
+  };
+
   const closeAuthModal = () => setIsAuthModalOpen(false);
 
   return (
@@ -189,6 +195,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithPassword,
         loginWithOtp,
         logout,
+        updateUser,
         openAuthModal,
         closeAuthModal,
         isAuthModalOpen,

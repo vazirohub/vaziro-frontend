@@ -108,7 +108,7 @@ export const CategoryGrid: React.FC = () => {
               Verified Personal & Healthcare Disciplines
             </h2>
             <p className="mt-2 text-sm text-neutral-600 max-w-2xl font-medium">
-              Choose from 8 verified service categories. Post your requirement and receive competitive reverse-auction bids from background-checked professionals across Delhi NCR.
+              Choose from 8 verified service categories. Post your requirement and receive verified transparent quotes from background-checked professionals across Delhi NCR.
             </p>
           </div>
 

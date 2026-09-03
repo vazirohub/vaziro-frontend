@@ -13,6 +13,7 @@ import {
   MapPin,
   ChevronRight,
   CheckCircle2,
+  User as UserIcon,
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
@@ -121,7 +122,15 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            to="/profile"
+            className="flex items-center gap-2 bg-neutral-100 hover:bg-neutral-200 border border-neutral-300 rounded-2xl px-4 py-3 text-xs font-bold text-neutral-800 transition"
+          >
+            <UserIcon className="w-4 h-4 text-black" />
+            <span>Edit Profile</span>
+          </Link>
+
           {isProfessional ? (
             <Link
               to="/credits"

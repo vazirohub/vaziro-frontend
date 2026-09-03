@@ -299,7 +299,7 @@ export const PostRequirementPage: React.FC = () => {
       <div className="text-center mb-8">
         <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-black bg-neutral-100 px-3.5 py-1.5 rounded-full mb-3 border border-neutral-300">
           <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span>Reverse Auction • Zero Middleman Fee</span>
+          <span>Direct Quotes • Zero Middleman Fee</span>
         </span>
         <h1 className="text-3xl sm:text-4xl font-black text-black tracking-tight">
           Post Your Service Requirement

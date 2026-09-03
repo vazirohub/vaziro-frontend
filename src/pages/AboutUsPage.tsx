@@ -16,7 +16,7 @@ export const AboutUsPage: React.FC = () => {
             About <span className="text-emerald-400">Vaziro</span>
           </h1>
           <p className="text-base sm:text-lg text-neutral-400 max-w-2xl mx-auto leading-relaxed">
-            Pioneering India’s transparent reverse-auction marketplace for verified healthcare, personal care, and domestic assistance.
+            Pioneering India’s trusted marketplace for verified healthcare, personal care, and domestic assistance.
           </p>
         </div>
       </section>
@@ -37,7 +37,7 @@ export const AboutUsPage: React.FC = () => {
               Traditional domestic agency brokerages in Delhi NCR operate opaquely, deducting 20% to 35% commission cuts from domestic healthcare and caregiver salaries while providing little to no verification or dispute protection to households.
             </p>
             <p className="text-sm text-neutral-600 leading-relaxed">
-              <strong>Vaziro (vaziro.in)</strong>, operated by <strong>Proanta Technologies Private Limited</strong>, was created to replace outdated brokerage middlemen with an open, democratic reverse-auction platform where households state their exact requirements and budget, and background-checked independent specialists bid transparently.
+              <strong>Vaziro (vaziro.in)</strong>, operated by <strong>Proanta Technologies Private Limited</strong>, was created to replace outdated brokerage middlemen with an open, democratic platform where households state their exact requirements and budget, and background-checked independent specialists send competitive, transparent quotes.
             </p>
           </div>
 

@@ -31,7 +31,7 @@ export const HomePage: React.FC = () => {
       rating: 5,
       avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80',
       comment:
-        'The reverse auction format saved us 35% compared to local Noida agencies. We set our budget at ₹6,500/month for vegetarian cooking and hired Chef Manoj. Completely commission-free!',
+        'Vaziro saved us 35% compared to local Noida agencies. We set our budget at ₹6,500/month for vegetarian cooking and hired Chef Manoj. Completely commission-free!',
     },
     {
       name: 'Siddharth Rao',
@@ -89,7 +89,7 @@ export const HomePage: React.FC = () => {
       {/* 8-Category Grid with Real Indian Photography Cards */}
       <CategoryGrid />
 
-      {/* HOW IT WORKS: 3-Step Reverse Auction Process */}
+      {/* HOW IT WORKS: 3-Step Process */}
       <section id="how-it-works" className="py-20 bg-white border-b border-neutral-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16">
@@ -97,7 +97,7 @@ export const HomePage: React.FC = () => {
               Transparent NCR Marketplace
             </span>
             <h2 className="text-3xl sm:text-4xl font-black text-black tracking-tight mt-3">
-              How the Vaziro Reverse Auction Works
+              How the Vaziro Marketplace Works
             </h2>
             <p className="mt-3 text-sm text-neutral-600 font-medium">
               State your service requirement and budget. Verified independent professionals compete transparently to win your business.
@@ -315,7 +315,7 @@ export const HomePage: React.FC = () => {
               <div className="absolute -top-3.5 right-6 text-[10px] font-black uppercase tracking-wider bg-white text-black px-3 py-1 rounded-full shadow-lg">
                 Verified NCR Marketplace
               </div>
-              <h4 className="text-base font-bold text-white mb-4 uppercase tracking-wider">Vaziro Reverse Auction</h4>
+              <h4 className="text-base font-bold text-white mb-4 uppercase tracking-wider">Vaziro Verified Marketplace</h4>
               <ul className="space-y-3.5 text-xs text-neutral-200">
                 <li className="flex items-center gap-2.5 text-emerald-400 font-bold">
                   <span>✓</span>

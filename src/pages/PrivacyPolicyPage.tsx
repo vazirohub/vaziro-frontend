@@ -61,7 +61,7 @@ export const PrivacyPolicyPage: React.FC = () => {
             We process your personal data strictly for:
           </p>
           <ul className="list-disc pl-5 space-y-1 text-xs text-neutral-600">
-            <li>Facilitating authentic reverse-auction quotes between verified parties.</li>
+            <li>Facilitating authentic service quotes and proposals between verified parties.</li>
             <li>Processing secure payments, credits, and milestone escrows.</li>
             <li>Preventing platform fraud, impersonation, and safety violations.</li>
             <li>Complying with statutory audits under Indian taxation and corporate laws.</li>
