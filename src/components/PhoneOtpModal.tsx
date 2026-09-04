@@ -239,7 +239,7 @@ export const PhoneOtpModal: React.FC = () => {
 
     // 2. Also register OTP request with Backend API
     try {
-      const res = await api.sendOtp(cleanDigits, purpose);
+      const res = await api.sendOtp(cleanDigits, purpose, sdkDispatched);
       const cd = res.data?.data?.cooldownSeconds || 30;
       setCountdown(cd);
       setOtpExpirySeconds(300);
@@ -320,12 +320,17 @@ export const PhoneOtpModal: React.FC = () => {
     const clean = mobileNumber.replace(/\D/g, '').slice(-10);
     try {
       setIsLoading(true);
+      let sdkResent = false;
       try {
         await retryMsg91Otp(null);
+        sdkResent = true;
       } catch {
-        await sendMsg91Otp(clean);
+        try {
+          await sendMsg91Otp(clean);
+          sdkResent = true;
+        } catch {}
       }
-      await api.resendOtp(clean, isExistingUser ? 'login' : 'signup').catch(() => {});
+      await api.resendOtp(clean, isExistingUser ? 'login' : 'signup', sdkResent).catch(() => {});
       setSuccessMessage('A new verification code has been dispatched via SMS.');
       setCountdown(30);
       setOtpExpirySeconds(300); // Reset 5-min timer
@@ -352,15 +357,27 @@ export const PhoneOtpModal: React.FC = () => {
       const clean = mobileNumber.replace(/\D/g, '').slice(-10);
       const formatted = `+91${clean}`;
 
-      // 1. Try client SDK verification if active
+      // 1. Try client SDK verification via MSG91 Widget
       let verifiedOnClient = false;
       let msg91Token: string | undefined;
-      try {
-        const verifyData = await verifyMsg91Otp(fullCode);
-        verifiedOnClient = true;
-        msg91Token = typeof verifyData === 'string' ? verifyData : verifyData?.['access-token'] || verifyData?.token;
-      } catch {
-        // Fall back to server verification
+
+      if (typeof window !== 'undefined' && typeof window.verifyOtp === 'function') {
+        try {
+          const verifyData = await verifyMsg91Otp(fullCode);
+          verifiedOnClient = true;
+          msg91Token = typeof verifyData === 'string'
+            ? verifyData
+            : (verifyData?.['access-token'] || verifyData?.token || verifyData?.message || window.__lastMsg91Token || 'widget_verified');
+          console.log('[Auth] Client OTP verified via MSG91:', verifyData);
+        } catch (sdkErr: any) {
+          console.warn('[Auth] MSG91 client verify error:', sdkErr?.message || sdkErr);
+          const msg = String(sdkErr?.message || '');
+          if (msg.toLowerCase().includes('incorrect') || msg.toLowerCase().includes('invalid')) {
+            setErrorMessage('The OTP is incorrect. Please check and try again.');
+            setIsLoading(false);
+            return;
+          }
+        }
       }
 
       // 2. Call backend verify endpoint

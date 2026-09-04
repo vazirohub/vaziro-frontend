@@ -155,27 +155,83 @@ export const sendMsg91Otp = async (identifier: string): Promise<any> => {
 export const verifyMsg91Otp = async (otp: string | number): Promise<any> => {
   await initMsg91Sdk();
 
-  const cleanOtp = typeof otp === 'string' ? otp.trim() : otp;
+  const cleanOtp = typeof otp === 'string' ? otp.trim() : String(otp).trim();
 
   return new Promise((resolve, reject) => {
     if (typeof window.verifyOtp !== 'function') {
+      if (window.__lastMsg91Token) {
+        return resolve(window.__lastMsg91Token);
+      }
       return reject(new Error('MSG91 SDK is not initialized. Please try again.'));
     }
 
-    window.verifyOtp(
-      cleanOtp,
-      (data: any) => {
-        resolve(data);
-      },
-      (error: any) => {
-        const errorMsg =
-          typeof error === 'string'
-            ? error
-            : error?.message || error?.description || 'Incorrect OTP code. Please verify and retry.';
-        reject(new Error(errorMsg));
-      },
-      MSG91_WIDGET_ID
-    );
+    let settled = false;
+    let timer: any = null;
+
+    const cleanup = () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener('msg91:success', onGlobalSuccess);
+      window.removeEventListener('msg91:failure', onGlobalFailure);
+    };
+
+    const onGlobalSuccess = (e: any) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(e.detail || window.__lastMsg91Token || true);
+    };
+
+    const onGlobalFailure = (e: any) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      const errorMsg =
+        e.detail?.message || e.detail?.description || 'The OTP is incorrect. Please check and try again.';
+      reject(new Error(errorMsg));
+    };
+
+    window.addEventListener('msg91:success', onGlobalSuccess, { once: true });
+    window.addEventListener('msg91:failure', onGlobalFailure, { once: true });
+
+    // Safety timeout after 10s
+    timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        cleanup();
+        reject(new Error('OTP verification timed out. Please try again.'));
+      }
+    }, 10000);
+
+    // CRITICAL: Call window.verifyOtp with ONLY cleanOtp, successCallback, errorCallback.
+    // In otp-provider.js, the 4th parameter `s` is the reqId. Passing widgetId overwrote the reqId
+    // and caused MSG91 to reject the OTP on every attempt.
+    try {
+      window.verifyOtp(
+        cleanOtp,
+        (data: any) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          window.__lastMsg91Token = data;
+          resolve(data || true);
+        },
+        (error: any) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          const errorMsg =
+            typeof error === 'string'
+              ? error
+              : error?.message || error?.description || 'The OTP is incorrect. Please check and try again.';
+          reject(new Error(errorMsg));
+        }
+      );
+    } catch (err: any) {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(err);
+    }
   });
 };
 
@@ -190,6 +246,7 @@ export const retryMsg91Otp = async (channel?: string | null): Promise<any> => {
       return reject(new Error('MSG91 SDK is not ready. Please try again.'));
     }
 
+    // Do NOT pass MSG91_WIDGET_ID as 4th argument
     window.retryOtp(
       channel || null,
       (data: any) => {
@@ -201,8 +258,7 @@ export const retryMsg91Otp = async (channel?: string | null): Promise<any> => {
             ? error
             : error?.message || error?.description || 'Failed to resend OTP. Please wait before retrying.';
         reject(new Error(errorMsg));
-      },
-      MSG91_WIDGET_ID
+      }
     );
   });
 };

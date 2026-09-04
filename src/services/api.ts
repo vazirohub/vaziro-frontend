@@ -74,11 +74,11 @@ export const api = {
   checkMobile: (mobile: string) =>
     apiClient.post<ApiResponse<{ exists: boolean; mobile: string; message: string }>>('/auth/check-mobile', { mobile }),
 
-  sendOtp: (mobile: string, purpose: string = 'login') =>
-    apiClient.post<ApiResponse<{ mobile: string; cooldownSeconds: number }>>('/auth/send-otp', { mobile, purpose }),
+  sendOtp: (mobile: string, purpose: string = 'login', widgetDispatched?: boolean) =>
+    apiClient.post<ApiResponse<{ mobile: string; cooldownSeconds: number }>>('/auth/send-otp', { mobile, purpose, widgetDispatched }),
 
-  resendOtp: (mobile: string, purpose: string = 'resend') =>
-    apiClient.post<ApiResponse<{ mobile: string; cooldownSeconds: number }>>('/auth/resend-otp', { mobile, purpose }),
+  resendOtp: (mobile: string, purpose: string = 'resend', widgetDispatched?: boolean) =>
+    apiClient.post<ApiResponse<{ mobile: string; cooldownSeconds: number }>>('/auth/resend-otp', { mobile, purpose, widgetDispatched }),
 
   requestOtp: (phone: string) =>
     apiClient.post<ApiResponse<{ phone: string; cooldownSeconds: number }>>('/auth/otp/request', { phone }),
