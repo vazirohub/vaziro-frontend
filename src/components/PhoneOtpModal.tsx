@@ -97,7 +97,6 @@ export const PhoneOtpModal: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [city, setCity] = useState('Delhi');
-  const [businessName, setBusinessName] = useState('');
   const [category, setCategory] = useState('Electrician & Appliance Repair');
   const [experience, setExperience] = useState('3');
 
@@ -125,7 +124,7 @@ export const PhoneOtpModal: React.FC = () => {
     return `+91 ${clean.slice(0, 2)}XXXXXX${clean.slice(8)}`;
   };
 
-  // Preload MSG91 SDK on modal open
+  // Preload verification SDK on modal open
   useEffect(() => {
     if (isAuthModalOpen) {
       initMsg91Sdk().catch(() => {});
@@ -223,18 +222,18 @@ export const PhoneOtpModal: React.FC = () => {
     }
   };
 
-  // Dispatch OTP: Always trigger MSG91 OTP Widget for real SMS/WhatsApp delivery, and sync with backend
+  // Dispatch OTP: Trigger provider for real SMS/WhatsApp delivery, and sync with backend
   const dispatchOtp = async (cleanDigits: string, purpose: string) => {
     const formatted = `+91${cleanDigits}`;
     let sdkDispatched = false;
 
-    // 1. Trigger MSG91 OTP Widget (delivers SMS through the configured MSG91 widget)
+    // 1. Trigger verification provider (delivers SMS through the configured widget)
     try {
       await sendMsg91Otp(cleanDigits);
       sdkDispatched = true;
-      console.log('[Auth] OTP dispatched via MSG91 Widget for', cleanDigits);
+      console.log('[Auth] OTP dispatched successfully for', cleanDigits);
     } catch (sdkErr: any) {
-      console.warn('[Auth] MSG91 Widget notice:', sdkErr?.message || sdkErr);
+      console.warn('[Auth] Verification provider notice:', sdkErr?.message || sdkErr);
     }
 
     // 2. Also register OTP request with Backend API
@@ -357,7 +356,7 @@ export const PhoneOtpModal: React.FC = () => {
       const clean = mobileNumber.replace(/\D/g, '').slice(-10);
       const formatted = `+91${clean}`;
 
-      // 1. Try client SDK verification via MSG91 Widget
+      // 1. Try client SDK verification via OTP Widget
       let verifiedOnClient = false;
       let msg91Token: string | undefined;
 
@@ -368,9 +367,9 @@ export const PhoneOtpModal: React.FC = () => {
           msg91Token = typeof verifyData === 'string'
             ? verifyData
             : (verifyData?.['access-token'] || verifyData?.token || verifyData?.message || window.__lastMsg91Token || 'widget_verified');
-          console.log('[Auth] Client OTP verified via MSG91:', verifyData);
+          console.log('[Auth] Client OTP verified successfully');
         } catch (sdkErr: any) {
-          console.warn('[Auth] MSG91 client verify error:', sdkErr?.message || sdkErr);
+          console.warn('[Auth] Verification notice:', sdkErr?.message || sdkErr);
           const msg = String(sdkErr?.message || '');
           if (msg.toLowerCase().includes('incorrect') || msg.toLowerCase().includes('invalid')) {
             setErrorMessage('The OTP is incorrect. Please check and try again.');
@@ -420,6 +419,11 @@ export const PhoneOtpModal: React.FC = () => {
       return;
     }
 
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setErrorMessage('Please enter a valid email address.');
+      return;
+    }
+
     try {
       setIsLoading(true);
       const clean = mobileNumber.replace(/\D/g, '').slice(-10);
@@ -429,9 +433,8 @@ export const PhoneOtpModal: React.FC = () => {
         signupToken,
         role: selectedRole,
         name: fullName.trim(),
-        email: email.trim() || undefined,
+        email: email.trim().toLowerCase(),
         city: city.trim() || undefined,
-        businessName: selectedRole === 'PROFESSIONAL' ? (businessName.trim() || undefined) : undefined,
         category: selectedRole === 'PROFESSIONAL' ? category : undefined,
         experience: selectedRole === 'PROFESSIONAL' ? Number(experience) : undefined,
       });
@@ -634,7 +637,7 @@ export const PhoneOtpModal: React.FC = () => {
                   </div>
                   <p className="text-[11px] text-neutral-400 mt-1.5 flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                    Instant SMS OTP dispatch via MSG91
+                    Instant & secure SMS verification
                   </p>
                 </div>
 
@@ -947,60 +950,60 @@ export const PhoneOtpModal: React.FC = () => {
                   />
                 </div>
 
-                {/* Professional Specific Fields */}
+                {/* Professional Specific Fields: Primary Service & Experience */}
                 {selectedRole === 'PROFESSIONAL' && (
-                  <>
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                        Business / Trade Name (Optional)
+                        Primary Service *
+                      </label>
+                      <select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="w-full px-3 py-3 text-xs font-semibold rounded-xl border border-neutral-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                      >
+                        {POPULAR_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                        Experience (Yrs) *
                       </label>
                       <input
-                        type="text"
-                        placeholder="e.g. Sharma Electricals & AC Care"
-                        value={businessName}
-                        onChange={(e) => setBusinessName(e.target.value)}
-                        className="w-full px-4 py-3 text-sm font-semibold rounded-xl border border-neutral-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                        type="number"
+                        min={0}
+                        max={50}
+                        value={experience}
+                        onChange={(e) => setExperience(e.target.value)}
+                        className="w-full px-3 py-3 text-xs font-semibold rounded-xl border border-neutral-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        required
                       />
                     </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                          Primary Service
-                        </label>
-                        <select
-                          value={category}
-                          onChange={(e) => setCategory(e.target.value)}
-                          className="w-full px-3 py-3 text-xs font-semibold rounded-xl border border-neutral-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-                        >
-                          {POPULAR_CATEGORIES.map((cat) => (
-                            <option key={cat} value={cat}>{cat}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                          Experience (Yrs)
-                        </label>
-                        <input
-                          type="number"
-                          min={0}
-                          max={50}
-                          value={experience}
-                          onChange={(e) => setExperience(e.target.value)}
-                          className="w-full px-3 py-3 text-xs font-semibold rounded-xl border border-neutral-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                        />
-                      </div>
-                    </div>
-                  </>
+                  </div>
                 )}
 
-                {/* Common Location & Email */}
-                <div className="grid grid-cols-2 gap-3">
+                {/* Common Fields: Email (Required) & City */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                      City
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="e.g. rahul@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-3 py-3 text-xs font-semibold rounded-xl border border-neutral-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
+                      City *
                     </label>
                     <select
                       value={city}
@@ -1012,24 +1015,11 @@ export const PhoneOtpModal: React.FC = () => {
                       ))}
                     </select>
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                      Email (Optional)
-                    </label>
-                    <input
-                      type="email"
-                      placeholder="e.g. you@domain.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full px-3 py-3 text-xs font-semibold rounded-xl border border-neutral-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={isLoading || !fullName.trim()}
+                  disabled={isLoading || !fullName.trim() || !email.trim()}
                   className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-black text-sm shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-4 cursor-pointer"
                 >
                   {isLoading ? (

@@ -101,7 +101,7 @@ export const api = {
     signupToken?: string;
     role: 'CUSTOMER' | 'PROFESSIONAL';
     name: string;
-    email?: string;
+    email: string;
     city?: string;
     businessName?: string;
     category?: string;

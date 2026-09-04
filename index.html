@@ -22,12 +22,12 @@
         exposeMethods: true,
         captchaRenderId: '',
         success: (data) => {
-          console.log('MSG91 OTP verified:', data);
+          console.log('OTP verified:', data);
           window.__lastMsg91Token = typeof data === 'string' ? data : (data?.token || data?.['access-token'] || data?.message || data);
           window.dispatchEvent(new CustomEvent('msg91:success', { detail: data }));
         },
         failure: (error) => {
-          console.log('MSG91 OTP error:', error);
+          console.log('OTP error:', error);
           window.dispatchEvent(new CustomEvent('msg91:failure', { detail: error }));
         },
       };

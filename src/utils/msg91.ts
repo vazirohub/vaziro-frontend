@@ -44,14 +44,14 @@ export const initMsg91Sdk = (identifier?: string): Promise<boolean> => {
       captchaRenderId: '',
       success: (data: any) => {
         if (import.meta.env.DEV) {
-          console.log('[MSG91] Global verification success:', data);
+          console.log('[Auth] Verification success:', data);
         }
         window.__lastMsg91Token = typeof data === 'string' ? data : (data?.token || data?.['access-token'] || data?.message || data);
         window.dispatchEvent(new CustomEvent('msg91:success', { detail: data }));
       },
       failure: (error: any) => {
         if (import.meta.env.DEV) {
-          console.warn('[MSG91] Global error:', error);
+          console.warn('[Auth] Verification notice:', error);
         }
         window.dispatchEvent(new CustomEvent('msg91:failure', { detail: error }));
       },
@@ -63,7 +63,7 @@ export const initMsg91Sdk = (identifier?: string): Promise<boolean> => {
         try {
           window.initSendOTP(window.configuration);
         } catch (e) {
-          console.warn('[MSG91] Re-init warning:', e);
+          console.warn('[Auth] Re-init warning:', e);
         }
       }
       return resolve(true);
@@ -93,7 +93,7 @@ export const initMsg91Sdk = (identifier?: string): Promise<boolean> => {
       resolve(true);
     };
     script.onerror = (err) => {
-      console.warn('[MSG91] Failed to load MSG91 SDK script:', err);
+      console.warn('[Auth] Failed to load OTP verification script:', err);
       resolve(false);
     };
     document.body.appendChild(script);
@@ -130,7 +130,7 @@ export const sendMsg91Otp = async (identifier: string): Promise<any> => {
 
   return new Promise((resolve, reject) => {
     if (typeof window.sendOtp !== 'function') {
-      return reject(new Error('MSG91 SDK is not initialized. Please try again.'));
+      return reject(new Error('Verification service is initializing. Please try again.'));
     }
 
     window.sendOtp(
@@ -162,7 +162,7 @@ export const verifyMsg91Otp = async (otp: string | number): Promise<any> => {
       if (window.__lastMsg91Token) {
         return resolve(window.__lastMsg91Token);
       }
-      return reject(new Error('MSG91 SDK is not initialized. Please try again.'));
+      return reject(new Error('Verification service is initializing. Please try again.'));
     }
 
     let settled = false;
@@ -202,9 +202,7 @@ export const verifyMsg91Otp = async (otp: string | number): Promise<any> => {
       }
     }, 10000);
 
-    // CRITICAL: Call window.verifyOtp with ONLY cleanOtp, successCallback, errorCallback.
-    // In otp-provider.js, the 4th parameter `s` is the reqId. Passing widgetId overwrote the reqId
-    // and caused MSG91 to reject the OTP on every attempt.
+    // Call window.verifyOtp with ONLY cleanOtp, successCallback, errorCallback.
     try {
       window.verifyOtp(
         cleanOtp,
@@ -243,7 +241,7 @@ export const retryMsg91Otp = async (channel?: string | null): Promise<any> => {
 
   return new Promise((resolve, reject) => {
     if (typeof window.retryOtp !== 'function') {
-      return reject(new Error('MSG91 SDK is not ready. Please try again.'));
+      return reject(new Error('Verification service is not ready. Please try again.'));
     }
 
     // Do NOT pass MSG91_WIDGET_ID as 4th argument

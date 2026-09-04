@@ -265,7 +265,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signupToken?: string;
     role: 'CUSTOMER' | 'PROFESSIONAL';
     name: string;
-    email?: string;
+    email: string;
     city?: string;
     businessName?: string;
     category?: string;
