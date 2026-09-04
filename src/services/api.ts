@@ -68,6 +68,20 @@ export const api = {
   loginWithPassword: (identifier: string, password: string) =>
     apiClient.post<ApiResponse<{ accessToken: string; user: User }>>('/auth/login', { identifier, password }),
 
+  requestOtp: (phone: string) =>
+    apiClient.post<ApiResponse<{ phone: string; cooldownSeconds: number }>>('/auth/otp/request', { phone }),
+
+  verifyOtp: (payload: {
+    phone: string;
+    otp?: string;
+    role?: 'CUSTOMER' | 'PROFESSIONAL';
+    firstName?: string;
+    lastName?: string;
+    msg91Verified?: boolean;
+    msg91Token?: string;
+  }) =>
+    apiClient.post<ApiResponse<{ accessToken: string; user: User }>>('/auth/otp/verify', payload),
+
   getMe: () => apiClient.get<ApiResponse<{ user: User }>>('/auth/me'),
 
   updateProfile: (data: any) =>
