@@ -46,22 +46,24 @@ export const LoginPage: React.FC = () => {
       setIsLoading(true);
       await login(cleanId, password);
       const savedUser = localStorage.getItem('vaziro_user');
+      let targetPath = '/dashboard';
       if (savedUser) {
         try {
           const parsed = JSON.parse(savedUser);
           const isProf = parsed.roles?.includes('PROFESSIONAL');
           const isAdm = parsed.roles?.includes('ADMIN') || parsed.roles?.includes('SUPER_ADMIN');
-          if (isAdm) navigate('/admin', { replace: true });
-          else if (isProf) navigate('/requirements', { replace: true });
-          else navigate('/dashboard', { replace: true });
+          if (isAdm) targetPath = '/admin';
+          else if (isProf) targetPath = '/requirements';
         } catch {}
       }
+      navigate(targetPath, { replace: true });
     } catch (err: any) {
       setErrorMessage(err.message || 'Invalid email/mobile or password. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 bg-neutral-50/50">
