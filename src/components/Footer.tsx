@@ -182,6 +182,16 @@ export const Footer: React.FC = () => {
                   Disclaimer & Platform Notice
                 </Link>
               </li>
+              <li className="pt-2 border-t border-neutral-800">
+                <Link to="/login" className="hover:text-white transition-colors font-medium">
+                  Customer / Pro Sign In
+                </Link>
+              </li>
+              <li>
+                <Link to="/signup" className="text-emerald-400 hover:text-emerald-300 transition-colors font-bold">
+                  Sign Up & Register Free
+                </Link>
+              </li>
               <li className="pt-2 flex items-center gap-1.5 text-neutral-300">
                 <Mail className="w-3.5 h-3.5 text-emerald-400" />
                 <a href="mailto:support@vaziro.in" className="hover:underline text-emerald-400 font-bold">

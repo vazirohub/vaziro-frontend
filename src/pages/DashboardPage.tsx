@@ -72,12 +72,20 @@ export const DashboardPage: React.FC = () => {
       <div className="max-w-md mx-auto my-24 p-8 bg-white rounded-3xl border border-gray-200 text-center shadow-lg">
         <h2 className="text-2xl font-black text-gray-900 mb-2">Authentication Required</h2>
         <p className="text-sm text-gray-600 mb-6">Please log in with your Indian mobile number to access your dashboard.</p>
-        <button
-          onClick={() => openAuthModal('CUSTOMER')}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-md"
-        >
-          Sign In / Register
-        </button>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => openAuthModal('CUSTOMER', undefined, 'LOGIN')}
+            className="bg-black hover:bg-neutral-800 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition cursor-pointer"
+          >
+            Sign In
+          </button>
+          <button
+            onClick={() => openAuthModal('CUSTOMER', undefined, 'SIGNUP')}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition cursor-pointer"
+          >
+            Sign Up Free
+          </button>
+        </div>
       </div>
     );
   }

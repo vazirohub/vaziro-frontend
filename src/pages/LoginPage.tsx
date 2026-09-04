@@ -12,7 +12,7 @@ export const LoginPage: React.FC = () => {
       const isProfessional = user.roles?.includes('PROFESSIONAL');
       navigate(isProfessional ? '/requirements' : '/dashboard', { replace: true });
     } else if (!isAuthModalOpen) {
-      openAuthModal('CUSTOMER');
+      openAuthModal('CUSTOMER', undefined, 'LOGIN');
     }
   }, [user, isAuthModalOpen, openAuthModal, navigate]);
 
@@ -26,7 +26,7 @@ export const LoginPage: React.FC = () => {
         </p>
         <div className="mt-6">
           <button
-            onClick={() => openAuthModal('CUSTOMER')}
+            onClick={() => openAuthModal('CUSTOMER', undefined, 'LOGIN')}
             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm py-3.5 px-6 rounded-2xl shadow-md transition cursor-pointer"
           >
             Open Sign In

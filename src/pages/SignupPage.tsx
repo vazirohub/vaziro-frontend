@@ -15,7 +15,7 @@ export const SignupPage: React.FC = () => {
       navigate(isProfessional ? '/requirements' : '/dashboard', { replace: true });
     } else if (!isAuthModalOpen) {
       const targetRole = roleParam?.toUpperCase() === 'PROFESSIONAL' ? 'PROFESSIONAL' : 'CUSTOMER';
-      openAuthModal(targetRole);
+      openAuthModal(targetRole, undefined, 'SIGNUP');
     }
   }, [user, isAuthModalOpen, openAuthModal, navigate, roleParam]);
 
@@ -29,13 +29,13 @@ export const SignupPage: React.FC = () => {
         </p>
         <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
           <button
-            onClick={() => openAuthModal('CUSTOMER')}
+            onClick={() => openAuthModal('CUSTOMER', undefined, 'SIGNUP')}
             className="bg-black hover:bg-neutral-800 text-white font-black text-sm py-3 px-5 rounded-2xl shadow-md transition cursor-pointer"
           >
             Join as Customer
           </button>
           <button
-            onClick={() => openAuthModal('PROFESSIONAL')}
+            onClick={() => openAuthModal('PROFESSIONAL', undefined, 'SIGNUP')}
             className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm py-3 px-5 rounded-2xl shadow-md transition cursor-pointer"
           >
             Join as Professional (+10 Free Credits)

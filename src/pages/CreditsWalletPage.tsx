@@ -116,12 +116,20 @@ export const CreditsWalletPage: React.FC = () => {
         <p className="text-xs text-neutral-500 leading-relaxed font-medium">
           Please sign in to view your real-time credit balance, transaction history, and choose a recharge plan.
         </p>
-        <button
-          onClick={() => openAuthModal('PROFESSIONAL')}
-          className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition"
-        >
-          Sign In / Register
-        </button>
+        <div className="flex items-center gap-3 pt-2">
+          <button
+            onClick={() => openAuthModal('PROFESSIONAL', undefined, 'LOGIN')}
+            className="flex-1 bg-black hover:bg-neutral-800 text-white py-3 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition cursor-pointer"
+          >
+            Sign In
+          </button>
+          <button
+            onClick={() => openAuthModal('PROFESSIONAL', undefined, 'SIGNUP')}
+            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition cursor-pointer"
+          >
+            Register as Pro
+          </button>
+        </div>
       </div>
     );
   }

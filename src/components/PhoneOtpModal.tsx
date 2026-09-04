@@ -66,7 +66,11 @@ export const PhoneOtpModal: React.FC = () => {
     completeSignup,
     defaultRole,
     initialIdentifier,
+    initialMode,
   } = useAuth();
+
+  // Mode: LOGIN (sign in existing account) vs SIGNUP (create new account)
+  const [authMode, setAuthMode] = useState<'LOGIN' | 'SIGNUP'>('LOGIN');
 
   // Auth Method: OTP (primary/recommended) vs PASSWORD
   const [authMethod, setAuthMethod] = useState<'OTP' | 'PASSWORD'>('OTP');
@@ -118,6 +122,7 @@ export const PhoneOtpModal: React.FC = () => {
   useEffect(() => {
     if (isAuthModalOpen) {
       setSelectedRole(defaultRole);
+      setAuthMode(initialMode || 'LOGIN');
       setAuthMethod('OTP');
       setStep('ENTER_MOBILE');
       setErrorMessage(null);
@@ -132,7 +137,7 @@ export const PhoneOtpModal: React.FC = () => {
       setMobileNumber(cleanDigits);
       setPasswordIdentifier(remembered);
     }
-  }, [isAuthModalOpen, defaultRole, initialIdentifier]);
+  }, [isAuthModalOpen, defaultRole, initialIdentifier, initialMode]);
 
   // Handle countdown timer
   useEffect(() => {
@@ -171,8 +176,22 @@ export const PhoneOtpModal: React.FC = () => {
       const userFound = Boolean(checkRes.data?.data?.exists ?? (checkRes.data as any)?.exists);
       setIsExistingUser(userFound);
 
+      if (authMode === 'SIGNUP') {
+        if (userFound) {
+          setErrorMessage(`An account already exists for +91 ${clean}. Please switch to the Sign In tab.`);
+          setIsLoading(false);
+          return;
+        }
+
+        // Direct happy path for Sign Up: Dispatch signup OTP immediately
+        await dispatchOtp(clean, 'signup');
+        setStep('VERIFY_OTP');
+        return;
+      }
+
+      // authMode === 'LOGIN'
       if (!userFound) {
-        // Unregistered mobile number: Ask user to confirm signup
+        // Unregistered mobile number in login mode: Ask user to confirm signup
         setStep('CONFIRM_SIGNUP');
         setIsLoading(false);
         return;
@@ -182,7 +201,7 @@ export const PhoneOtpModal: React.FC = () => {
       await dispatchOtp(clean, 'login');
       setStep('VERIFY_OTP');
     } catch (err: any) {
-      setErrorMessage(err.response?.data?.error?.message || err.message || 'Unable to check mobile number. Please try again.');
+      setErrorMessage(err.response?.data?.error?.message || err.message || 'Unable to process mobile number. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -221,6 +240,7 @@ export const PhoneOtpModal: React.FC = () => {
 
     try {
       setIsLoading(true);
+      setAuthMode('SIGNUP');
       await dispatchOtp(clean, 'signup');
       setStep('VERIFY_OTP');
     } catch (err: any) {
@@ -423,7 +443,7 @@ export const PhoneOtpModal: React.FC = () => {
         </button>
 
         {/* Brand Header */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-5">
           <img
             src="/logo.png"
             alt="Vaziro"
@@ -433,15 +453,19 @@ export const PhoneOtpModal: React.FC = () => {
             {step === 'COMPLETE_PROFILE'
               ? 'Complete Your Profile'
               : step === 'VERIFY_OTP'
-              ? (isExistingUser ? 'Welcome Back!' : 'Verify Mobile Number')
-              : (authMethod === 'PASSWORD' ? 'Sign In with Password' : 'Login / Sign Up')}
+              ? (authMode === 'LOGIN' && isExistingUser ? 'Welcome Back!' : 'Verify Mobile Number')
+              : (authMethod === 'PASSWORD' 
+                  ? 'Sign In with Password' 
+                  : (authMode === 'SIGNUP' ? 'Create Free Account' : 'Welcome Back'))}
           </h3>
           <p className="text-xs text-neutral-500 mt-1">
             {step === 'COMPLETE_PROFILE'
               ? 'Choose your role and tell us a bit about yourself'
               : step === 'VERIFY_OTP'
               ? `We sent a 6-digit verification code to ${normalizedPhone}`
-              : 'India’s trusted marketplace for on-demand verified services'}
+              : (authMode === 'SIGNUP'
+                  ? 'Join India’s trusted marketplace as Customer or Professional'
+                  : 'Sign in with your mobile number to access your dashboard')}
           </p>
         </div>
 
@@ -460,6 +484,42 @@ export const PhoneOtpModal: React.FC = () => {
           </div>
         )}
 
+        {/* TOP TABS: SIGN IN vs SIGN UP (Visible on initial phone input screen) */}
+        {step === 'ENTER_MOBILE' && authMethod === 'OTP' && (
+          <div className="grid grid-cols-2 p-1 bg-neutral-100 rounded-2xl mb-5">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('LOGIN');
+                setErrorMessage(null);
+                setSuccessMessage(null);
+              }}
+              className={`py-2.5 rounded-xl text-xs font-black transition cursor-pointer text-center ${
+                authMode === 'LOGIN'
+                  ? 'bg-white text-black shadow-sm'
+                  : 'text-neutral-500 hover:text-black'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('SIGNUP');
+                setErrorMessage(null);
+                setSuccessMessage(null);
+              }}
+              className={`py-2.5 rounded-xl text-xs font-black transition cursor-pointer text-center ${
+                authMode === 'SIGNUP'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-neutral-500 hover:text-black'
+              }`}
+            >
+              Create Account (Sign Up)
+            </button>
+          </div>
+        )}
+
         {/* ================================================================= */}
         {/* FLOW A: OTP AUTHENTICATION                                        */}
         {/* ================================================================= */}
@@ -468,6 +528,44 @@ export const PhoneOtpModal: React.FC = () => {
             {/* STEP 1: MOBILE NUMBER INPUT */}
             {step === 'ENTER_MOBILE' && (
               <form onSubmit={handleMobileSubmit} className="space-y-4">
+                {/* Account Type Selector for Sign Up mode */}
+                {authMode === 'SIGNUP' && (
+                  <div>
+                    <label className="block text-[11px] font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
+                      I want to register as:
+                    </label>
+                    <div className="grid grid-cols-2 gap-2.5 mb-1">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRole('CUSTOMER')}
+                        className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
+                          selectedRole === 'CUSTOMER'
+                            ? 'border-black bg-neutral-50 ring-2 ring-black'
+                            : 'border-neutral-200 hover:border-neutral-300'
+                        }`}
+                      >
+                        <div className="font-black text-xs text-black">Customer</div>
+                        <div className="text-[10px] text-neutral-500 mt-0.5 leading-tight">Hire verified pros</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedRole('PROFESSIONAL')}
+                        className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
+                          selectedRole === 'PROFESSIONAL'
+                            ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600'
+                            : 'border-neutral-200 hover:border-neutral-300'
+                        }`}
+                      >
+                        <div className="font-black text-xs text-emerald-800 flex items-center justify-between">
+                          <span>Professional</span>
+                          <span className="text-[9px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold">+10 Free</span>
+                        </div>
+                        <div className="text-[10px] text-emerald-700 mt-0.5 leading-tight">Get jobs & 0% cut</div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
                     Enter Mobile Number *
@@ -503,34 +601,70 @@ export const PhoneOtpModal: React.FC = () => {
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Checking account...</span>
+                      <span>{authMode === 'SIGNUP' ? 'Sending Signup OTP...' : 'Checking account...'}</span>
                     </>
                   ) : (
                     <>
-                      <span>Continue with OTP</span>
+                      <span>{authMode === 'SIGNUP' ? 'Send OTP & Create Account' : 'Continue with OTP'}</span>
                       <Sparkles className="w-4 h-4 text-emerald-200" />
                     </>
                   )}
                 </button>
 
-                {/* Password mode switch */}
-                <div className="pt-2 text-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAuthMethod('PASSWORD');
-                      setErrorMessage(null);
-                    }}
-                    className="text-xs text-neutral-500 hover:text-black font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                  >
-                    <KeyRound className="w-3.5 h-3.5 text-neutral-400" />
-                    <span>Administrator or password sign in</span>
-                  </button>
+                {/* Switcher & Password mode */}
+                <div className="pt-2 text-center space-y-2.5">
+                  <p className="text-xs text-neutral-600">
+                    {authMode === 'LOGIN' ? (
+                      <>
+                        Don't have an account?{' '}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAuthMode('SIGNUP');
+                            setErrorMessage(null);
+                            setSuccessMessage(null);
+                          }}
+                          className="text-emerald-600 hover:text-emerald-700 font-bold underline cursor-pointer"
+                        >
+                          Sign Up Free
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        Already have an account?{' '}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAuthMode('LOGIN');
+                            setErrorMessage(null);
+                            setSuccessMessage(null);
+                          }}
+                          className="text-emerald-600 hover:text-emerald-700 font-bold underline cursor-pointer"
+                        >
+                          Sign In
+                        </button>
+                      </>
+                    )}
+                  </p>
+
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthMethod('PASSWORD');
+                        setErrorMessage(null);
+                      }}
+                      className="text-xs text-neutral-400 hover:text-black font-semibold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      <KeyRound className="w-3.5 h-3.5 text-neutral-400" />
+                      <span>Administrator or password sign in</span>
+                    </button>
+                  </div>
                 </div>
               </form>
             )}
 
-            {/* STEP 1.5: CONFIRM ACCOUNT CREATION (FOR UNREGISTERED MOBILES) */}
+            {/* STEP 1.5: CONFIRM ACCOUNT CREATION (FOR UNREGISTERED MOBILES IN LOGIN MODE) */}
             {step === 'CONFIRM_SIGNUP' && (
               <div className="space-y-4 animate-in fade-in">
                 <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900">
@@ -566,13 +700,29 @@ export const PhoneOtpModal: React.FC = () => {
                   )}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setStep('ENTER_MOBILE')}
-                  className="w-full text-xs text-neutral-500 hover:text-black font-bold py-2 transition text-center"
-                >
-                  Use a different mobile number
-                </button>
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep('ENTER_MOBILE');
+                      setErrorMessage(null);
+                    }}
+                    className="text-xs text-neutral-500 hover:text-black font-bold py-1 transition cursor-pointer"
+                  >
+                    ← Use different number
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthMode('SIGNUP');
+                      setStep('ENTER_MOBILE');
+                      setErrorMessage(null);
+                    }}
+                    className="text-xs text-emerald-700 hover:underline font-bold py-1 transition cursor-pointer"
+                  >
+                    Go to Sign Up tab →
+                  </button>
+                </div>
               </div>
             )}
 

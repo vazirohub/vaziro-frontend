@@ -10,6 +10,7 @@ import {
   Briefcase,
   Sliders,
   ShieldCheck,
+  UserPlus,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -196,12 +197,21 @@ export const Navbar: React.FC = () => {
                 )}
               </div>
             ) : (
-              <button
-                onClick={() => openAuthModal('CUSTOMER')}
-                className="flex items-center gap-1.5 bg-black hover:bg-neutral-800 text-white px-5 py-2.5 rounded-xl font-bold text-xs shadow-sm transition"
-              >
-                <span>Sign In / Register</span>
-              </button>
+              <div className="flex items-center gap-1.5 sm:gap-2.5">
+                <button
+                  onClick={() => openAuthModal('CUSTOMER', undefined, 'LOGIN')}
+                  className="text-xs font-bold text-neutral-700 hover:text-black px-3 py-2 rounded-xl hover:bg-neutral-100 transition cursor-pointer"
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => openAuthModal('CUSTOMER', undefined, 'SIGNUP')}
+                  className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-xl font-bold text-xs shadow-sm transition cursor-pointer"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Sign Up</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

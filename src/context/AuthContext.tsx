@@ -13,11 +13,13 @@ interface AuthContextType {
   completeSignup: (payload: any) => Promise<any>;
   logout: () => void;
   updateUser: (user: User) => void;
-  openAuthModal: (role?: 'CUSTOMER' | 'PROFESSIONAL', initialIdentifier?: string) => void;
+  openAuthModal: (role?: 'CUSTOMER' | 'PROFESSIONAL', initialIdentifier?: string, mode?: 'LOGIN' | 'SIGNUP') => void;
   closeAuthModal: () => void;
   isAuthModalOpen: boolean;
   defaultRole: 'CUSTOMER' | 'PROFESSIONAL';
   initialIdentifier: string;
+  initialMode: 'LOGIN' | 'SIGNUP';
+  setInitialMode: (mode: 'LOGIN' | 'SIGNUP') => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,6 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [defaultRole, setDefaultRole] = useState<'CUSTOMER' | 'PROFESSIONAL'>('CUSTOMER');
   const [initialIdentifier, setInitialIdentifier] = useState('');
+  const [initialMode, setInitialMode] = useState<'LOGIN' | 'SIGNUP'>('LOGIN');
 
   useEffect(() => {
     const token = localStorage.getItem('vaziro_token');
@@ -323,9 +326,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
-  const openAuthModal = (role: 'CUSTOMER' | 'PROFESSIONAL' = 'CUSTOMER', initialId?: string) => {
+  const openAuthModal = (
+    role: 'CUSTOMER' | 'PROFESSIONAL' = 'CUSTOMER',
+    initialId?: string,
+    mode?: 'LOGIN' | 'SIGNUP'
+  ) => {
     setDefaultRole(role);
     setInitialIdentifier(initialId || '');
+    if (mode) {
+      setInitialMode(mode);
+    }
     setIsAuthModalOpen(true);
   };
 
@@ -354,6 +364,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthModalOpen,
         defaultRole,
         initialIdentifier,
+        initialMode,
+        setInitialMode,
       }}
     >
       {children}

@@ -90,12 +90,20 @@ export const ProfilePage: React.FC = () => {
           <p className="text-xs text-neutral-500 leading-relaxed font-medium">
             Please sign in to manage your personal details, profile photo, and password.
           </p>
-          <button
-            onClick={() => openAuthModal()}
-            className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition"
-          >
-            Sign In / Register
-          </button>
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              onClick={() => openAuthModal('CUSTOMER', undefined, 'LOGIN')}
+              className="flex-1 bg-black hover:bg-neutral-800 text-white py-3 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition cursor-pointer"
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => openAuthModal('CUSTOMER', undefined, 'SIGNUP')}
+              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition cursor-pointer"
+            >
+              Sign Up Free
+            </button>
+          </div>
         </div>
       </div>
     );
