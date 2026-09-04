@@ -33,71 +33,86 @@ export const MobileBottomNav: React.FC = () => {
   return (
     <nav
       aria-label="Mobile Navigation"
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 md:hidden shadow-[0_-4px_16px_rgba(0,0,0,0.06)]"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-neutral-200/80 md:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.05)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div className="grid grid-cols-5 h-16 max-w-lg mx-auto px-1">
+      <div className="grid grid-cols-5 h-16 max-w-lg mx-auto px-2">
         {isProfessional ? (
           // Professional Navigation
           <>
             <Link
               to="/dashboard"
-              className={`flex flex-col items-center justify-center min-h-[44px] text-[11px] font-medium transition ${
+              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
                 isActive('/dashboard') && !location.search.includes('tab=jobs')
-                  ? 'text-emerald-700 font-bold'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'text-emerald-700 font-extrabold'
+                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
               }`}
             >
+              {isActive('/dashboard') && !location.search.includes('tab=jobs') && (
+                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
+              )}
               <Home className="w-5 h-5 mb-0.5" />
               <span>Overview</span>
             </Link>
 
             <Link
               to="/requirements"
-              className={`flex flex-col items-center justify-center min-h-[44px] text-[11px] font-medium transition ${
+              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
                 isActive('/requirements')
-                  ? 'text-emerald-700 font-bold'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'text-emerald-700 font-extrabold'
+                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
               }`}
             >
+              {isActive('/requirements') && (
+                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
+              )}
               <Search className="w-5 h-5 mb-0.5" />
-              <span>Find Leads</span>
+              <span>Leads</span>
             </Link>
 
             <Link
               to="/dashboard?tab=jobs"
-              className={`flex flex-col items-center justify-center min-h-[44px] text-[11px] font-medium transition ${
+              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
                 location.pathname === '/dashboard' && location.search.includes('tab=jobs')
-                  ? 'text-emerald-700 font-bold'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'text-emerald-700 font-extrabold'
+                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
               }`}
             >
+              {location.pathname === '/dashboard' && location.search.includes('tab=jobs') && (
+                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
+              )}
               <Briefcase className="w-5 h-5 mb-0.5" />
-              <span>Active Jobs</span>
+              <span>Jobs</span>
             </Link>
 
             <Link
               to="/credits"
-              className={`flex flex-col items-center justify-center min-h-[44px] text-[11px] font-medium transition ${
+              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
                 isActive('/credits')
-                  ? 'text-emerald-700 font-bold'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'text-amber-700 font-extrabold'
+                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
               }`}
             >
-              <Coins className="w-5 h-5 mb-0.5" />
+              {isActive('/credits') && (
+                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-amber-500" />
+              )}
+              <Coins className="w-5 h-5 mb-0.5 text-amber-500" />
               <span>Credits</span>
             </Link>
 
             <Link
               to="/profile"
-              className={`flex flex-col items-center justify-center min-h-[44px] text-[11px] font-medium transition ${
+              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
                 isActive('/profile')
-                  ? 'text-emerald-700 font-bold'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'text-emerald-700 font-extrabold'
+                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
               }`}
             >
+              {isActive('/profile') && (
+                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
+              )}
               <User className="w-5 h-5 mb-0.5" />
-              <span>Profile</span>
+              <span>Account</span>
             </Link>
           </>
         ) : (
@@ -105,47 +120,56 @@ export const MobileBottomNav: React.FC = () => {
           <>
             <Link
               to="/"
-              className={`flex flex-col items-center justify-center min-h-[44px] text-[11px] font-medium transition ${
+              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
                 isActive('/')
-                  ? 'text-emerald-700 font-bold'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'text-emerald-700 font-extrabold'
+                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
               }`}
             >
+              {isActive('/') && (
+                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
+              )}
               <Home className="w-5 h-5 mb-0.5" />
               <span>Home</span>
             </Link>
 
             <Link
               to="/dashboard"
-              className={`flex flex-col items-center justify-center min-h-[44px] text-[11px] font-medium transition ${
+              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
                 isActive('/dashboard')
-                  ? 'text-emerald-700 font-bold'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'text-emerald-700 font-extrabold'
+                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
               }`}
             >
+              {isActive('/dashboard') && (
+                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
+              )}
               <FileText className="w-5 h-5 mb-0.5" />
-              <span>My Requests</span>
+              <span>Requests</span>
             </Link>
 
-            {/* Prominent Center Action: Post Job */}
+            {/* Prominent Floating Center Action: Post Job */}
             <Link
               to="/post-requirement"
-              className="flex flex-col items-center justify-center min-h-[44px] -mt-3 text-[11px] font-bold text-white transition group"
+              className="flex flex-col items-center justify-center min-h-[44px] -mt-3.5 text-[10.5px] font-extrabold transition group"
             >
-              <div className="w-11 h-11 rounded-full bg-emerald-600 group-hover:bg-emerald-700 flex items-center justify-center shadow-md border-2 border-white transition-transform active:scale-95">
-                <PlusCircle className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 rounded-full bg-black group-hover:bg-neutral-800 flex items-center justify-center shadow-lg border-2 border-white transition-transform active:scale-95">
+                <PlusCircle className="w-6 h-6 text-emerald-400" />
               </div>
-              <span className="text-emerald-800 text-[10px] font-bold mt-0.5">Post Job</span>
+              <span className="text-black text-[9.5px] font-black mt-0.5">Post Job</span>
             </Link>
 
             <Link
               to="/chat"
-              className={`flex flex-col items-center justify-center min-h-[44px] text-[11px] font-medium transition ${
+              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
                 isActive('/chat')
-                  ? 'text-emerald-700 font-bold'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'text-emerald-700 font-extrabold'
+                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
               }`}
             >
+              {isActive('/chat') && (
+                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
+              )}
               <MessageSquare className="w-5 h-5 mb-0.5" />
               <span>Chat</span>
             </Link>
@@ -153,12 +177,15 @@ export const MobileBottomNav: React.FC = () => {
             {isAuthenticated ? (
               <Link
                 to="/profile"
-                className={`flex flex-col items-center justify-center min-h-[44px] text-[11px] font-medium transition ${
+                className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
                   isActive('/profile')
-                    ? 'text-emerald-700 font-bold'
-                    : 'text-gray-500 hover:text-gray-900'
+                    ? 'text-emerald-700 font-extrabold'
+                    : 'text-neutral-500 hover:text-neutral-900 font-medium'
                 }`}
               >
+                {isActive('/profile') && (
+                  <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
+                )}
                 <User className="w-5 h-5 mb-0.5" />
                 <span>Account</span>
               </Link>
@@ -166,7 +193,7 @@ export const MobileBottomNav: React.FC = () => {
               <button
                 type="button"
                 onClick={() => openAuthModal('CUSTOMER', undefined, 'LOGIN')}
-                className="flex flex-col items-center justify-center min-h-[44px] text-[11px] font-medium text-gray-500 hover:text-gray-900 transition"
+                className="flex flex-col items-center justify-center min-h-[44px] text-[10.5px] font-medium text-neutral-500 hover:text-neutral-900 transition cursor-pointer"
               >
                 <LogIn className="w-5 h-5 mb-0.5" />
                 <span>Sign In</span>
@@ -180,3 +207,4 @@ export const MobileBottomNav: React.FC = () => {
 };
 
 export default MobileBottomNav;
+
