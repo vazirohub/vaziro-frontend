@@ -20,7 +20,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || (isLocal ? 'http://localhos
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 25000,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -37,6 +37,9 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.code === 'ECONNABORTED' || error.message?.toLowerCase().includes('timeout')) {
+      error.message = 'The server is taking longer than expected to respond. It may be starting up or updating. Please try again in a few seconds.';
+    }
     if (error.response?.status === 401) {
       const code = error.response?.data?.error?.code;
       const message = error.response?.data?.error?.message || '';
