@@ -4,6 +4,7 @@ import { Requirement, Category, DetailedCreditWallet } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { Search, MapPin, IndianRupee, ShieldCheck, Coins, Send, X, Clock, Calendar, AlertCircle, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { CategoryIcon } from '../components/CategoryIcon';
 
 export const BrowseRequirementsPage: React.FC = () => {
   const { user, isAuthenticated, openAuthModal } = useAuth();
@@ -185,7 +186,7 @@ export const BrowseRequirementsPage: React.FC = () => {
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            <span>{cat.icon || '💼'}</span>
+            <CategoryIcon icon={cat.icon} className="w-4 h-4" />
             <span>{cat.name}</span>
           </button>
         ))}
@@ -223,8 +224,9 @@ export const BrowseRequirementsPage: React.FC = () => {
                   {/* Category & Boosted Badge */}
                   <div className="flex items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                        {req.category?.icon || '💼'} {req.subcategory?.name || req.category?.name}
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                        <CategoryIcon icon={req.category?.icon} className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>{req.subcategory?.name || req.category?.name}</span>
                       </span>
                       {req.isBoosted && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 shadow-xs">

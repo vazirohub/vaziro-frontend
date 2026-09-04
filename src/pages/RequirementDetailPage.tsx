@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import { openRazorpayCheckout } from '../utils/razorpay';
+import { CategoryIcon } from '../components/CategoryIcon';
 
 export const RequirementDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -185,8 +186,9 @@ export const RequirementDetailPage: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-                {requirement.category?.icon} {requirement.category?.name} • {requirement.subcategory?.name}
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                <CategoryIcon icon={requirement.category?.icon} className="w-3.5 h-3.5 text-emerald-600" />
+                <span>{requirement.category?.name} • {requirement.subcategory?.name}</span>
               </span>
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                 Status: {requirement.status}

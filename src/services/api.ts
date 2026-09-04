@@ -18,6 +18,7 @@ import {
   ChatThread,
   Message,
   Dispute,
+  ProfessionalTransaction,
 } from '../types';
 
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -151,11 +152,19 @@ export const api = {
   getJobDetails: (id: string) => apiClient.get<ApiResponse<Job>>(`/jobs/${id}`),
   updateJobStatus: (id: string, newStatus: string, reason?: string) =>
     apiClient.patch<ApiResponse<Job>>(`/jobs/${id}/status`, { newStatus, reason }),
+  updateJobWorkStatus: (jobId: string, workStatus: string, notes?: string) =>
+    apiClient.patch<ApiResponse<Job>>(`/jobs/${jobId}/work-status`, { workStatus, notes }),
+  confirmJobCompletion: (jobId: string) =>
+    apiClient.post<ApiResponse<Job>>(`/jobs/${jobId}/confirm-completion`),
+  raiseJobDispute: (jobId: string, reason: string, description: string) =>
+    apiClient.post<ApiResponse<Job>>(`/jobs/${jobId}/dispute`, { reason, description }),
 
   // Credits & Wallet
   getCreditWallet: () => apiClient.get<ApiResponse<DetailedCreditWallet>>('/credits/wallet'),
   getCreditBatches: () => apiClient.get<ApiResponse<CreditBatch[]>>('/credits/batches'),
   getCreditLedger: () => apiClient.get<ApiResponse<CreditLedgerItem[]>>('/credits/ledger'),
+  getProfessionalTransactions: (params?: { type?: string; limit?: number; offset?: number }) =>
+    apiClient.get<ApiResponse<{ transactions: ProfessionalTransaction[]; total: number }>>('/credits/transactions', { params }),
   getCreditPlans: () => apiClient.get<ApiResponse<ProfessionalPlan[]>>('/credits/plans'),
   calculateCreditFee: (budgetMin: number, budgetMax?: number) =>
     apiClient.post<ApiResponse<{ creditsRequired: number; nominalCostInr: number }>>('/credits/calculate-fee', { budgetMin, budgetMax }),

@@ -1,7 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { DetailedCreditWallet, ProfessionalPlan, CreditBatch, CreditLedgerItem } from '../types';
+import {
+  DetailedCreditWallet,
+  ProfessionalPlan,
+  CreditBatch,
+  CreditLedgerItem,
+  ProfessionalTransaction,
+} from '../types';
 import { useAuth } from '../context/AuthContext';
 import {
   Coins,
@@ -18,18 +24,28 @@ import {
   CheckCircle2,
   Calendar,
   Layers,
+  History,
+  TrendingUp,
+  RotateCcw,
+  ExternalLink,
+  Wallet,
+  Filter,
+  ArrowRight,
 } from 'lucide-react';
 import { openRazorpayCheckout } from '../utils/razorpay';
 
 export const CreditsWalletPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, openAuthModal } = useAuth();
+  const plansSectionRef = useRef<HTMLDivElement>(null);
 
   const [wallet, setWallet] = useState<DetailedCreditWallet | null>(null);
   const [plans, setPlans] = useState<ProfessionalPlan[]>([]);
   const [batches, setBatches] = useState<CreditBatch[]>([]);
   const [ledger, setLedger] = useState<CreditLedgerItem[]>([]);
-  const [activeTab, setActiveTab] = useState<'plans' | 'batches' | 'ledger'>('plans');
+  const [transactions, setTransactions] = useState<ProfessionalTransaction[]>([]);
+  const [activeTab, setActiveTab] = useState<'plans' | 'transactions' | 'batches' | 'ledger'>('plans');
+  const [transactionFilter, setTransactionFilter] = useState<'ALL' | 'CREDIT' | 'PAYMENT' | 'REFUND'>('ALL');
   const [loading, setLoading] = useState(true);
   const [purchasingPlan, setPurchasingPlan] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -37,11 +53,12 @@ export const CreditsWalletPage: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [walletRes, plansRes, batchesRes, ledgerRes] = await Promise.all([
+      const [walletRes, plansRes, batchesRes, ledgerRes, txRes] = await Promise.all([
         api.getCreditWallet().catch(() => null),
         api.getCreditPlans().catch(() => null),
         api.getCreditBatches().catch(() => null),
         api.getCreditLedger().catch(() => null),
+        api.getProfessionalTransactions().catch(() => null),
       ]);
 
       if (walletRes?.data?.data) {
@@ -55,6 +72,9 @@ export const CreditsWalletPage: React.FC = () => {
       }
       if (ledgerRes?.data?.data) {
         setLedger(ledgerRes.data.data);
+      }
+      if (txRes?.data?.data?.transactions) {
+        setTransactions(txRes.data.data.transactions);
       }
     } catch (err) {
       console.error(err);
@@ -127,7 +147,7 @@ export const CreditsWalletPage: React.FC = () => {
     return (
       <div className="max-w-6xl mx-auto py-16 px-4 text-center">
         <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-emerald-600 border-t-transparent"></div>
-        <p className="mt-4 text-sm text-gray-500 font-medium">Loading Vaziro Credit Wallet & Plans...</p>
+        <p className="mt-4 text-sm text-gray-500 font-medium">Loading Vaziro Credit Wallet & History...</p>
       </div>
     );
   }
@@ -200,33 +220,48 @@ export const CreditsWalletPage: React.FC = () => {
   }
 
   const balance = wallet?.balance ?? 10;
+  const creditValue = wallet?.creditValueInr ?? balance * 10;
   const purchased = wallet?.purchasedCredits ?? 0;
   const bonus = wallet?.bonusCredits ?? 0;
-  const expiring30 = wallet?.expiringCredits30Days ?? 0;
-  const refundableCr = wallet?.refundableCredits ?? 0;
-  const refundableAmount = wallet?.refundableAmountInr ?? 0;
+  const pendingRefund = wallet?.creditsPendingRefund ?? 0;
+  const refunded = wallet?.creditsRefunded ?? 0;
+  const used = wallet?.creditsUsed ?? 0;
+  const expiringSoon = wallet?.creditsExpiringSoon ?? wallet?.expiringCredits30Days ?? 0;
   const tier = wallet?.visibilityTier ?? 'STANDARD';
+
+  const getTransactionCategory = (tx: ProfessionalTransaction): 'CREDIT' | 'PAYMENT' | 'REFUND' => {
+    if (tx.category) return tx.category;
+    if (tx.type.includes('REFUND')) return 'REFUND';
+    if (tx.type.includes('PAYMENT') || tx.type.includes('TRANSFER')) return 'PAYMENT';
+    return 'CREDIT';
+  };
+
+  const filteredTransactions = transactions.filter((tx) => {
+    if (transactionFilter === 'ALL') return true;
+    const cat = getTransactionCategory(tx);
+    return cat === transactionFilter;
+  });
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-              Professional Credit Wallet & Plans
+              Professional Credit Wallet & History
             </h1>
             <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
               {tier} Visibility
             </span>
           </div>
-          <p className="text-sm text-gray-500">
-            1 Credit = ₹10. Applications cost 1 credit per ₹100 of customer budget (minimum 1 credit). 90-day credit validity with full refund guarantee on unused purchased credits.
+          <p className="text-xs sm:text-sm text-gray-500">
+            1 Credit = ₹10. Full credit refund guarantee if customer chooses another professional or if requirement expires.
           </p>
         </div>
         <button
           onClick={fetchData}
-          className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition"
+          className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           Refresh
@@ -240,34 +275,121 @@ export const CreditsWalletPage: React.FC = () => {
         </div>
       )}
 
-      {/* Comprehensive Wallet Breakdown Grid (Section 17, 18, 20) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {/* Total Available Balance */}
+      {/* Quick Action Navigation Bar */}
+      <div className="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 mb-8 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+            <Wallet className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xs text-slate-300 font-medium">Wallet Quick Actions</div>
+            <div className="text-sm font-bold text-white">
+              {balance} Available Credits (₹{creditValue.toLocaleString('en-IN')} Value)
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('plans');
+              setTimeout(() => {
+                plansSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+              }, 100);
+            }}
+            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            Buy Professional Plan
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('transactions')}
+            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-bold uppercase tracking-wider transition border border-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <History className="w-3.5 h-3.5" />
+            View Transaction History
+          </button>
+        </div>
+      </div>
+
+      {/* Real-time Credit Wallet Breakdown (6 Core Metrics) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        {/* Metric 1: Available Credits & Value */}
         <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-5 text-white shadow-md flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-emerald-100 text-xs font-bold uppercase tracking-wider mb-2">
-              <span>Available Balance</span>
+              <span>Available Credits</span>
               <Coins className="w-5 h-5" />
             </div>
-            <div className="text-3xl sm:text-4xl font-black">
+            <div className="text-3xl font-black">
               {balance} <span className="text-sm font-normal text-emerald-100">Credits</span>
             </div>
           </div>
           <div className="mt-3 pt-3 border-t border-emerald-500/40 text-xs text-emerald-100 flex justify-between items-center">
-            <span>Nominal: ₹{(balance * 10).toLocaleString('en-IN')}</span>
-            <span>Purchased: {purchased} • Bonus: {bonus}</span>
+            <span className="font-semibold">Value: ₹{creditValue.toLocaleString('en-IN')}</span>
+            <span>{purchased} Base • {bonus} Bonus</span>
           </div>
         </div>
 
-        {/* Expiring Soon */}
+        {/* Metric 2: Credits Pending Refund */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span>Credits Pending Refund</span>
+              <RotateCcw className={`w-4 h-4 ${pendingRefund > 0 ? 'text-amber-500' : 'text-gray-400'}`} />
+            </div>
+            <div className={`text-3xl font-extrabold ${pendingRefund > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
+              {pendingRefund} <span className="text-xs text-gray-500 font-normal">Credits</span>
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
+            From open leads awaiting customer hiring decision.
+          </div>
+        </div>
+
+        {/* Metric 3: Credits Refunded (Safe Guarantee) */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span>Credits Refunded</span>
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div className="text-3xl font-extrabold text-emerald-700">
+              +{refunded} <span className="text-xs text-gray-500 font-normal">Credits</span>
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-emerald-700 font-medium">
+            100% credited back when customer chose another pro or lead expired.
+          </div>
+        </div>
+
+        {/* Metric 4: Credits Used */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span>Credits Used</span>
+              <TrendingUp className="w-4 h-4 text-gray-400" />
+            </div>
+            <div className="text-3xl font-extrabold text-gray-900">
+              {used} <span className="text-xs text-gray-500 font-normal">Credits</span>
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
+            Total credits committed to verified lead applications.
+          </div>
+        </div>
+
+        {/* Metric 5: Expiring Soon */}
         <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
           <div>
             <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
               <span>Expiring in 30 Days</span>
-              <Clock className={`w-4 h-4 ${expiring30 > 0 ? 'text-amber-500' : 'text-gray-400'}`} />
+              <Clock className={`w-4 h-4 ${expiringSoon > 0 ? 'text-amber-500' : 'text-gray-400'}`} />
             </div>
-            <div className={`text-3xl font-extrabold ${expiring30 > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
-              {expiring30} <span className="text-xs text-gray-500 font-normal">Credits</span>
+            <div className={`text-3xl font-extrabold ${expiringSoon > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
+              {expiringSoon} <span className="text-xs text-gray-500 font-normal">Credits</span>
             </div>
           </div>
           <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
@@ -279,23 +401,7 @@ export const CreditsWalletPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Refundable Balance */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
-              <span>Refund Guarantee</span>
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            </div>
-            <div className="text-3xl font-extrabold text-gray-900">
-              ₹{refundableAmount.toLocaleString('en-IN')}
-            </div>
-          </div>
-          <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-emerald-700 font-medium">
-            {refundableCr} unused base credits eligible for ₹10/credit refund upon expiry.
-          </div>
-        </div>
-
-        {/* Visibility Tier */}
+        {/* Metric 6: Visibility Tier */}
         <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
           <div>
             <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
@@ -307,16 +413,16 @@ export const CreditsWalletPage: React.FC = () => {
             </div>
           </div>
           <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
-            Higher tier plans boost your directory ranking and discovery match score.
+            Directory ranking & algorithm priority for new leads.
           </div>
         </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-gray-200 mb-8 pb-3">
+      <div className="flex items-center gap-2 border-b border-gray-200 mb-8 pb-3 overflow-x-auto no-scrollbar">
         <button
           onClick={() => setActiveTab('plans')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition whitespace-nowrap cursor-pointer ${
             activeTab === 'plans'
               ? 'bg-emerald-600 text-white shadow-sm'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
@@ -325,39 +431,53 @@ export const CreditsWalletPage: React.FC = () => {
           <CreditCard className="w-4 h-4" />
           Vaziro Professional Plans
         </button>
+
+        <button
+          onClick={() => setActiveTab('transactions')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition whitespace-nowrap cursor-pointer ${
+            activeTab === 'transactions'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          }`}
+        >
+          <History className="w-4 h-4" />
+          Transaction History ({transactions.length})
+        </button>
+
         <button
           onClick={() => setActiveTab('batches')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition whitespace-nowrap cursor-pointer ${
             activeTab === 'batches'
               ? 'bg-emerald-600 text-white shadow-sm'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
           }`}
         >
           <Layers className="w-4 h-4" />
-          Credit Batches & Validity ({batches.length})
+          Credit Batches ({batches.length})
         </button>
+
         <button
           onClick={() => setActiveTab('ledger')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition whitespace-nowrap cursor-pointer ${
             activeTab === 'ledger'
               ? 'bg-emerald-600 text-white shadow-sm'
               : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
           }`}
         >
           <Clock className="w-4 h-4" />
-          Audit Ledger History
+          Audit Ledger
         </button>
       </div>
 
       {/* TAB 1: 5 VAZIRO PROFESSIONAL PLANS */}
       {activeTab === 'plans' && (
-        <div>
+        <div ref={plansSectionRef}>
           <div className="text-center max-w-xl mx-auto mb-8">
             <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900">
               Choose Your Vaziro Professional Plan
             </h2>
             <p className="text-xs text-gray-500 mt-1">
-              Select a plan that fits your business volume. 1 Credit = ₹10. Unused base credits valid for 90 days and refundable if unspent.
+              Select a plan that fits your business volume. 1 Credit = ₹10. Unused base credits valid for 90 days with full refund guarantee.
             </p>
           </div>
 
@@ -438,44 +558,201 @@ export const CreditsWalletPage: React.FC = () => {
             })}
           </div>
 
-          {/* Refund Transparency Policy Box */}
-          <div className="bg-neutral-50 rounded-2xl p-6 border border-neutral-200 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div className="text-xs text-neutral-600 leading-relaxed">
-              <span className="font-bold text-neutral-900 block mb-0.5">Vaziro 90-Day Credit Validity & Refund Guarantee (Section 18, 20)</span>
-              All purchased credits are valid for 90 days from the purchase date. In the expiring batch, bonus credits are spent first before purchased credits. Any unused base purchased credits remaining after 90 days become automatically eligible for a refund at ₹10 per credit directly to your original payment method. Bonus credits are promotional and non-refundable.
-            </div>
+          <div className="bg-emerald-50/60 border border-emerald-200/70 rounded-2xl p-4 text-xs text-emerald-900 flex items-start gap-3">
+            <Info className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <p>
+              <strong>Fair Refund Guarantee:</strong> When you submit a quotation on a lead, credits are held temporarily. If the customer hires another professional, or if the requirement expires or is cancelled without hiring, 100% of your application credits are automatically restored to your wallet.
+            </p>
           </div>
         </div>
       )}
 
-      {/* TAB 2: CREDIT BATCHES & 90-DAY EXPIRY */}
-      {activeTab === 'batches' && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+      {/* TAB 2: TRANSACTION HISTORY */}
+      {activeTab === 'transactions' && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-7 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
             <div>
-              <h3 className="text-base font-bold text-gray-900">Your Active & Expired Credit Batches</h3>
+              <h3 className="text-base sm:text-lg font-bold text-gray-900">Complete Financial & Credit History</h3>
               <p className="text-xs text-gray-500 mt-0.5">
-                Every plan purchase creates an isolated batch tracked for 90-day expiry and automated refund eligibility.
+                Transparent records of all plan purchases, application credit debits, automated refunds, and escrow payments.
               </p>
+            </div>
+
+            {/* Sub-Filters */}
+            <div className="flex items-center gap-1.5 p-1 bg-gray-100 rounded-xl self-start sm:self-auto overflow-x-auto">
+              {(['ALL', 'CREDIT', 'PAYMENT', 'REFUND'] as const).map((filter) => (
+                <button
+                  key={filter}
+                  onClick={() => setTransactionFilter(filter)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                    transactionFilter === filter
+                      ? 'bg-white text-gray-900 shadow-xs'
+                      : 'text-gray-500 hover:text-gray-900'
+                  }`}
+                >
+                  {filter === 'ALL'
+                    ? 'All'
+                    : filter === 'CREDIT'
+                    ? 'Credits'
+                    : filter === 'PAYMENT'
+                    ? 'Payments'
+                    : 'Refunds'}
+                </button>
+              ))}
             </div>
           </div>
 
-          {batches.length > 0 ? (
+          {filteredTransactions.length > 0 ? (
+            <div className="space-y-3">
+              {filteredTransactions.map((tx) => {
+                const isCredit = tx.direction === 'CREDIT';
+                const cat = getTransactionCategory(tx);
+                const title = tx.displayType || tx.title || tx.type.replace(/_/g, ' ');
+                const desc = tx.description || tx.reason || '';
+                const reqTitle = tx.requirement?.title || tx.metadata?.requirementTitle;
+                const reqId = tx.requirement?.id || tx.metadata?.requirementId;
+                const amountFormatted = tx.amount;
+
+                return (
+                  <div
+                    key={tx.id}
+                    className="p-4 rounded-xl border border-gray-100 hover:border-gray-200 hover:bg-slate-50/50 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                          cat === 'REFUND'
+                            ? 'bg-blue-50 text-blue-600 border border-blue-200'
+                            : isCredit
+                            ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                            : 'bg-gray-100 text-gray-700 border border-gray-200'
+                        }`}
+                      >
+                        {cat === 'REFUND' ? (
+                          <RotateCcw className="w-4 h-4" />
+                        ) : isCredit ? (
+                          <ArrowDownLeft className="w-4 h-4" />
+                        ) : (
+                          <ArrowUpRight className="w-4 h-4" />
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-gray-900 text-xs sm:text-sm">
+                            {title}
+                          </span>
+                          <span
+                            className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                              cat === 'REFUND'
+                                ? 'bg-blue-100 text-blue-800'
+                                : isCredit
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-gray-100 text-gray-700'
+                            }`}
+                          >
+                            {cat}
+                          </span>
+                        </div>
+
+                        {desc && (
+                          <p className="text-xs text-gray-600 mt-1 leading-relaxed">{desc}</p>
+                        )}
+
+                        {reqTitle && (
+                          <div className="mt-1.5 flex items-center gap-1.5 text-xs text-emerald-700">
+                            <span className="text-gray-400">Requirement:</span>
+                            {reqId ? (
+                              <Link
+                                to={`/requirements/${reqId}`}
+                                className="font-semibold hover:underline inline-flex items-center gap-1"
+                              >
+                                {reqTitle}
+                                <ExternalLink className="w-3 h-3" />
+                              </Link>
+                            ) : (
+                              <span className="font-medium">{reqTitle}</span>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="mt-1 text-[11px] text-gray-400 flex items-center gap-2">
+                          <span>
+                            {new Date(tx.createdAt).toLocaleDateString('en-IN', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                          {tx.balanceAfter !== undefined && tx.balanceAfter !== null && (
+                            <>
+                              <span>•</span>
+                              <span>Balance: {tx.balanceAfter} cr</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Amount & Direction Badge */}
+                    <div className="sm:text-right shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100 flex sm:flex-col items-center sm:items-end justify-between">
+                      <span
+                        className={`text-sm sm:text-base font-black px-2.5 py-1 rounded-lg ${
+                          isCredit
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-gray-900 text-white'
+                        }`}
+                      >
+                        {amountFormatted}
+                      </span>
+                      {tx.status && (
+                        <span className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mt-1">
+                          {tx.status.replace(/_/g, ' ')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-400">
+              <History className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+              <p className="text-sm font-semibold text-gray-700">No transactions match this filter</p>
+              <p className="text-xs text-gray-400 mt-1">
+                Your credits debited for applications and subsequent refunds will appear here.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: CREDIT BATCHES */}
+      {activeTab === 'batches' && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Active Credit Batches</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                FIFO consumption tracking. Each batch maintains an independent 90-day validity clock.
+              </p>
+            </div>
+            <span className="text-xs text-gray-400">{batches.length} Batches</span>
+          </div>
+
+          {batches && batches.length > 0 ? (
             <div className="divide-y divide-gray-100">
               {batches.map((batch) => {
-                const isExpired = new Date(batch.expiresAt) <= new Date();
                 const totalInit = batch.initialPurchasedCredits + batch.initialBonusCredits;
                 const totalRem = batch.remainingPurchasedCredits + batch.remainingBonusCredits;
-
                 return (
                   <div key={batch.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-gray-900 text-sm">
-                          {batch.planPurchase?.plan?.name || 'Professional Plan'} Batch
+                          {batch.planPurchase?.plan?.name || 'Professional Plan Batch'}
                         </span>
                         <span
                           className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
@@ -529,7 +806,7 @@ export const CreditsWalletPage: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: AUDIT LEDGER */}
+      {/* TAB 4: AUDIT LEDGER */}
       {activeTab === 'ledger' && (
         <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
           <div className="flex items-center justify-between mb-4">
@@ -583,3 +860,5 @@ export const CreditsWalletPage: React.FC = () => {
     </div>
   );
 };
+
+export default CreditsWalletPage;

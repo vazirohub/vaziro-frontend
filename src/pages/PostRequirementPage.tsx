@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { Category, Subcategory, IndianState, City } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { CategoryIcon } from '../components/CategoryIcon';
 import {
   CheckCircle2,
   ChevronRight,
@@ -465,7 +466,7 @@ export const PostRequirementPage: React.FC = () => {
                       
                       <div className="absolute bottom-2 left-2.5 right-2 flex items-center justify-between text-white">
                         <div className="w-7 h-7 rounded-lg bg-white/90 backdrop-blur-sm flex items-center justify-center">
-                          {iconMap[cat.icon] || <Sparkles className="w-4 h-4 text-black" />}
+                          <CategoryIcon icon={cat.icon} className="w-4 h-4 text-black" />
                         </div>
                         {isSelected && (
                           <span className="w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-black">

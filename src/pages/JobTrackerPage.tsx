@@ -19,19 +19,30 @@ import {
   X,
   CreditCard,
   Sparkles,
+  Truck,
+  Wrench,
+  Check,
+  HelpCircle,
+  AlertCircle,
+  Lock,
+  Info,
 } from 'lucide-react';
 import { openRazorpayCheckout } from '../utils/razorpay';
 
-const LIFECYCLE_STEPS = [
-  { key: 'HIRED', label: 'Hired', desc: 'Agreement finalized' },
-  { key: 'SCHEDULED', label: 'Scheduled', desc: 'Date & time set' },
-  { key: 'PREPARING', label: 'Preparing', desc: 'Gathering tools' },
-  { key: 'ON_THE_WAY', label: 'On The Way', desc: 'En route to location' },
-  { key: 'ARRIVED', label: 'Arrived', desc: 'At service address' },
-  { key: 'SERVICE_STARTED', label: 'In Progress', desc: 'Service execution' },
-  { key: 'SERVICE_COMPLETED', label: 'Completed', desc: 'Delivery finished' },
-  { key: 'CUSTOMER_APPROVED', label: 'Approved', desc: 'Quality verified' },
-  { key: 'PAYMENT_RELEASED', label: 'Paid', desc: 'Funds transferred' },
+// Operational Work Stages (strictly professional-controlled)
+const WORK_STAGES = [
+  { key: 'PREPARING', label: 'Preparing', desc: 'Gathering tools & materials', icon: Wrench },
+  { key: 'ON_THE_WAY', label: 'On The Way', desc: 'En route to customer location', icon: Truck },
+  { key: 'WORK_STARTED', label: 'Work Started', desc: 'Service execution underway', icon: Clock },
+  { key: 'WORK_COMPLETED', label: 'Work Completed', desc: 'Service finished by pro', icon: CheckCircle2 },
+];
+
+// Financial Escrow Stages (strictly customer-controlled)
+const PAYMENT_STAGES = [
+  { key: 'PAYMENT_PENDING', label: 'Escrow Pending', desc: 'Deposit by customer awaited' },
+  { key: 'PAYMENT_SECURED', label: 'Escrow Secured', desc: 'Safely locked in Vaziro Escrow' },
+  { key: 'READY_FOR_RELEASE', label: 'Ready for Release', desc: 'Customer inspected & approved' },
+  { key: 'RELEASED', label: 'Payment Released', desc: 'Funds transferred to partner' },
 ];
 
 export const JobTrackerPage: React.FC = () => {
@@ -89,11 +100,42 @@ export const JobTrackerPage: React.FC = () => {
     fetchJob();
   }, [id]);
 
-  const isCustomer = user?.id === (job?.customer as any)?.userId || user?.id === (job?.customer as any)?.user || user?.roles?.includes('CUSTOMER');
-  const isProfessional = user?.roles?.includes('PROFESSIONAL');
-  const isPaymentSecured = Boolean(
-    job?.payments?.some((p: any) => p.status === 'SECURED' || p.status === 'COMPLETED') ||
-    (job as any)?.paymentProtection?.status === 'HELD'
+  const isCustomer = Boolean(
+    user?.id === (job?.customer as any)?.userId ||
+    user?.id === (job?.customer as any)?.user ||
+    user?.id === (job?.customer as any)?.id ||
+    user?.roles?.includes('CUSTOMER')
+  );
+
+  const isHiredProfessional = Boolean(
+    (job?.professional as any)?.userId === user?.id ||
+    (job?.professional as any)?.user?.id === user?.id ||
+    (user?.roles?.includes('PROFESSIONAL') && (job?.professional as any)?.id === (user as any)?.professionalProfile?.id)
+  );
+
+  const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
+
+  // Payment protection status
+  const currentPaymentStatus = (job?.paymentStatus as string) || (
+    job?.payments?.some((p: any) => p.status === 'COMPLETED' || p.status === 'RELEASED')
+      ? 'RELEASED'
+      : job?.payments?.some((p: any) => p.status === 'SECURED')
+      ? 'PAYMENT_SECURED'
+      : 'PAYMENT_PENDING'
+  );
+
+  const isPaymentSecured = currentPaymentStatus === 'PAYMENT_SECURED' || currentPaymentStatus === 'READY_FOR_RELEASE' || currentPaymentStatus === 'RELEASED';
+  const isDisputed = currentPaymentStatus === 'DISPUTED' || job?.status === 'DISPUTED';
+
+  // Work stage status
+  const currentWorkStatus = (job?.workStatus as string) || (
+    job?.status === 'SERVICE_COMPLETED' || job?.status === 'CUSTOMER_APPROVED' || job?.status === 'COMPLETED'
+      ? 'WORK_COMPLETED'
+      : job?.status === 'SERVICE_STARTED'
+      ? 'WORK_STARTED'
+      : job?.status === 'ON_THE_WAY' || job?.status === 'ARRIVED'
+      ? 'ON_THE_WAY'
+      : 'PREPARING'
   );
 
   const handleDepositEscrow = async () => {
@@ -154,20 +196,37 @@ export const JobTrackerPage: React.FC = () => {
     }
   };
 
-  const handleUpdateStatus = async (newStatus: string) => {
+  // Operational Work Status (Professional only)
+  const handleUpdateWorkStatus = async (newWorkStatus: string) => {
     if (!job) return;
     try {
       setUpdating(true);
       setError(null);
-      await api.updateJobStatus(job.id, newStatus);
+      await api.updateJobWorkStatus(job.id, newWorkStatus);
       await fetchJob();
     } catch (err: any) {
-      setError(err.response?.data?.error?.message || err.message || 'Failed to update status');
+      setError(err.response?.data?.error?.message || err.message || 'Failed to update work status');
     } finally {
       setUpdating(false);
     }
   };
 
+  // Customer Completion Confirmation
+  const handleConfirmCompletion = async () => {
+    if (!job) return;
+    try {
+      setUpdating(true);
+      setError(null);
+      await api.confirmJobCompletion(job.id);
+      await fetchJob();
+    } catch (err: any) {
+      setError(err.response?.data?.error?.message || err.message || 'Failed to confirm completion');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Customer Payment Release (Customer only)
   const handleReleasePayment = async () => {
     if (!job) return;
     try {
@@ -204,15 +263,11 @@ export const JobTrackerPage: React.FC = () => {
     if (!job) return;
     try {
       setSubmittingDispute(true);
-      await api.raiseDispute({
-        jobId: job.id,
-        reason: disputeReason,
-        description: disputeDesc,
-      });
+      await api.raiseJobDispute(job.id, disputeReason, disputeDesc);
       setDisputeModal(false);
       await fetchJob();
     } catch (err: any) {
-      alert('Failed to submit dispute: ' + err.message);
+      alert('Failed to submit dispute: ' + (err.response?.data?.error?.message || err.message));
     } finally {
       setSubmittingDispute(false);
     }
@@ -231,7 +286,7 @@ export const JobTrackerPage: React.FC = () => {
       setReviewModal(false);
       await fetchJob();
     } catch (err: any) {
-      alert('Failed to submit review: ' + err.message);
+      alert('Failed to submit review: ' + (err.response?.data?.error?.message || err.message));
     } finally {
       setSubmittingReview(false);
     }
@@ -269,7 +324,7 @@ export const JobTrackerPage: React.FC = () => {
         </p>
         <button
           onClick={() => openAuthModal()}
-          className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition"
+          className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition cursor-pointer"
         >
           Sign In
         </button>
@@ -288,8 +343,8 @@ export const JobTrackerPage: React.FC = () => {
     );
   }
 
-  // Calculate current stage index
-  const currentStageIndex = LIFECYCLE_STEPS.findIndex((s) => s.key === job.status);
+  const workStageIndex = WORK_STAGES.findIndex((s) => s.key === currentWorkStatus);
+  const paymentStageIndex = PAYMENT_STAGES.findIndex((s) => s.key === currentPaymentStatus);
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -323,12 +378,12 @@ export const JobTrackerPage: React.FC = () => {
               ₹{job.agreedPrice.toLocaleString('en-IN')}
             </div>
             <div className="text-xs font-bold text-emerald-700 mt-1">
-              Current Status: {job.status.replace(/_/g, ' ')}
+              Work: {currentWorkStatus.replace(/_/g, ' ')}
             </div>
           </div>
         </div>
 
-        {/* Communication & Invoicing Action Bar (Section 32, 33, 40) */}
+        {/* Communication & Invoicing Action Bar */}
         <div className="mt-6 pt-6 border-t border-gray-100 flex flex-wrap items-center gap-3">
           <Link
             to="/chat"
@@ -341,7 +396,7 @@ export const JobTrackerPage: React.FC = () => {
           <button
             onClick={handleInitiateCall}
             disabled={callLoading}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-xs font-bold transition"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-xs font-bold transition cursor-pointer"
           >
             <Phone className="w-4 h-4 text-blue-600" />
             {callLoading ? 'Connecting...' : 'Masked Virtual Call'}
@@ -349,19 +404,21 @@ export const JobTrackerPage: React.FC = () => {
 
           <button
             onClick={handleViewInvoice}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-xs font-bold transition"
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-xs font-bold transition cursor-pointer"
           >
             <FileText className="w-4 h-4 text-gray-600" />
             GST Tax Invoice
           </button>
 
-          <button
-            onClick={() => setDisputeModal(true)}
-            className="ml-auto inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 font-semibold"
-          >
-            <AlertTriangle className="w-3.5 h-3.5" />
-            Raise Dispute
-          </button>
+          {!isDisputed && currentPaymentStatus !== 'RELEASED' && (
+            <button
+              onClick={() => setDisputeModal(true)}
+              className="ml-auto inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 font-semibold cursor-pointer"
+            >
+              <AlertTriangle className="w-3.5 h-3.5" />
+              Report Issue / Dispute
+            </button>
+          )}
         </div>
       </div>
 
@@ -378,8 +435,35 @@ export const JobTrackerPage: React.FC = () => {
         </div>
       )}
 
-      {/* Escrow Status Section */}
-      {job.paymentProtectionEnabled && isPaymentSecured && (
+      {/* DISPUTED BANNER */}
+      {isDisputed && (
+        <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-6 shadow-sm mb-8">
+          <div className="flex items-start gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-red-100 border border-red-300 flex items-center justify-center text-red-800 shrink-0">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-base font-black text-red-950">Job in Dispute — Escrow Frozen</span>
+                <span className="text-[10px] uppercase font-bold bg-red-200 text-red-900 px-2.5 py-0.5 rounded-full">
+                  Under Mediation
+                </span>
+              </div>
+              <p className="text-xs text-red-800 mt-1 max-w-2xl leading-relaxed">
+                A formal dispute was raised for this job. Escrow funds of ₹{job.agreedPrice.toLocaleString('en-IN')} are locked securely under Vaziro Payment Protection. A Vaziro mediation officer is reviewing the communication history and photos to resolve this.
+              </p>
+              {job.disputeReason && (
+                <div className="mt-2 text-xs text-red-900 font-semibold bg-red-100/70 p-2.5 rounded-xl">
+                  Dispute Reason: {job.disputeReason}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ESCROW STATUS BANNER */}
+      {job.paymentProtectionEnabled && isPaymentSecured && !isDisputed && (
         <div className="bg-gradient-to-r from-emerald-950 via-slate-900 to-black text-white rounded-2xl p-6 shadow-md mb-8 border border-emerald-800/40">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
@@ -390,23 +474,26 @@ export const JobTrackerPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-extrabold text-white">100% Escrow Protection Active</span>
                   <span className="text-[10px] uppercase font-bold bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/40">
-                    Secured
+                    {currentPaymentStatus === 'RELEASED' ? 'Released to Partner' : 'Secured in Escrow'}
                   </span>
                 </div>
                 <p className="text-xs text-slate-300 mt-1">
-                  ₹{job.agreedPrice.toLocaleString('en-IN')} is safely locked in Vaziro Escrow. Funds are released to the partner only upon your inspection and approval.
+                  {currentPaymentStatus === 'RELEASED'
+                    ? 'Payment has been released and transferred to the professional.'
+                    : '₹' + job.agreedPrice.toLocaleString('en-IN') + ' is safely held in Vaziro Escrow. Only the customer can release payment upon work inspection.'}
                 </p>
               </div>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2.5 border border-white/10 text-right shrink-0">
-              <span className="text-[10px] uppercase tracking-wider text-emerald-300 font-semibold block">Secured Balance</span>
+              <span className="text-[10px] uppercase tracking-wider text-emerald-300 font-semibold block">Escrow Amount</span>
               <span className="text-xl font-black text-white">₹{job.agreedPrice.toLocaleString('en-IN')}</span>
             </div>
           </div>
         </div>
       )}
 
-      {job.paymentProtectionEnabled && !isPaymentSecured && job.status !== 'PAYMENT_RELEASED' && (
+      {/* CUSTOMER ACTION 1: DEPOSIT ESCROW (If pending) */}
+      {isCustomer && job.paymentProtectionEnabled && !isPaymentSecured && !isDisputed && (
         <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 shadow-sm mb-8">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="flex items-start gap-3.5">
@@ -415,13 +502,13 @@ export const JobTrackerPage: React.FC = () => {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-extrabold text-amber-950">Escrow Payment Pending</span>
+                  <span className="text-sm font-extrabold text-amber-950">Escrow Deposit Required</span>
                   <span className="text-[10px] uppercase font-bold bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full">
-                    Action Required
+                    Customer Action
                   </span>
                 </div>
                 <p className="text-xs text-amber-800 mt-1 max-w-xl leading-relaxed">
-                  Deposit the agreed contract amount of <strong className="font-bold text-amber-950">₹{job.agreedPrice.toLocaleString('en-IN')}</strong> via Razorpay. Your money stays 100% protected in Vaziro Escrow and is never released without your approval.
+                  Deposit the agreed contract amount of <strong className="font-bold text-amber-950">₹{job.agreedPrice.toLocaleString('en-IN')}</strong> via Razorpay. Your money stays 100% protected in Vaziro Escrow and cannot be released without your approval.
                 </p>
               </div>
             </div>
@@ -446,30 +533,249 @@ export const JobTrackerPage: React.FC = () => {
         </div>
       )}
 
-      {/* DISCRETE LIFECYCLE PROGRESSION (Section 28 & 29: No Fake GPS) */}
+      {/* CUSTOMER ACTION 2: WORK COMPLETION INSPECTION & CONFIRMATION */}
+      {isCustomer && currentWorkStatus === 'WORK_COMPLETED' && currentPaymentStatus !== 'RELEASED' && !isDisputed && (
+        <div className="bg-emerald-50/80 border-2 border-emerald-500 rounded-2xl p-6 sm:p-7 shadow-md mb-8 ring-4 ring-emerald-500/10">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                  Verification Required
+                </span>
+                <h3 className="text-lg font-black text-gray-900 mt-1">
+                  Has the work been completed?
+                </h3>
+                <p className="text-xs text-gray-600 mt-1 max-w-xl leading-relaxed">
+                  The professional marked this service as finished. Please verify the completed work before releasing escrow payment. If satisfied, confirm completion below to authorize payment release.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch gap-2.5 w-full md:w-auto shrink-0">
+              {currentPaymentStatus === 'READY_FOR_RELEASE' ? (
+                <button
+                  onClick={handleReleasePayment}
+                  disabled={updating}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-6 py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Release Payment (₹{job.agreedPrice.toLocaleString('en-IN')})
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={handleConfirmCompletion}
+                    disabled={updating}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-6 py-3 rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Check className="w-4 h-4" />
+                    Confirm Work Completed
+                  </button>
+                  <button
+                    onClick={() => setDisputeModal(true)}
+                    disabled={updating}
+                    className="bg-white hover:bg-red-50 text-red-700 border border-red-300 font-bold text-xs px-4 py-3 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <AlertTriangle className="w-4 h-4 text-red-600" />
+                    Work Not Completed / Report Issue
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CUSTOMER ACTION 3: RELEASE PAYMENT BUTTON (When confirmed and ready) */}
+      {isCustomer && currentPaymentStatus === 'READY_FOR_RELEASE' && !isDisputed && (
+        <div className="bg-white rounded-2xl border-2 border-emerald-500 p-6 shadow-sm mb-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block">Ready for Release</span>
+            <h4 className="text-base font-extrabold text-gray-900 mt-0.5">
+              Work Confirmed by You • Release Escrow
+            </h4>
+            <p className="text-xs text-gray-500 mt-1">
+              Click below to transfer the ₹{job.agreedPrice.toLocaleString('en-IN')} escrow balance directly to the professional's account.
+            </p>
+          </div>
+          <button
+            onClick={handleReleasePayment}
+            disabled={updating}
+            className="w-full sm:w-auto px-7 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            Release Payment (₹{job.agreedPrice.toLocaleString('en-IN')})
+          </button>
+        </div>
+      )}
+
+      {/* SECTION 1: WORK EXECUTION MILESTONES (Controlled by Professional) */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm mb-8">
-        <div className="mb-6">
-          <h2 className="text-lg font-bold text-gray-900">Service Delivery Stages</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Real discrete stage milestones logged in audit history. (No simulated movement or fake GPS markers).
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-gray-900">Service Work Execution Stages</h2>
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                Operational Tracking
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Strictly updated by the hired service professional at each physical phase of delivery.
+            </p>
+          </div>
+
+          <div className="text-right self-start sm:self-auto">
+            <span className="text-[10px] uppercase font-bold text-gray-400 block">Current Work Phase</span>
+            <span className="text-sm font-extrabold text-emerald-700">
+              {currentWorkStatus.replace(/_/g, ' ')}
+            </span>
+          </div>
         </div>
 
-        {/* Step Progression Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          {LIFECYCLE_STEPS.map((step, idx) => {
-            const isCompleted = currentStageIndex > idx;
-            const isCurrent = currentStageIndex === idx;
+        {/* Work Step Progression Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          {WORK_STAGES.map((step, idx) => {
+            const isCompleted = workStageIndex > idx || currentWorkStatus === 'WORK_COMPLETED';
+            const isCurrent = currentWorkStatus === step.key;
+            const Icon = step.icon;
 
             return (
               <div
                 key={step.key}
-                className={`p-3.5 rounded-xl border transition-all ${
+                className={`p-4 rounded-xl border transition-all ${
                   isCurrent
-                    ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-500/20'
+                    ? 'border-emerald-600 bg-emerald-50/80 ring-2 ring-emerald-500/20'
                     : isCompleted
-                    ? 'border-emerald-200 bg-emerald-50/40 text-emerald-900'
-                    : 'border-gray-200 bg-gray-50/50 text-gray-400 opacity-70'
+                    ? 'border-emerald-200 bg-emerald-50/30 text-emerald-900'
+                    : 'border-gray-200 bg-gray-50/40 text-gray-400 opacity-70'
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <div
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                      isCurrent
+                        ? 'bg-emerald-600 text-white'
+                        : isCompleted
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-gray-200 text-gray-500'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <span className={`text-xs font-bold ${isCurrent ? 'text-emerald-950' : 'text-gray-900'}`}>
+                    {step.label}
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500 leading-tight">{step.desc}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Professional Work Advancement Controls */}
+        {(isHiredProfessional || isAdmin) && (
+          <div className="pt-6 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <span className="text-xs text-gray-500 font-semibold block">Professional Actions:</span>
+              <p className="text-xs text-gray-600 mt-0.5">
+                Keep the customer updated by clicking your active work stage.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2.5">
+              {currentWorkStatus === 'PREPARING' && (
+                <button
+                  onClick={() => handleUpdateWorkStatus('ON_THE_WAY')}
+                  disabled={updating}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Truck className="w-4 h-4" />
+                  Mark On The Way
+                </button>
+              )}
+
+              {currentWorkStatus === 'ON_THE_WAY' && (
+                <button
+                  onClick={() => handleUpdateWorkStatus('WORK_STARTED')}
+                  disabled={updating}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Wrench className="w-4 h-4" />
+                  Mark Work Started
+                </button>
+              )}
+
+              {currentWorkStatus === 'WORK_STARTED' && (
+                <button
+                  onClick={() => handleUpdateWorkStatus('WORK_COMPLETED')}
+                  disabled={updating}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  Mark Work Completed
+                </button>
+              )}
+
+              {currentWorkStatus === 'WORK_COMPLETED' && (
+                <div className="inline-flex items-center gap-2 text-xs font-bold text-emerald-800 bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200">
+                  <Check className="w-4 h-4 text-emerald-600" />
+                  Work Completed! Waiting for customer confirmation & escrow release.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Customer view notice: Cannot advance work status */}
+        {isCustomer && !isAdmin && (
+          <div className="pt-4 border-t border-gray-100 text-xs text-gray-500 flex items-center gap-2">
+            <Info className="w-4 h-4 text-gray-400 shrink-0" />
+            <span>Work stages are updated in real-time by your verified service professional.</span>
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 2: PAYMENT & ESCROW FLOW (Controlled by Customer) */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-gray-900">Escrow Payment Protection Milestones</h2>
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Customer Authorized
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Escrow funds cannot be released by the professional. Releasing payment is strictly gated by customer confirmation.
+            </p>
+          </div>
+
+          <div className="text-right self-start sm:self-auto">
+            <span className="text-[10px] uppercase font-bold text-gray-400 block">Payment State</span>
+            <span className="text-sm font-extrabold text-emerald-700">
+              {currentPaymentStatus.replace(/_/g, ' ')}
+            </span>
+          </div>
+        </div>
+
+        {/* Payment Stage Progression */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+          {PAYMENT_STAGES.map((pStep, idx) => {
+            const isCompleted = paymentStageIndex > idx || currentPaymentStatus === 'RELEASED';
+            const isCurrent = currentPaymentStatus === pStep.key;
+
+            return (
+              <div
+                key={pStep.key}
+                className={`p-4 rounded-xl border transition-all ${
+                  isCurrent
+                    ? 'border-emerald-600 bg-emerald-50/80 ring-2 ring-emerald-500/20'
+                    : isCompleted
+                    ? 'border-emerald-200 bg-emerald-50/30 text-emerald-900'
+                    : 'border-gray-200 bg-gray-50/40 text-gray-400 opacity-70'
                 }`}
               >
                 <div className="flex items-center gap-1.5 mb-1.5">
@@ -483,137 +789,58 @@ export const JobTrackerPage: React.FC = () => {
                     </div>
                   )}
                   <span className={`text-xs font-bold ${isCurrent ? 'text-emerald-950' : 'text-gray-900'}`}>
-                    {step.label}
+                    {pStep.label}
                   </span>
                 </div>
-                <p className="text-[11px] text-gray-500 line-clamp-1">{step.desc}</p>
+                <p className="text-[11px] text-gray-500 leading-tight">{pStep.desc}</p>
               </div>
             );
           })}
         </div>
 
-        {/* Stage Advancement Controls */}
-        <div className="mt-8 pt-6 border-t border-gray-100 flex flex-wrap items-center justify-between gap-4">
+        {/* Escrow Role Separation Callout */}
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs text-slate-700 flex items-start gap-3">
+          <Lock className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
           <div>
-            <span className="text-xs text-gray-500 block">Current Active Phase</span>
-            <span className="text-base font-extrabold text-gray-900">
-              {job.status.replace(/_/g, ' ')}
-            </span>
-          </div>
-
-          {/* Workflow Buttons */}
-          <div className="flex flex-wrap gap-2">
-            {job.status === 'HIRED' && (
-              <button
-                onClick={() => handleUpdateStatus('SCHEDULED')}
-                disabled={updating}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm"
-              >
-                Confirm Scheduled
-              </button>
-            )}
-
-            {job.status === 'SCHEDULED' && (
-              <button
-                onClick={() => handleUpdateStatus('PREPARING')}
-                disabled={updating}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm"
-              >
-                Start Preparation
-              </button>
-            )}
-
-            {job.status === 'PREPARING' && (
-              <button
-                onClick={() => handleUpdateStatus('ON_THE_WAY')}
-                disabled={updating}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm"
-              >
-                Start Travel (On The Way)
-              </button>
-            )}
-
-            {job.status === 'ON_THE_WAY' && (
-              <button
-                onClick={() => handleUpdateStatus('ARRIVED')}
-                disabled={updating}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm"
-              >
-                Mark Arrived at Location
-              </button>
-            )}
-
-            {job.status === 'ARRIVED' && (
-              <button
-                onClick={() => handleUpdateStatus('SERVICE_STARTED')}
-                disabled={updating}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm"
-              >
-                Start Service Delivery
-              </button>
-            )}
-
-            {job.status === 'SERVICE_STARTED' && (
-              <button
-                onClick={() => handleUpdateStatus('SERVICE_COMPLETED')}
-                disabled={updating}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm"
-              >
-                Mark Service Completed
-              </button>
-            )}
-
-            {job.status === 'SERVICE_COMPLETED' && (
-              <button
-                onClick={handleReleasePayment}
-                disabled={updating}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-6 py-2.5 rounded-lg shadow-md flex items-center gap-1.5 animate-bounce"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                Approve Quality & Release Payment (₹{job.agreedPrice.toLocaleString('en-IN')})
-              </button>
-            )}
-
-            {job.status === 'CUSTOMER_APPROVED' && (
-              <button
-                onClick={handleReleasePayment}
-                disabled={updating}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-6 py-2.5 rounded-lg shadow-sm"
-              >
-                Release Payment to Professional
-              </button>
-            )}
-
-            {job.status === 'PAYMENT_RELEASED' && (
-              <div className="text-xs font-bold text-emerald-800 bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-200">
-                ✓ Payment Released Successfully & Order Complete
-              </div>
+            <strong>Vaziro Escrow Safety Guarantee:</strong>
+            {isHiredProfessional ? (
+              <span className="ml-1">
+                Your payment of ₹{job.agreedPrice.toLocaleString('en-IN')} is locked in escrow. Once the customer confirms work completion, funds are immediately routed to your bank account. Service professionals do not have access to manually release escrow funds.
+              </span>
+            ) : (
+              <span className="ml-1">
+                You maintain complete control of your funds. Never pay the professional directly outside the platform. Release payment only after inspecting the finished service.
+              </span>
             )}
           </div>
         </div>
       </div>
 
-      {/* Status History Audit Log Timeline (Section 28) */}
+      {/* Status History Audit Log Timeline */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
         <h3 className="text-sm font-bold text-gray-900 mb-4 uppercase tracking-wider">
           Audited Status History Log
         </h3>
-        <div className="space-y-3">
-          {job.statusHistory?.map((entry) => (
-            <div key={entry.id} className="flex items-start gap-3 text-xs border-l-2 border-emerald-500 pl-3 py-1">
-              <div>
-                <span className="font-bold text-gray-900">{entry.newStatus}</span>
-                {entry.reason && <p className="text-gray-600 mt-0.5">{entry.reason}</p>}
-                <span className="text-[10px] text-gray-400 mt-1 block">
-                  {new Date(entry.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} (IST)
-                </span>
+        {job.statusHistory && job.statusHistory.length > 0 ? (
+          <div className="space-y-3">
+            {job.statusHistory.map((entry) => (
+              <div key={entry.id} className="flex items-start gap-3 text-xs border-l-2 border-emerald-500 pl-3 py-1">
+                <div>
+                  <span className="font-bold text-gray-900">{entry.newStatus}</span>
+                  {entry.reason && <p className="text-gray-600 mt-0.5">{entry.reason}</p>}
+                  <span className="text-[10px] text-gray-400 mt-1 block">
+                    {new Date(entry.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} (IST)
+                  </span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400">Job milestones and timestamped audits will appear here.</p>
+        )}
       </div>
 
-      {/* MASKED CALLING BRIDGE MODAL (Section 33) */}
+      {/* MASKED CALLING BRIDGE MODAL */}
       {callModal && callSession && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200 text-center">
@@ -640,13 +867,9 @@ export const JobTrackerPage: React.FC = () => {
               </div>
             </div>
 
-            <p className="text-[11px] text-gray-400 leading-relaxed mb-4">
-              Vaziro will dial both parties simultaneously and bridge the line. No personal phone numbers are shared.
-            </p>
-
             <button
               onClick={() => setCallModal(false)}
-              className="w-full py-2.5 bg-gray-900 text-white rounded-lg text-xs font-bold hover:bg-black"
+              className="w-full py-2.5 bg-gray-900 hover:bg-black text-white rounded-xl text-xs font-bold"
             >
               Close Window
             </button>
@@ -654,13 +877,13 @@ export const JobTrackerPage: React.FC = () => {
         </div>
       )}
 
-      {/* DISPUTE MODAL (Section 41) */}
+      {/* DISPUTE MODAL */}
       {disputeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-gray-200">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-base font-bold text-gray-900">Raise a Formal Dispute</h3>
-              <button onClick={() => setDisputeModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
+              <h3 className="text-base font-bold text-gray-900">Report Issue / Raise Dispute</h3>
+              <button onClick={() => setDisputeModal(false)} className="cursor-pointer"><X className="w-5 h-5 text-gray-400" /></button>
             </div>
             <form onSubmit={handleSubmitDispute} className="space-y-3">
               <div>
@@ -670,9 +893,9 @@ export const JobTrackerPage: React.FC = () => {
                   onChange={(e) => setDisputeReason(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs"
                 >
+                  <option value="Work not completed">Work not completed / Incomplete</option>
                   <option value="Quality not as expected">Service quality not as expected</option>
                   <option value="Professional did not arrive">Professional did not arrive</option>
-                  <option value="Scope incomplete">Scope left incomplete</option>
                   <option value="Unprofessional behavior">Unprofessional conduct</option>
                 </select>
               </div>
@@ -682,7 +905,7 @@ export const JobTrackerPage: React.FC = () => {
                   rows={4}
                   value={disputeDesc}
                   onChange={(e) => setDisputeDesc(e.target.value)}
-                  placeholder="Explain what occurred in detail. A Vaziro Support Specialist will arbitrate..."
+                  placeholder="Explain what occurred in detail. A Vaziro Support Specialist will arbitrate and hold escrow funds..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs"
                   required
                 />
@@ -691,14 +914,14 @@ export const JobTrackerPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setDisputeModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-semibold"
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-semibold cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingDispute}
-                  className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold"
+                  className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold cursor-pointer"
                 >
                   {submittingDispute ? 'Submitting...' : 'Submit Formal Dispute'}
                 </button>
@@ -708,7 +931,7 @@ export const JobTrackerPage: React.FC = () => {
         </div>
       )}
 
-      {/* VERIFIED REVIEW MODAL (Section 42) */}
+      {/* VERIFIED REVIEW MODAL */}
       {reviewModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-200">
@@ -723,7 +946,7 @@ export const JobTrackerPage: React.FC = () => {
                       key={star}
                       type="button"
                       onClick={() => setReviewRating(star)}
-                      className="p-1"
+                      className="p-1 cursor-pointer"
                     >
                       <Star
                         className={`w-7 h-7 ${
@@ -751,14 +974,14 @@ export const JobTrackerPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setReviewModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-semibold"
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-xs font-semibold cursor-pointer"
                 >
                   Skip
                 </button>
                 <button
                   type="submit"
                   disabled={submittingReview}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold cursor-pointer"
                 >
                   {submittingReview ? 'Publishing...' : 'Publish Verified Review'}
                 </button>
@@ -768,7 +991,7 @@ export const JobTrackerPage: React.FC = () => {
         </div>
       )}
 
-      {/* GST INVOICE MODAL (Section 39 & 40) */}
+      {/* GST INVOICE MODAL */}
       {invoiceModal && invoiceData?.invoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto">
@@ -779,7 +1002,7 @@ export const JobTrackerPage: React.FC = () => {
                   {invoiceData.invoice.invoiceNumber}
                 </h3>
               </div>
-              <button onClick={() => setInvoiceModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
+              <button onClick={() => setInvoiceModal(false)} className="cursor-pointer"><X className="w-5 h-5 text-gray-400" /></button>
             </div>
 
             <div className="text-xs text-gray-600 space-y-3">
@@ -839,7 +1062,7 @@ export const JobTrackerPage: React.FC = () => {
 
             <button
               onClick={() => setInvoiceModal(false)}
-              className="mt-6 w-full py-2.5 bg-gray-900 text-white rounded-lg text-xs font-bold hover:bg-black"
+              className="mt-6 w-full py-2.5 bg-gray-900 text-white rounded-lg text-xs font-bold hover:bg-black cursor-pointer"
             >
               Done
             </button>
@@ -849,3 +1072,5 @@ export const JobTrackerPage: React.FC = () => {
     </div>
   );
 };
+
+export default JobTrackerPage;

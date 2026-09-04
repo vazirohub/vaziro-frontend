@@ -169,6 +169,11 @@ export interface Job {
   agreedPrice: number;
   currency: string;
   status: string;
+  workStatus?: string;
+  paymentStatus?: string;
+  customerConfirmedAt?: string | null;
+  disputeReason?: string | null;
+  disputedAt?: string | null;
   paymentProtectionEnabled: boolean;
   scheduledStartTime?: string | null;
   actualStartTime?: string | null;
@@ -257,20 +262,67 @@ export interface CreditLedgerItem {
 }
 
 export interface DetailedCreditWallet {
-  id: string;
-  professionalProfileId: string;
+  id?: string;
+  walletId?: string;
+  professionalProfileId?: string;
   balance: number;
+  availableCredits?: number;
+  creditValueInr?: number;
   purchasedCredits: number;
   bonusCredits: number;
-  expiringCredits30Days: number;
+  expiringCredits?: number;
+  expiringCredits30Days?: number;
+  creditsExpiringSoon?: number;
   nextExpiryDate: string | null;
   refundableCredits: number;
   refundableAmountInr: number;
+  creditsPendingRefund?: number;
+  creditsRefunded?: number;
+  creditsUsed?: number;
   visibilityTier: string;
   lifetimePurchased: number;
   lifetimeSpent: number;
   batches?: CreditBatch[];
+  activeBatches?: CreditBatch[];
   recentLedger?: CreditLedgerItem[];
+}
+
+export interface ProfessionalTransaction {
+  id: string;
+  professionalId?: string;
+  type: string;
+  displayType?: string;
+  title?: string;
+  category?: 'CREDIT' | 'PAYMENT' | 'REFUND';
+  currency?: 'CREDITS' | 'INR';
+  description?: string;
+  amount: string;
+  rawAmount?: number;
+  creditAmount?: number | null;
+  currencyAmount?: number | null;
+  direction: 'CREDIT' | 'DEBIT';
+  balanceBefore?: number | null;
+  balanceAfter?: number | null;
+  requirement?: {
+    id: string;
+    title: string;
+  } | null;
+  metadata?: {
+    requirementTitle?: string;
+    requirementId?: string;
+    refundReason?: string;
+    planName?: string;
+    paymentMethod?: string;
+    customerName?: string;
+  };
+  applicationId?: string | null;
+  jobId?: string | null;
+  paymentId?: string | null;
+  razorpayReference?: string | null;
+  reason?: string;
+  status?: string;
+  createdAt: string;
+  completedAt?: string | null;
 }
 
 export interface BoostPackage {

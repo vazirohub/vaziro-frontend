@@ -24,6 +24,7 @@ import { PaymentFailedPage } from './pages/PaymentFailedPage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { ScrollToTop } from './components/ScrollToTop';
+import { MobileBottomNav } from './components/MobileBottomNav';
 
 export const App: React.FC = () => {
   return (
@@ -32,7 +33,7 @@ export const App: React.FC = () => {
         <ScrollToTop />
         <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white">
           <Navbar />
-          <main className="flex-1">
+          <main className="flex-1 pb-16 md:pb-0">
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/post-requirement" element={<PostRequirementPage />} />
@@ -61,6 +62,7 @@ export const App: React.FC = () => {
           </main>
           <Footer />
           <PhoneOtpModal />
+          <MobileBottomNav />
         </div>
       </Router>
     </AuthProvider>
