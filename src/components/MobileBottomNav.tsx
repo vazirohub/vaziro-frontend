@@ -11,6 +11,7 @@ import {
   FileText,
   MessageSquare,
   LogIn,
+  Sparkles,
 } from 'lucide-react';
 
 export const MobileBottomNav: React.FC = () => {
@@ -115,8 +116,8 @@ export const MobileBottomNav: React.FC = () => {
               <span>Account</span>
             </Link>
           </>
-        ) : (
-          // Customer & Visitor Navigation
+        ) : isAuthenticated ? (
+          // Customer (Logged-In) Navigation
           <>
             <Link
               to="/"
@@ -174,31 +175,82 @@ export const MobileBottomNav: React.FC = () => {
               <span>Chat</span>
             </Link>
 
-            {isAuthenticated ? (
-              <Link
-                to="/profile"
-                className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
-                  isActive('/profile')
-                    ? 'text-emerald-700 font-extrabold'
-                    : 'text-neutral-500 hover:text-neutral-900 font-medium'
-                }`}
-              >
-                {isActive('/profile') && (
-                  <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
-                )}
-                <User className="w-5 h-5 mb-0.5" />
-                <span>Account</span>
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={() => openAuthModal('CUSTOMER', undefined, 'LOGIN')}
-                className="flex flex-col items-center justify-center min-h-[44px] text-[10.5px] font-medium text-neutral-500 hover:text-neutral-900 transition cursor-pointer"
-              >
-                <LogIn className="w-5 h-5 mb-0.5" />
-                <span>Sign In</span>
-              </button>
-            )}
+            <Link
+              to="/profile"
+              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
+                isActive('/profile')
+                  ? 'text-emerald-700 font-extrabold'
+                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
+              }`}
+            >
+              {isActive('/profile') && (
+                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
+              )}
+              <User className="w-5 h-5 mb-0.5" />
+              <span>Account</span>
+            </Link>
+          </>
+        ) : (
+          // Visitor / Guest Navigation (No Dashboard or Messages shown)
+          <>
+            <Link
+              to="/"
+              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
+                isActive('/')
+                  ? 'text-emerald-700 font-extrabold'
+                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
+              }`}
+            >
+              {isActive('/') && (
+                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
+              )}
+              <Home className="w-5 h-5 mb-0.5" />
+              <span>Home</span>
+            </Link>
+
+            <Link
+              to="/requirements"
+              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
+                isActive('/requirements')
+                  ? 'text-emerald-700 font-extrabold'
+                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
+              }`}
+            >
+              {isActive('/requirements') && (
+                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
+              )}
+              <Search className="w-5 h-5 mb-0.5" />
+              <span>Browse</span>
+            </Link>
+
+            {/* Prominent Floating Center Action: Post Job */}
+            <Link
+              to="/post-requirement"
+              className="flex flex-col items-center justify-center min-h-[44px] -mt-3.5 text-[10.5px] font-extrabold transition group"
+            >
+              <div className="w-12 h-12 rounded-full bg-black group-hover:bg-neutral-800 flex items-center justify-center shadow-lg border-2 border-white transition-transform active:scale-95">
+                <PlusCircle className="w-6 h-6 text-emerald-400" />
+              </div>
+              <span className="text-black text-[9.5px] font-black mt-0.5">Post Job</span>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => openAuthModal('PROFESSIONAL', undefined, 'SIGNUP')}
+              className="flex flex-col items-center justify-center min-h-[44px] text-[10.5px] font-medium text-neutral-500 hover:text-emerald-700 transition cursor-pointer"
+            >
+              <Sparkles className="w-5 h-5 mb-0.5 text-amber-500" />
+              <span>Join Pro</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => openAuthModal('CUSTOMER', undefined, 'LOGIN')}
+              className="flex flex-col items-center justify-center min-h-[44px] text-[10.5px] font-semibold text-neutral-800 hover:text-black transition cursor-pointer"
+            >
+              <LogIn className="w-5 h-5 mb-0.5 text-emerald-600" />
+              <span>Sign In</span>
+            </button>
           </>
         )}
       </div>

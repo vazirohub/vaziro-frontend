@@ -365,19 +365,6 @@ export const Navbar: React.FC = () => {
                 </Link>
               )}
 
-              {/* Messages */}
-              <Link
-                to="/chat"
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all ${
-                  isActive('/chat')
-                    ? 'bg-neutral-100 text-black font-bold'
-                    : 'text-neutral-700 hover:text-black hover:bg-neutral-50'
-                }`}
-              >
-                <MessageSquare className="w-4 h-4 text-neutral-500" />
-                <span>Messages</span>
-              </Link>
-
               {/* Admin Console */}
               {isAdmin && (
                 <Link
@@ -427,6 +414,20 @@ export const Navbar: React.FC = () => {
               {/* Logged-In User Actions */}
               {user ? (
                 <div className="flex items-center gap-1.5 sm:gap-2">
+                  {/* Messages Icon Button (Logged-In Users Only) */}
+                  <Link
+                    to="/chat"
+                    className={`p-2.5 rounded-xl transition flex items-center justify-center relative ${
+                      isActive('/chat')
+                        ? 'bg-black text-white shadow-sm'
+                        : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 hover:text-black'
+                    }`}
+                    title="Messages & Quotations"
+                    aria-label="Messages"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                  </Link>
+
                   {/* Notification Center */}
                   <div className="relative" ref={notificationRef}>
                     <button
@@ -653,21 +654,14 @@ export const Navbar: React.FC = () => {
                     </span>
                   </button>
 
+                  {/* Unified Sign In / Sign Up Button Styled Like Post Requirement */}
                   <button
                     type="button"
                     onClick={() => openAuthModal('CUSTOMER', undefined, 'LOGIN')}
-                    className="text-xs font-bold text-neutral-700 hover:text-black px-3.5 py-2 rounded-xl hover:bg-neutral-100 transition cursor-pointer"
+                    className="hidden md:inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition active:scale-98 cursor-pointer"
                   >
-                    Sign In
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => openAuthModal('CUSTOMER', undefined, 'SIGNUP')}
-                    className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold text-xs shadow-sm transition active:scale-98 cursor-pointer"
-                  >
-                    <UserPlus className="w-3.5 h-3.5" />
-                    <span>Sign Up</span>
+                    <User className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Sign In / Sign Up</span>
                   </button>
                 </div>
               )}
@@ -891,23 +885,28 @@ export const Navbar: React.FC = () => {
                   Navigation
                 </div>
 
-                <Link
-                  to="/dashboard"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 p-3 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold text-xs transition"
-                >
-                  <Briefcase className="w-4 h-4 text-neutral-500" />
-                  <span>Dashboard & Active Jobs</span>
-                </Link>
+                {/* Dashboard & Messages (Visible Only to Logged-In Users) */}
+                {user && (
+                  <>
+                    <Link
+                      to="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 p-3 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold text-xs transition"
+                    >
+                      <Briefcase className="w-4 h-4 text-neutral-500" />
+                      <span>Dashboard & Active Jobs</span>
+                    </Link>
 
-                <Link
-                  to="/chat"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 p-3 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold text-xs transition"
-                >
-                  <MessageSquare className="w-4 h-4 text-neutral-500" />
-                  <span>Messages & Quotations</span>
-                </Link>
+                    <Link
+                      to="/chat"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 p-3 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold text-xs transition"
+                    >
+                      <MessageSquare className="w-4 h-4 text-neutral-500" />
+                      <span>Messages & Quotations</span>
+                    </Link>
+                  </>
+                )}
 
                 {(isProfessional || isAdmin) && (
                   <Link
