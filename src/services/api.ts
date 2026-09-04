@@ -19,6 +19,8 @@ import {
   Message,
   Dispute,
   ProfessionalTransaction,
+  NotificationItem,
+  NotificationListResponse,
 } from '../types';
 
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -123,7 +125,26 @@ export const api = {
   changePassword: (data: { currentPassword?: string; newPassword: string }) =>
     apiClient.put<ApiResponse<{ success: boolean; message: string }>>('/auth/password', data),
 
+  forgotPassword: (identifier: string) =>
+    apiClient.post<ApiResponse<{ success: boolean; message: string }>>('/auth/forgot-password', { identifier }),
+
+  verifyResetCode: (identifier: string, code: string) =>
+    apiClient.post<ApiResponse<{ resetToken: string }>>('/auth/verify-reset-code', { identifier, code }),
+
+  resetPassword: (payload: { identifier: string; code?: string; resetToken?: string; newPassword: string }) =>
+    apiClient.post<ApiResponse<{ success: boolean; message: string }>>('/auth/reset-password', payload),
+
   logout: () => apiClient.post<ApiResponse<{ success: boolean; message: string }>>('/auth/logout'),
+
+  // Notifications & Alerts
+  getNotifications: (params?: { limit?: number; offset?: number; unreadOnly?: boolean }) =>
+    apiClient.get<ApiResponse<NotificationListResponse>>('/notifications', { params }),
+
+  markNotificationRead: (id: string) =>
+    apiClient.patch<ApiResponse<{ id: string; isRead: boolean; unreadCount: number }>>(`/notifications/${id}/read`),
+
+  markAllNotificationsRead: () =>
+    apiClient.patch<ApiResponse<{ count: number; unreadCount: number }>>('/notifications/read-all'),
 
   // Categories & Locations
   getCategories: () => apiClient.get<ApiResponse<Category[]>>('/categories'),

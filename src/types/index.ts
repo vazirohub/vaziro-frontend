@@ -416,6 +416,24 @@ export interface Dispute {
   } | null;
 }
 
+export interface NotificationItem {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: string;
+  actionUrl?: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface NotificationListResponse {
+  notifications: NotificationItem[];
+  total: number;
+  unreadCount: number;
+  hasMore: boolean;
+}
+
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
