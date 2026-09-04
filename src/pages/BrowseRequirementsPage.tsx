@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { Requirement, Category, CreditWallet } from '../types';
+import { Requirement, Category, DetailedCreditWallet } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { Search, MapPin, IndianRupee, ShieldCheck, Coins, Send, X, Clock, Calendar, AlertCircle } from 'lucide-react';
+import { Search, MapPin, IndianRupee, ShieldCheck, Coins, Send, X, Clock, Calendar, AlertCircle, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const BrowseRequirementsPage: React.FC = () => {
@@ -10,7 +10,7 @@ export const BrowseRequirementsPage: React.FC = () => {
 
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [wallet, setWallet] = useState<CreditWallet | null>(null);
+  const [wallet, setWallet] = useState<DetailedCreditWallet | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchCity, setSearchCity] = useState<string>('');
@@ -215,15 +215,25 @@ export const BrowseRequirementsPage: React.FC = () => {
             return (
               <div
                 key={req.id}
-                className="bg-white rounded-2xl border border-gray-200 p-6 flex flex-col justify-between hover:shadow-md transition"
+                className={`bg-white rounded-2xl border p-6 flex flex-col justify-between hover:shadow-md transition relative ${
+                  req.isBoosted ? 'border-amber-300 ring-2 ring-amber-400/20 bg-gradient-to-b from-amber-50/20 to-white' : 'border-gray-200'
+                }`}
               >
                 <div>
-                  {/* Category & Badge */}
+                  {/* Category & Boosted Badge */}
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                      {req.category?.icon || '💼'} {req.subcategory?.name || req.category?.name}
-                    </span>
-                    <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                        {req.category?.icon || '💼'} {req.subcategory?.name || req.category?.name}
+                      </span>
+                      {req.isBoosted && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 shadow-xs">
+                          <Sparkles className="w-3 h-3 text-amber-600 fill-amber-500" />
+                          Boosted
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-400 font-medium flex items-center gap-1 shrink-0">
                       <Clock className="w-3.5 h-3.5" />
                       {new Date(req.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
                     </span>

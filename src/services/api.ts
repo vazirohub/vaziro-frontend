@@ -10,6 +10,11 @@ import {
   Job,
   CreditWallet,
   CreditPlan,
+  ProfessionalPlan,
+  CreditBatch,
+  CreditLedgerItem,
+  DetailedCreditWallet,
+  BoostPackage,
   ChatThread,
   Message,
   Dispute,
@@ -148,14 +153,25 @@ export const api = {
     apiClient.patch<ApiResponse<Job>>(`/jobs/${id}/status`, { newStatus, reason }),
 
   // Credits & Wallet
-  getCreditWallet: () => apiClient.get<ApiResponse<CreditWallet>>('/credits/wallet'),
-  getCreditPlans: () => apiClient.get<ApiResponse<CreditPlan[]>>('/credits/plans'),
+  getCreditWallet: () => apiClient.get<ApiResponse<DetailedCreditWallet>>('/credits/wallet'),
+  getCreditBatches: () => apiClient.get<ApiResponse<CreditBatch[]>>('/credits/batches'),
+  getCreditLedger: () => apiClient.get<ApiResponse<CreditLedgerItem[]>>('/credits/ledger'),
+  getCreditPlans: () => apiClient.get<ApiResponse<ProfessionalPlan[]>>('/credits/plans'),
   calculateCreditFee: (budgetMin: number, budgetMax?: number) =>
     apiClient.post<ApiResponse<{ creditsRequired: number; nominalCostInr: number }>>('/credits/calculate-fee', { budgetMin, budgetMax }),
   purchaseCreditPlan: (planId: string) => apiClient.post<ApiResponse<any>>('/credits/purchase', { planId }),
   createCreditOrder: (planId: string) => apiClient.post<ApiResponse<any>>('/credits/create-order', { planId }),
   verifyCreditPayment: (data: { orderId: string; paymentId: string; signature: string; planId: string }) =>
     apiClient.post<ApiResponse<any>>('/credits/verify-payment', data),
+
+  // Customer Boost
+  getBoostPackages: () => apiClient.get<ApiResponse<BoostPackage[]>>('/boost/packages'),
+  createBoostOrder: (requirementId: string, packageId: string) =>
+    apiClient.post<ApiResponse<any>>('/boost/create-order', { requirementId, packageId }),
+  verifyBoostPayment: (data: { orderId: string; paymentId: string; signature: string; requirementId: string; packageId: string }) =>
+    apiClient.post<ApiResponse<any>>('/boost/verify-payment', data),
+  getRequirementBoost: (requirementId: string) =>
+    apiClient.get<ApiResponse<any>>(`/boost/requirement/${requirementId}`),
 
   // Chat & Calling
   getChatThreads: () => apiClient.get<ApiResponse<ChatThread[]>>('/chat/threads'),
@@ -219,4 +235,21 @@ export const api = {
   getAdminLocations: () => apiClient.get<ApiResponse<any[]>>('/admin/locations'),
   toggleAdminLocation: (type: string, id: string, isActive: boolean) =>
     apiClient.patch<ApiResponse<any>>('/admin/locations/toggle', { type, id, isActive }),
+
+  // Admin Plans & Boost Governance
+  getAdminPlans: () => apiClient.get<ApiResponse<ProfessionalPlan[]>>('/admin/plans'),
+  createAdminPlan: (data: any) => apiClient.post<ApiResponse<ProfessionalPlan>>('/admin/plans', data),
+  updateAdminPlan: (id: string, data: any) => apiClient.put<ApiResponse<ProfessionalPlan>>(`/admin/plans/${id}`, data),
+  getAdminBoostPackages: () => apiClient.get<ApiResponse<BoostPackage[]>>('/admin/boost-packages'),
+  createAdminBoostPackage: (data: any) => apiClient.post<ApiResponse<BoostPackage>>('/admin/boost-packages', data),
+  updateAdminBoostPackage: (id: string, data: any) => apiClient.put<ApiResponse<BoostPackage>>(`/admin/boost-packages/${id}`, data),
+  getAdminCreditBatches: () => apiClient.get<ApiResponse<CreditBatch[]>>('/admin/credits/batches'),
+  getAdminCreditLedger: () => apiClient.get<ApiResponse<CreditLedgerItem[]>>('/admin/credits/ledger'),
+  triggerBatchExpiry: () => apiClient.post<ApiResponse<any>>('/admin/credits/process-expired'),
+  createAdminCategory: (data: any) => apiClient.post<ApiResponse<Category>>('/admin/categories', data),
+  updateAdminCategory: (id: string, data: any) => apiClient.put<ApiResponse<Category>>(`/admin/categories/${id}`, data),
+  deleteAdminCategory: (id: string) => apiClient.delete<ApiResponse<any>>(`/admin/categories/${id}`),
+  createAdminSubcategory: (data: any) => apiClient.post<ApiResponse<any>>('/admin/subcategories', data),
+  updateAdminSubcategory: (id: string, data: any) => apiClient.put<ApiResponse<any>>(`/admin/subcategories/${id}`, data),
+  deleteAdminSubcategory: (id: string) => apiClient.delete<ApiResponse<any>>(`/admin/subcategories/${id}`),
 };

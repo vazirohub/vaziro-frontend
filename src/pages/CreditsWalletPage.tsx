@@ -1,17 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { CreditWallet, CreditPlan } from '../types';
+import { DetailedCreditWallet, ProfessionalPlan, CreditBatch, CreditLedgerItem } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { Coins, Check, ShieldCheck, ArrowUpRight, ArrowDownLeft, Sparkles, CreditCard, RefreshCw } from 'lucide-react';
+import {
+  Coins,
+  Check,
+  ShieldCheck,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Sparkles,
+  CreditCard,
+  RefreshCw,
+  Clock,
+  AlertCircle,
+  Info,
+  CheckCircle2,
+  Calendar,
+  Layers,
+} from 'lucide-react';
 import { openRazorpayCheckout } from '../utils/razorpay';
 
 export const CreditsWalletPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, openAuthModal } = useAuth();
 
-  const [wallet, setWallet] = useState<CreditWallet | null>(null);
-  const [plans, setPlans] = useState<CreditPlan[]>([]);
+  const [wallet, setWallet] = useState<DetailedCreditWallet | null>(null);
+  const [plans, setPlans] = useState<ProfessionalPlan[]>([]);
+  const [batches, setBatches] = useState<CreditBatch[]>([]);
+  const [ledger, setLedger] = useState<CreditLedgerItem[]>([]);
+  const [activeTab, setActiveTab] = useState<'plans' | 'batches' | 'ledger'>('plans');
   const [loading, setLoading] = useState(true);
   const [purchasingPlan, setPurchasingPlan] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -19,9 +37,11 @@ export const CreditsWalletPage: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [walletRes, plansRes] = await Promise.all([
+      const [walletRes, plansRes, batchesRes, ledgerRes] = await Promise.all([
         api.getCreditWallet().catch(() => null),
-        api.getCreditPlans(),
+        api.getCreditPlans().catch(() => null),
+        api.getCreditBatches().catch(() => null),
+        api.getCreditLedger().catch(() => null),
       ]);
 
       if (walletRes?.data?.data) {
@@ -29,6 +49,12 @@ export const CreditsWalletPage: React.FC = () => {
       }
       if (plansRes?.data?.data) {
         setPlans(plansRes.data.data);
+      }
+      if (batchesRes?.data?.data) {
+        setBatches(batchesRes.data.data);
+      }
+      if (ledgerRes?.data?.data) {
+        setLedger(ledgerRes.data.data);
       }
     } catch (err) {
       console.error(err);
@@ -41,7 +67,7 @@ export const CreditsWalletPage: React.FC = () => {
     fetchData();
   }, [isAuthenticated]);
 
-  const handlePurchase = async (plan: CreditPlan) => {
+  const handlePurchase = async (plan: ProfessionalPlan) => {
     if (!isAuthenticated) {
       openAuthModal('PROFESSIONAL');
       return;
@@ -64,8 +90,8 @@ export const CreditsWalletPage: React.FC = () => {
         keyId,
         orderId,
         amount,
-        name: 'Vaziro™ Partner Credits',
-        description: `${plan.name} Pack — ${plan.creditsCount} Application Credits`,
+        name: 'Vaziro™ Professional Plan',
+        description: `${plan.name} Plan — ${plan.totalCredits} Credits (${plan.visibilityTier} Visibility)`,
         prefill: {
           name: userInfo?.name || `${user?.firstName} ${user?.lastName}`,
           email: userInfo?.email || user?.email,
@@ -101,7 +127,7 @@ export const CreditsWalletPage: React.FC = () => {
     return (
       <div className="max-w-6xl mx-auto py-16 px-4 text-center">
         <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-emerald-600 border-t-transparent"></div>
-        <p className="mt-4 text-sm text-gray-500 font-medium">Loading Vaziro Credit Wallet...</p>
+        <p className="mt-4 text-sm text-gray-500 font-medium">Loading Vaziro Credit Wallet & Plans...</p>
       </div>
     );
   }
@@ -114,7 +140,7 @@ export const CreditsWalletPage: React.FC = () => {
         </div>
         <h2 className="text-2xl font-black text-black">Sign In to View Wallet</h2>
         <p className="text-xs text-neutral-500 leading-relaxed font-medium">
-          Please sign in to view your real-time credit balance, transaction history, and choose a recharge plan.
+          Please sign in to view your real-time credit balance, batch validity, and choose a Vaziro Professional Plan.
         </p>
         <div className="flex items-center gap-3 pt-2">
           <button
@@ -152,7 +178,7 @@ export const CreditsWalletPage: React.FC = () => {
             Posting Requirements is 100% Free
           </h1>
           <p className="text-xs text-neutral-500 mt-2 leading-relaxed font-medium">
-            Credit wallets and application packs are used exclusively by <strong>Service Professionals</strong> to submit quotes. As a customer, you never pay to post requirements or receive verified quotes.
+            Credit wallets and application plans are used exclusively by <strong>Service Professionals</strong> to submit quotes. As a customer, you never pay to post requirements or receive verified quotes.
           </p>
         </div>
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -174,17 +200,37 @@ export const CreditsWalletPage: React.FC = () => {
   }
 
   const balance = wallet?.balance ?? 10;
+  const purchased = wallet?.purchasedCredits ?? 0;
+  const bonus = wallet?.bonusCredits ?? 0;
+  const expiring30 = wallet?.expiringCredits30Days ?? 0;
+  const refundableCr = wallet?.refundableCredits ?? 0;
+  const refundableAmount = wallet?.refundableAmountInr ?? 0;
+  const tier = wallet?.visibilityTier ?? 'STANDARD';
 
   return (
     <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      {/* Page Title */}
-      <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-          Professional Credit Wallet
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Credits are used by professionals to apply and quote on customer requirements. No fixed commission upfront.
-        </p>
+      {/* Header Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
+              Professional Credit Wallet & Plans
+            </h1>
+            <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+              {tier} Visibility
+            </span>
+          </div>
+          <p className="text-sm text-gray-500">
+            1 Credit = ₹10. Applications cost 1 credit per ₹100 of customer budget (minimum 1 credit). 90-day credit validity with full refund guarantee on unused purchased credits.
+          </p>
+        </div>
+        <button
+          onClick={fetchData}
+          className="self-start sm:self-auto flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition"
+        >
+          <RefreshCw className="w-3.5 h-3.5" />
+          Refresh
+        </button>
       </div>
 
       {message && (
@@ -194,162 +240,346 @@ export const CreditsWalletPage: React.FC = () => {
         </div>
       )}
 
-      {/* Wallet Balance Cards (Section 17 & 21) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-6 text-white shadow-md flex flex-col justify-between">
+      {/* Comprehensive Wallet Breakdown Grid (Section 17, 18, 20) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        {/* Total Available Balance */}
+        <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-5 text-white shadow-md flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-emerald-100 text-xs font-bold uppercase tracking-wider mb-2">
-              <span>Current Available Balance</span>
+              <span>Available Balance</span>
               <Coins className="w-5 h-5" />
             </div>
-            <div className="text-4xl font-extrabold">
+            <div className="text-3xl sm:text-4xl font-black">
               {balance} <span className="text-sm font-normal text-emerald-100">Credits</span>
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-emerald-500/40 text-xs text-emerald-100">
-            Nominal Value: ~₹{(balance * 50).toLocaleString('en-IN')} INR
+          <div className="mt-3 pt-3 border-t border-emerald-500/40 text-xs text-emerald-100 flex justify-between items-center">
+            <span>Nominal: ₹{(balance * 10).toLocaleString('en-IN')}</span>
+            <span>Purchased: {purchased} • Bonus: {bonus}</span>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col justify-between">
+        {/* Expiring Soon */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
           <div>
-            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">
-              Lifetime Purchased
+            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span>Expiring in 30 Days</span>
+              <Clock className={`w-4 h-4 ${expiring30 > 0 ? 'text-amber-500' : 'text-gray-400'}`} />
             </div>
-            <div className="text-3xl font-extrabold text-gray-900">
-              {wallet?.lifetimePurchased ?? 0} <span className="text-xs text-gray-500 font-normal">Credits</span>
+            <div className={`text-3xl font-extrabold ${expiring30 > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
+              {expiring30} <span className="text-xs text-gray-500 font-normal">Credits</span>
             </div>
           </div>
-          <div className="text-xs text-gray-500 flex items-center gap-1">
-            <ArrowUpRight className="w-4 h-4 text-emerald-600" /> Across plan subscriptions
+          <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
+            {wallet?.nextExpiryDate ? (
+              <span>Next expiry: {new Date(wallet.nextExpiryDate).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+            ) : (
+              <span>No credits expiring soon</span>
+            )}
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm flex flex-col justify-between">
+        {/* Refundable Balance */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
           <div>
-            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">
-              Lifetime Spent
+            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span>Refund Guarantee</span>
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
             </div>
             <div className="text-3xl font-extrabold text-gray-900">
-              {wallet?.lifetimeSpent ?? 0} <span className="text-xs text-gray-500 font-normal">Credits</span>
+              ₹{refundableAmount.toLocaleString('en-IN')}
             </div>
           </div>
-          <div className="text-xs text-gray-500 flex items-center gap-1">
-            <ArrowDownLeft className="w-4 h-4 text-amber-600" /> Spent on customer job proposals
+          <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-emerald-700 font-medium">
+            {refundableCr} unused base credits eligible for ₹10/credit refund upon expiry.
+          </div>
+        </div>
+
+        {/* Visibility Tier */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span>Visibility Status</span>
+              <Sparkles className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div className="text-2xl font-black text-gray-900 capitalize">
+              {tier.toLowerCase().replace(/_/g, ' ')}
+            </div>
+          </div>
+          <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
+            Higher tier plans boost your directory ranking and discovery match score.
           </div>
         </div>
       </div>
 
-      {/* Credit Plans (Section 20) */}
-      <div className="mb-12">
-        <div className="text-center max-w-xl mx-auto mb-8">
-          <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900">
-            Choose Your Credit Plan
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">
-            Recharge your credit wallet to quote on higher-value requirements and grow your business.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className={`rounded-2xl p-6 flex flex-col justify-between transition relative ${
-                plan.isRecommended
-                  ? 'bg-white border-2 border-emerald-600 shadow-lg ring-4 ring-emerald-500/10'
-                  : 'bg-white border border-gray-200 shadow-sm hover:border-gray-300'
-              }`}
-            >
-              {plan.isRecommended && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-[10px] font-extrabold uppercase tracking-wider py-1 px-3 rounded-full shadow-sm">
-                  RECOMMENDED
-                </div>
-              )}
-
-              <div>
-                <h3 className="font-extrabold text-gray-900 text-base">{plan.name}</h3>
-                <div className="my-4">
-                  <span className="text-3xl font-extrabold text-gray-900">
-                    ₹{plan.price.toLocaleString('en-IN')}
-                  </span>
-                </div>
-
-                <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl text-center mb-4">
-                  <span className="text-xl font-extrabold text-emerald-950 block">{plan.creditsCount}</span>
-                  <span className="text-[11px] text-emerald-800 font-medium">Credits Included</span>
-                </div>
-
-                <ul className="space-y-2 text-xs text-gray-600 mb-6">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Apply to verified requirements</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>In-app chat & masked calling</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>{plan.perks || 'Standard profile visibility'}</span>
-                  </li>
-                </ul>
-              </div>
-
-              <button
-                onClick={() => handlePurchase(plan)}
-                disabled={purchasingPlan === plan.id}
-                className={`w-full py-2.5 rounded-xl font-bold text-xs transition shadow-sm ${
-                  plan.isRecommended
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                    : 'bg-gray-900 hover:bg-black text-white'
-                }`}
-              >
-                {purchasingPlan === plan.id ? 'Processing...' : plan.price === 0 ? 'Current Plan' : `Get ${plan.name} Plan`}
-              </button>
-            </div>
-          ))}
-        </div>
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-gray-200 mb-8 pb-3">
+        <button
+          onClick={() => setActiveTab('plans')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${
+            activeTab === 'plans'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          }`}
+        >
+          <CreditCard className="w-4 h-4" />
+          Vaziro Professional Plans
+        </button>
+        <button
+          onClick={() => setActiveTab('batches')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${
+            activeTab === 'batches'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          Credit Batches & Validity ({batches.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('ledger')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition ${
+            activeTab === 'ledger'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          }`}
+        >
+          <Clock className="w-4 h-4" />
+          Audit Ledger History
+        </button>
       </div>
 
-      {/* Transaction Ledger History (Section 21) */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-bold text-gray-900">Credit Ledger History</h3>
-          <span className="text-xs text-gray-400">Audited Immutable Log</span>
-        </div>
+      {/* TAB 1: 5 VAZIRO PROFESSIONAL PLANS */}
+      {activeTab === 'plans' && (
+        <div>
+          <div className="text-center max-w-xl mx-auto mb-8">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900">
+              Choose Your Vaziro Professional Plan
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Select a plan that fits your business volume. 1 Credit = ₹10. Unused base credits valid for 90 days and refundable if unspent.
+            </p>
+          </div>
 
-        {wallet?.transactions && wallet.transactions.length > 0 ? (
-          <div className="divide-y divide-gray-100">
-            {wallet.transactions.map((tx) => (
-              <div key={tx.id} className="py-3 flex items-center justify-between text-xs">
-                <div>
-                  <span className="font-semibold text-gray-900 block">{tx.transactionType.replace(/_/g, ' ')}</span>
-                  <p className="text-gray-500 mt-0.5 text-[11px]">{tx.notes || 'Transaction recorded'}</p>
-                  <span className="text-[10px] text-gray-400">
-                    {new Date(tx.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  </span>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+            {plans.map((plan) => {
+              const isPopular = plan.isPopular || plan.slug === 'popular' || plan.price === 500;
+              return (
+                <div
+                  key={plan.id}
+                  className={`rounded-2xl p-5 flex flex-col justify-between transition relative ${
+                    isPopular
+                      ? 'bg-white border-2 border-emerald-600 shadow-xl ring-4 ring-emerald-500/10 scale-[1.02]'
+                      : 'bg-white border border-gray-200 shadow-sm hover:border-gray-300'
+                  }`}
+                >
+                  {isPopular && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wider py-0.5 px-2.5 rounded-full shadow-sm">
+                      POPULAR
+                    </div>
+                  )}
 
-                <div className="text-right">
-                  <span
-                    className={`font-extrabold text-sm ${
-                      tx.amount > 0 ? 'text-emerald-600' : 'text-amber-600'
+                  <div>
+                    <h3 className="font-black text-gray-900 text-base">{plan.name}</h3>
+                    <div className="my-3">
+                      <span className="text-3xl font-black text-gray-900">
+                        ₹{plan.price.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+
+                    {/* Credit Breakdown Badge */}
+                    <div className="p-2.5 bg-emerald-50/70 border border-emerald-200 rounded-xl text-center mb-3">
+                      <span className="text-xl font-black text-emerald-950 block">{plan.totalCredits}</span>
+                      <span className="text-[10px] text-emerald-800 font-semibold block">
+                        {plan.baseCredits} Base + {plan.bonusCredits} Bonus Credits
+                      </span>
+                    </div>
+
+                    {/* Visibility Tier */}
+                    <div className="mb-4 text-center">
+                      <span className="inline-block text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-gray-100 text-gray-700">
+                        {plan.visibilityTier} Visibility
+                      </span>
+                    </div>
+
+                    <ul className="space-y-1.5 text-xs text-gray-600 mb-5">
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>Quote on verified jobs</span>
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>Chat & masked calls</span>
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>90-Day Validity</span>
+                      </li>
+                      <li className="flex items-center gap-1.5">
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>Unused base refund guarantee</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <button
+                    onClick={() => handlePurchase(plan)}
+                    disabled={purchasingPlan === plan.id}
+                    className={`w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition shadow-sm cursor-pointer ${
+                      isPopular
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        : 'bg-gray-900 hover:bg-black text-white'
                     }`}
                   >
-                    {tx.amount > 0 ? `+${tx.amount}` : tx.amount} cr
-                  </span>
-                  <span className="text-[11px] text-gray-400 block mt-0.5">
-                    Balance: {tx.balanceAfter} cr
-                  </span>
+                    {purchasingPlan === plan.id ? 'Processing...' : `Get ${plan.name}`}
+                  </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        ) : (
-          <p className="text-xs text-gray-500 py-4 text-center">No transactions recorded yet.</p>
-        )}
-      </div>
+
+          {/* Refund Transparency Policy Box */}
+          <div className="bg-neutral-50 rounded-2xl p-6 border border-neutral-200 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div className="text-xs text-neutral-600 leading-relaxed">
+              <span className="font-bold text-neutral-900 block mb-0.5">Vaziro 90-Day Credit Validity & Refund Guarantee (Section 18, 20)</span>
+              All purchased credits are valid for 90 days from the purchase date. In the expiring batch, bonus credits are spent first before purchased credits. Any unused base purchased credits remaining after 90 days become automatically eligible for a refund at ₹10 per credit directly to your original payment method. Bonus credits are promotional and non-refundable.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: CREDIT BATCHES & 90-DAY EXPIRY */}
+      {activeTab === 'batches' && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Your Active & Expired Credit Batches</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Every plan purchase creates an isolated batch tracked for 90-day expiry and automated refund eligibility.
+              </p>
+            </div>
+          </div>
+
+          {batches.length > 0 ? (
+            <div className="divide-y divide-gray-100">
+              {batches.map((batch) => {
+                const isExpired = new Date(batch.expiresAt) <= new Date();
+                const totalInit = batch.initialPurchasedCredits + batch.initialBonusCredits;
+                const totalRem = batch.remainingPurchasedCredits + batch.remainingBonusCredits;
+
+                return (
+                  <div key={batch.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-gray-900 text-sm">
+                          {batch.planPurchase?.plan?.name || 'Professional Plan'} Batch
+                        </span>
+                        <span
+                          className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                            batch.status === 'ACTIVE'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : batch.status === 'REFUND_PENDING'
+                              ? 'bg-amber-100 text-amber-800'
+                              : batch.status === 'REFUNDED'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {batch.status.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <div className="text-gray-500 mt-1 flex flex-wrap items-center gap-3 text-[11px]">
+                        <span>Granted: {new Date(batch.grantedAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span>•</span>
+                        <span>Expires: {new Date(batch.expiresAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        {batch.refundAmountPaise > 0 && (
+                          <>
+                            <span>•</span>
+                            <span className="text-emerald-700 font-semibold">
+                              Refund: ₹{(batch.refundAmountPaise / 100).toLocaleString('en-IN')}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-right">
+                      <div>
+                        <span className="text-gray-400 text-[10px] uppercase font-bold block">Remaining</span>
+                        <span className="font-black text-sm text-gray-900">
+                          {totalRem} / {totalInit} cr
+                        </span>
+                        <span className="text-[10px] text-gray-400 block">
+                          ({batch.remainingPurchasedCredits} base, {batch.remainingBonusCredits} bonus)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-xs text-gray-400">
+              No credit batches found. Purchase a Professional Plan above to activate your first batch!
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: AUDIT LEDGER */}
+      {activeTab === 'ledger' && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-base font-bold text-gray-900">Credit Audit Ledger</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Every application debit, plan purchase, and cancellation refund is immutably recorded.
+              </p>
+            </div>
+            <span className="text-xs text-gray-400">Audited Immutable Log</span>
+          </div>
+
+          {ledger && ledger.length > 0 ? (
+            <div className="divide-y divide-gray-100">
+              {ledger.map((item) => (
+                <div key={item.id} className="py-3 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-semibold text-gray-900 block">{item.transactionType.replace(/_/g, ' ')}</span>
+                    <p className="text-gray-500 mt-0.5 text-[11px]">{item.reason || 'Credit transaction recorded'}</p>
+                    <span className="text-[10px] text-gray-400">
+                      {new Date(item.createdAt).toLocaleDateString('en-IN', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+
+                  <div className="text-right">
+                    <span
+                      className={`font-extrabold text-sm ${
+                        item.amount > 0 ? 'text-emerald-600' : 'text-amber-600'
+                      }`}
+                    >
+                      {item.amount > 0 ? `+${item.amount}` : item.amount} cr
+                    </span>
+                    <span className="text-[11px] text-gray-400 block mt-0.5">
+                      Balance: {item.balanceAfter} cr
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500 py-4 text-center">No ledger records found yet.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 };

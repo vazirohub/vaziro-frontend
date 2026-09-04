@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
-import { Requirement, Quotation } from '../types';
+import { Requirement, Quotation, BoostPackage } from '../types';
 import { useAuth } from '../context/AuthContext';
 import {
   ShieldCheck,
@@ -17,7 +17,11 @@ import {
   AlertCircle,
   ThumbsUp,
   XCircle,
+  Zap,
+  Check,
+  X,
 } from 'lucide-react';
+import { openRazorpayCheckout } from '../utils/razorpay';
 
 export const RequirementDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +30,11 @@ export const RequirementDetailPage: React.FC = () => {
 
   const [requirement, setRequirement] = useState<Requirement | null>(null);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [boostPackages, setBoostPackages] = useState<BoostPackage[]>([]);
+  const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
+  const [selectedBoostPkg, setSelectedBoostPkg] = useState<BoostPackage | null>(null);
+  const [boosting, setBoosting] = useState(false);
+  const [boostSuccess, setBoostSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [hiring, setHiring] = useState<string | null>(null);
   const [usePaymentProtection, setUsePaymentProtection] = useState(true);
@@ -35,9 +44,10 @@ export const RequirementDetailPage: React.FC = () => {
     if (!id) return;
     try {
       setLoading(true);
-      const [reqRes, quotesRes] = await Promise.all([
+      const [reqRes, quotesRes, boostRes] = await Promise.all([
         api.getRequirementById(id),
         api.getQuotationsForRequirement(id),
+        api.getBoostPackages().catch(() => null),
       ]);
 
       if (reqRes.data?.data) {
@@ -45,6 +55,9 @@ export const RequirementDetailPage: React.FC = () => {
       }
       if (quotesRes.data?.data) {
         setQuotations(quotesRes.data.data);
+      }
+      if (boostRes?.data?.data) {
+        setBoostPackages(boostRes.data.data);
       }
     } catch (err: any) {
       setError('Failed to load requirement details or quotations.');
@@ -91,6 +104,57 @@ export const RequirementDetailPage: React.FC = () => {
     }
   };
 
+  const handleBoostRequirement = async (pkg: BoostPackage) => {
+    if (!id || !requirement) return;
+    try {
+      setBoosting(true);
+      setError(null);
+
+      // 1. Create boost order
+      const orderRes = await api.createBoostOrder(id, pkg.id);
+      if (!orderRes.data?.data) {
+        throw new Error('Failed to create boost order.');
+      }
+
+      const { orderId, amount, keyId, user: userInfo } = orderRes.data.data;
+
+      // 2. Open Razorpay Checkout
+      const paymentResponse = await openRazorpayCheckout({
+        keyId,
+        orderId,
+        amount,
+        name: 'Vaziro™ Requirement Boost',
+        description: `${pkg.name} — ${pkg.durationDays} Days Priority Placement`,
+        prefill: {
+          name: userInfo?.name || `${user?.firstName} ${user?.lastName}`,
+          email: userInfo?.email || user?.email,
+          contact: userInfo?.phone || user?.phone,
+        },
+      });
+
+      // 3. Verify Payment
+      const verifyRes = await api.verifyBoostPayment({
+        orderId: paymentResponse.razorpay_order_id,
+        paymentId: paymentResponse.razorpay_payment_id,
+        signature: paymentResponse.razorpay_signature,
+        requirementId: id,
+        packageId: pkg.id,
+      });
+
+      if (verifyRes.data?.success) {
+        setBoostSuccess(verifyRes.data.message || 'Requirement boosted successfully!');
+        setIsBoostModalOpen(false);
+        fetchDetails();
+      }
+    } catch (err: any) {
+      if (!err.message?.includes('cancelled')) {
+        setError(err.response?.data?.error?.message || err.message || 'Failed to complete boost.');
+      }
+    } finally {
+      setBoosting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto py-16 px-4 text-center">
@@ -111,6 +175,9 @@ export const RequirementDetailPage: React.FC = () => {
     );
   }
 
+  const isCustomerOwner = user && user.id === (requirement as any).customer?.userId;
+  const isBoostActive = Boolean(requirement.isBoosted);
+
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       {/* Top Banner: Requirement Summary */}
@@ -124,6 +191,12 @@ export const RequirementDetailPage: React.FC = () => {
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                 Status: {requirement.status}
               </span>
+              {isBoostActive && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300 shadow-xs">
+                  <Sparkles className="w-3 h-3 text-amber-600 fill-amber-500" />
+                  Featured Boosted
+                </span>
+              )}
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
               {requirement.title}
@@ -148,8 +221,56 @@ export const RequirementDetailPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Customer Boost Banner (Section 25, 26) */}
+        {isCustomerOwner && (
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            {isBoostActive ? (
+              <div className="p-4 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-5 h-5 fill-amber-500" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-amber-950 block">Requirement Boost Active</span>
+                    <p className="text-[11px] text-amber-800">
+                      Your requirement is featured at the top of professional discovery feeds
+                      {requirement.boostExpiresAt && ` until ${new Date(requirement.boostExpiresAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}`}.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsBoostModalOpen(true)}
+                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition shadow-xs shrink-0 cursor-pointer"
+                >
+                  Extend Boost
+                </button>
+              </div>
+            ) : (
+              <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-gray-900 block">Get 3x Faster Quotes with Requirement Boost</span>
+                    <p className="text-[11px] text-gray-500">
+                      Promote your requirement to the top of the search feed for verified service professionals in your area. Starting at just ₹29.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsBoostModalOpen(true)}
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm transition shrink-0 cursor-pointer"
+                >
+                  ⚡ Boost Requirement
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Payment Protection Option Toggle (Section 34) */}
-        <div className="mt-6 pt-6 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-emerald-50/50 p-4 rounded-xl border border-emerald-200">
+        <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-emerald-50/50 p-4 rounded-xl border border-emerald-200">
           <div className="flex items-start gap-3">
             <ShieldCheck className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
             <div>
@@ -175,6 +296,13 @@ export const RequirementDetailPage: React.FC = () => {
           </label>
         </div>
       </div>
+
+      {boostSuccess && (
+        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm font-semibold flex items-center gap-2">
+          <Check className="w-5 h-5 text-emerald-600" />
+          {boostSuccess}
+        </div>
+      )}
 
       {error && (
         <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded text-red-700 text-sm">
@@ -248,75 +376,39 @@ export const RequirementDetailPage: React.FC = () => {
                         <div className="text-right">
                           <div className="inline-flex items-center gap-1 bg-violet-50 text-violet-800 border border-violet-200 px-2.5 py-1 rounded-full text-xs font-bold">
                             <Sparkles className="w-3.5 h-3.5 text-violet-600" />
-                            {ai.score}% Match
+                            {ai.score}% AI Match
                           </div>
-                          <div className="text-[10px] text-violet-700 mt-0.5 font-medium">{ai.ratingGrade} FIT</div>
                         </div>
                       )}
                     </div>
 
-                    {/* Stats bar */}
-                    <div className="grid grid-cols-3 gap-2 bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-center text-xs mb-4">
+                    {/* Proposed Price & Timeline */}
+                    <div className="bg-gray-50 p-4 rounded-xl mb-4 flex items-center justify-between border border-gray-100">
                       <div>
-                        <span className="text-gray-400 block text-[10px] uppercase font-semibold">Rating</span>
-                        <span className="font-bold text-gray-900 flex items-center justify-center gap-1">
-                          <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                          {prof?.rating || 5.0}★ ({prof?.reviewsCount || 0})
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 block text-[10px] uppercase font-semibold">Experience</span>
-                        <span className="font-bold text-gray-900">{prof?.yearsOfExperience || 3} Years</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-400 block text-[10px] uppercase font-semibold">Jobs Won</span>
-                        <span className="font-bold text-gray-900">{prof?.completedJobsCount || 0}</span>
-                      </div>
-                    </div>
-
-                    {/* Quoted Pricing & Timeline (Section 23) */}
-                    <div className="p-3.5 bg-emerald-50/70 border border-emerald-200 rounded-xl mb-4 flex items-center justify-between">
-                      <div>
-                        <span className="text-[11px] text-emerald-800 font-semibold uppercase block">Quoted Price</span>
-                        <span className="text-xl font-extrabold text-emerald-950">
-                          ₹{q.proposedPrice.toLocaleString('en-IN')}
-                        </span>
+                        <span className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider block">Proposed Quote</span>
+                        <span className="text-2xl font-black text-gray-900">₹{q.proposedPrice.toLocaleString('en-IN')}</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-[11px] text-emerald-800 font-semibold uppercase block">Timeline</span>
-                        <span className="text-sm font-bold text-emerald-950 flex items-center gap-1 justify-end">
-                          <Clock className="w-3.5 h-3.5" />
-                          {q.estimatedTimeline}
-                        </span>
+                        <span className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider block">Est. Timeline</span>
+                        <span className="text-sm font-bold text-gray-800">{q.estimatedTimeline}</span>
                       </div>
                     </div>
 
                     {/* Message & Scope */}
-                    <div className="space-y-2 text-xs text-gray-700 mb-4">
-                      {q.message && (
-                        <p className="bg-gray-50 p-3 rounded-lg border border-gray-100 italic">
-                          "{q.message}"
+                    <div className="space-y-2 mb-4">
+                      <div>
+                        <span className="text-xs font-bold text-gray-700 block">Proposal Message:</span>
+                        <p className="text-xs text-gray-600 leading-relaxed bg-white p-3 rounded-lg border border-gray-100">
+                          {q.message}
                         </p>
-                      )}
+                      </div>
                       {q.scopeSummary && (
-                        <div className="text-[11px] text-gray-500">
-                          <span className="font-semibold text-gray-700">Scope:</span> {q.scopeSummary}
+                        <div>
+                          <span className="text-xs font-bold text-gray-700 block">Scope Summary:</span>
+                          <p className="text-xs text-gray-600 leading-relaxed">{q.scopeSummary}</p>
                         </div>
                       )}
                     </div>
-
-                    {/* AI Match Rationale (Section 26) */}
-                    {ai?.reasons && ai.reasons.length > 0 && (
-                      <div className="mb-4 p-2.5 bg-violet-50/50 rounded-lg border border-violet-100 text-[11px] space-y-1 text-violet-900">
-                        <span className="font-semibold block text-violet-950">Why this match?</span>
-                        {ai.reasons.map((r, i) => (
-                          <div key={i} className="flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-violet-500"></span>
-                            <span>{r}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
                   {/* Actions (Section 27: Hire) */}
@@ -325,7 +417,7 @@ export const RequirementDetailPage: React.FC = () => {
                       <>
                         <button
                           onClick={() => handleShortlist(q.id)}
-                          className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 text-xs font-semibold flex items-center gap-1"
+                          className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 text-xs font-semibold flex items-center gap-1 cursor-pointer"
                           title="Shortlist"
                         >
                           <ThumbsUp className="w-3.5 h-3.5 text-emerald-600" />
@@ -334,7 +426,7 @@ export const RequirementDetailPage: React.FC = () => {
 
                         <button
                           onClick={() => handleReject(q.id)}
-                          className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 text-xs font-semibold flex items-center gap-1"
+                          className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 text-xs font-semibold flex items-center gap-1 cursor-pointer"
                           title="Reject"
                         >
                           <XCircle className="w-3.5 h-3.5 text-red-500" />
@@ -345,7 +437,7 @@ export const RequirementDetailPage: React.FC = () => {
                     <button
                       onClick={() => handleHire(q.id)}
                       disabled={hiring === q.id || q.status === 'REJECTED' || requirement.status === 'HIRED'}
-                      className="ml-auto bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow-sm transition disabled:opacity-50 flex items-center gap-1.5"
+                      className="ml-auto bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow-sm transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                     >
                       <CheckCircle2 className="w-4 h-4" />
                       {hiring === q.id ? 'Hiring...' : 'Hire Professional'}
@@ -357,6 +449,74 @@ export const RequirementDetailPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* CUSTOMER BOOST CHECKOUT MODAL (Section 25, 26) */}
+      {isBoostModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-neutral-200 relative max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setIsBoostModalOpen(false)}
+              className="absolute top-5 right-5 text-gray-400 hover:text-gray-600 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-3">
+                <Sparkles className="w-6 h-6 fill-amber-500" />
+              </div>
+              <h2 className="text-xl font-black text-gray-900">Boost Your Requirement</h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Pin your requirement to the top of discovery feeds for local verified professionals.
+              </p>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              {boostPackages.map((pkg) => {
+                const isSelected = selectedBoostPkg?.id === pkg.id;
+                return (
+                  <div
+                    key={pkg.id}
+                    onClick={() => setSelectedBoostPkg(pkg)}
+                    className={`p-4 rounded-2xl border transition cursor-pointer flex items-center justify-between ${
+                      isSelected
+                        ? 'border-amber-500 bg-amber-50/50 ring-2 ring-amber-400/30'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-extrabold text-sm text-gray-900">{pkg.name}</h4>
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                          {pkg.durationDays} {pkg.durationDays === 1 ? 'Day' : 'Days'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-0.5">{pkg.description || `Priority ranking for ${pkg.durationDays} days`}</p>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-lg font-black text-gray-900">₹{pkg.price}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="bg-neutral-50 p-3.5 rounded-xl border border-neutral-200 text-[11px] text-neutral-500 mb-6 leading-relaxed">
+              <span className="font-bold text-neutral-900 block mb-0.5">Instant Activation Disclosure:</span>
+              Boosts are activated immediately upon payment. Professional quotations are submitted directly by verified local experts. Posting requirements is always free; boosts are an optional acceleration tool.
+            </div>
+
+            <button
+              onClick={() => selectedBoostPkg && handleBoostRequirement(selectedBoostPkg)}
+              disabled={!selectedBoostPkg || boosting}
+              className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+            >
+              {boosting ? 'Processing Payment...' : selectedBoostPkg ? `Pay ₹${selectedBoostPkg.price} & Activate Boost` : 'Select a Package'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

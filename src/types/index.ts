@@ -96,6 +96,9 @@ export interface Requirement {
   genderPreference?: string | null;
   specialInstructions?: string | null;
   status: string;
+  isBoosted?: boolean;
+  boostPriority?: number;
+  boostExpiresAt?: string | null;
   creditsRequired?: number;
   createdAt: string;
   category?: Category;
@@ -203,6 +206,83 @@ export interface Job {
     platformFeeAmount: number;
     status: string;
   } | null;
+}
+
+export interface ProfessionalPlan {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  baseCredits: number;
+  bonusCredits: number;
+  totalCredits: number;
+  visibilityTier: string;
+  description?: string | null;
+  isPopular: boolean;
+  isActive: boolean;
+  displayOrder: number;
+}
+
+export interface CreditBatch {
+  id: string;
+  professionalProfileId: string;
+  planPurchaseId?: string | null;
+  initialPurchasedCredits: number;
+  initialBonusCredits: number;
+  remainingPurchasedCredits: number;
+  remainingBonusCredits: number;
+  totalRemainingCredits: number;
+  grantedAt: string;
+  expiresAt: string;
+  status: 'ACTIVE' | 'EXPIRED_NON_REFUNDABLE' | 'REFUND_PENDING' | 'REFUNDED';
+  refundAmountPaise: number;
+  refundedAt?: string | null;
+  planPurchase?: {
+    plan?: ProfessionalPlan;
+  } | null;
+}
+
+export interface CreditLedgerItem {
+  id: string;
+  professionalProfileId: string;
+  creditBatchId?: string | null;
+  transactionType: string;
+  amount: number;
+  balanceBefore: number;
+  balanceAfter: number;
+  referenceEntityId?: string | null;
+  reason?: string | null;
+  createdAt: string;
+  batch?: CreditBatch | null;
+}
+
+export interface DetailedCreditWallet {
+  id: string;
+  professionalProfileId: string;
+  balance: number;
+  purchasedCredits: number;
+  bonusCredits: number;
+  expiringCredits30Days: number;
+  nextExpiryDate: string | null;
+  refundableCredits: number;
+  refundableAmountInr: number;
+  visibilityTier: string;
+  lifetimePurchased: number;
+  lifetimeSpent: number;
+  batches?: CreditBatch[];
+  recentLedger?: CreditLedgerItem[];
+}
+
+export interface BoostPackage {
+  id: string;
+  name: string;
+  slug: string;
+  durationDays: number;
+  price: number;
+  priority: number;
+  description?: string | null;
+  isActive: boolean;
+  displayOrder: number;
 }
 
 export interface CreditPlan {
