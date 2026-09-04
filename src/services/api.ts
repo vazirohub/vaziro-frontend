@@ -158,6 +158,7 @@ export const api = {
   getMyRequirements: () => apiClient.get<ApiResponse<Requirement[]>>('/requirements/my'),
   getRequirementById: (id: string) => apiClient.get<ApiResponse<Requirement>>(`/requirements/${id}`),
   updateRequirementStatus: (id: string, status: string) => apiClient.patch<ApiResponse<any>>(`/requirements/${id}/status`, { status }),
+  deleteRequirement: (id: string) => apiClient.delete<ApiResponse<any>>(`/requirements/${id}`),
 
   // Quotations & Applications
   submitQuotation: (data: any) => apiClient.post<ApiResponse<any>>('/quotations/apply', data),

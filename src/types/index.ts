@@ -88,6 +88,7 @@ export interface Requirement {
   currency: string;
   cityId?: string | null;
   pincodeId?: string | null;
+  pincode?: Pincode | string | null;
   preferredDate?: string | null;
   preferredTime?: string | null;
   timeline?: string | null;

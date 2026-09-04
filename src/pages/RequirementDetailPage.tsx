@@ -20,6 +20,7 @@ import {
   Zap,
   Check,
   X,
+  Trash2,
 } from 'lucide-react';
 import { openRazorpayCheckout } from '../utils/razorpay';
 import { CategoryIcon } from '../components/CategoryIcon';
@@ -84,6 +85,21 @@ export const RequirementDetailPage: React.FC = () => {
       setError(err.response?.data?.error?.message || err.message || 'Failed to hire professional.');
     } finally {
       setHiring(null);
+    }
+  };
+
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteRequirement = async () => {
+    if (!requirement) return;
+    if (!window.confirm('Are you sure you want to remove this posted job? All open applications and quotes will be cancelled.')) return;
+    try {
+      setIsDeleting(true);
+      await api.deleteRequirement(requirement.id);
+      navigate('/dashboard');
+    } catch (err: any) {
+      alert(err.response?.data?.error?.message || err.message || 'Failed to remove requirement');
+      setIsDeleting(false);
     }
   };
 
@@ -177,6 +193,8 @@ export const RequirementDetailPage: React.FC = () => {
   }
 
   const isCustomerOwner = user && user.id === (requirement as any).customer?.userId;
+  const isAdmin = user && (user.roles?.includes('ADMIN') || user.roles?.includes('SUPER_ADMIN'));
+  const canManageRequirement = Boolean(isCustomerOwner || isAdmin);
   const isBoostActive = Boolean(requirement.isBoosted);
 
   return (
@@ -193,6 +211,17 @@ export const RequirementDetailPage: React.FC = () => {
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
                 Status: {requirement.status}
               </span>
+              {canManageRequirement && (
+                <button
+                  onClick={handleDeleteRequirement}
+                  disabled={isDeleting}
+                  className="inline-flex items-center gap-1 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 px-2.5 py-0.5 rounded-full border border-red-200 transition cursor-pointer"
+                  title="Remove this posted job"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  {isDeleting ? 'Removing...' : 'Remove Posted Job'}
+                </button>
+              )}
               {isBoostActive && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300 shadow-xs">
                   <Sparkles className="w-3 h-3 text-amber-600 fill-amber-500" />
@@ -217,8 +246,14 @@ export const RequirementDetailPage: React.FC = () => {
                 : `₹${requirement.budgetMin.toLocaleString('en-IN')}`}
             </div>
             <div className="text-[11px] text-gray-500 mt-1 flex items-center justify-end gap-1">
-              <MapPin className="w-3.5 h-3.5" />
-              {requirement.city?.name || 'Bengaluru'}, {requirement.pincodeId || '560038'}
+              <MapPin className="w-3.5 h-3.5 text-gray-400" />
+              <span>
+                {requirement.city?.name || 'India'}
+                {(() => {
+                  const pin = typeof requirement.pincode === 'string' ? requirement.pincode : (requirement.pincode as any)?.pincode || (requirement.pincodeId && requirement.pincodeId.length === 6 && !requirement.pincodeId.includes('-') ? requirement.pincodeId : null);
+                  return pin ? `, ${pin}` : '';
+                })()}
+              </span>
             </div>
           </div>
         </div>

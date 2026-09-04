@@ -368,7 +368,12 @@ export const JobTrackerPage: React.FC = () => {
               {job.requirement?.title || 'Service Requirement'}
             </h1>
             <p className="text-xs text-gray-500 mt-1">
-              Category: {job.requirement?.category?.name} • Location: {job.requirement?.city?.name}, {job.requirement?.pincodeId || '560038'}
+              Category: {job.requirement?.category?.name} • Location: {job.requirement?.city?.name || 'India'}
+              {(() => {
+                const req = job.requirement as any;
+                const pin = typeof req?.pincode === 'string' ? req.pincode : req?.pincode?.pincode || (req?.pincodeId && req.pincodeId.length === 6 && !req.pincodeId.includes('-') ? req.pincodeId : null);
+                return pin ? `, ${pin}` : '';
+              })()}
             </p>
           </div>
 

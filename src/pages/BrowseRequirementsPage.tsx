@@ -267,7 +267,11 @@ export const BrowseRequirementsPage: React.FC = () => {
                         <MapPin className="w-3.5 h-3.5 text-blue-500" /> Location:
                       </span>
                       <span className="font-medium text-gray-800">
-                        {req.city?.name || 'India'}, {req.pincodeId || '560038'}
+                        {req.city?.name || 'India'}
+                        {(() => {
+                          const pin = typeof req.pincode === 'string' ? req.pincode : (req.pincode as any)?.pincode || (req.pincodeId && req.pincodeId.length === 6 && !req.pincodeId.includes('-') ? req.pincodeId : null);
+                          return pin ? `, ${pin}` : '';
+                        })()}
                       </span>
                     </div>
 
