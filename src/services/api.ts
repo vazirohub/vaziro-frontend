@@ -114,6 +114,8 @@ export const api = {
   changePassword: (data: { currentPassword?: string; newPassword: string }) =>
     apiClient.put<ApiResponse<{ success: boolean; message: string }>>('/auth/password', data),
 
+  logout: () => apiClient.post<ApiResponse<{ success: boolean; message: string }>>('/auth/logout'),
+
   // Categories & Locations
   getCategories: () => apiClient.get<ApiResponse<Category[]>>('/categories'),
   getStates: () => apiClient.get<ApiResponse<IndianState[]>>('/locations/states'),

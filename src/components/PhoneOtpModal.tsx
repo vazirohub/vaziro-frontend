@@ -16,6 +16,7 @@ import {
   ArrowLeft,
   Check,
   HelpCircle,
+  Clock,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -109,7 +110,20 @@ export const PhoneOtpModal: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState(0);
+  const [countdown, setCountdown] = useState(0); // 30s resend cooldown
+  const [otpExpirySeconds, setOtpExpirySeconds] = useState(0); // 300s (5 min) OTP expiration
+
+  const formatExpiryTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const getMaskedPhone = (raw: string) => {
+    const clean = raw.replace(/\D/g, '').slice(-10);
+    if (clean.length < 10) return '+91 XXXXXXXXXX';
+    return `+91 ${clean.slice(0, 2)}XXXXXX${clean.slice(8)}`;
+  };
 
   // Preload MSG91 SDK on modal open
   useEffect(() => {
@@ -128,6 +142,7 @@ export const PhoneOtpModal: React.FC = () => {
       setErrorMessage(null);
       setSuccessMessage(null);
       setCountdown(0);
+      setOtpExpirySeconds(0);
       setOtpDigits(['', '', '', '', '', '']);
       setSignupToken('');
       setIsExistingUser(null);
@@ -139,16 +154,17 @@ export const PhoneOtpModal: React.FC = () => {
     }
   }, [isAuthModalOpen, defaultRole, initialIdentifier, initialMode]);
 
-  // Handle countdown timer
+  // Handle countdown timers (30s resend + 5m expiry)
   useEffect(() => {
     let timer: any;
-    if (countdown > 0) {
+    if (countdown > 0 || otpExpirySeconds > 0) {
       timer = setInterval(() => {
         setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+        setOtpExpirySeconds((prev) => (prev > 0 ? prev - 1 : 0));
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [countdown]);
+  }, [countdown, otpExpirySeconds]);
 
   if (!isAuthModalOpen) return null;
 
@@ -215,13 +231,15 @@ export const PhoneOtpModal: React.FC = () => {
       const res = await api.sendOtp(cleanDigits, purpose);
       const cd = res.data?.data?.cooldownSeconds || 30;
       setCountdown(cd);
-      setSuccessMessage(`Verification code sent to +91 ${cleanDigits}`);
+      setOtpExpirySeconds(300); // 5 minutes expiry
+      setSuccessMessage(`Verification code sent to ${getMaskedPhone(cleanDigits)}`);
     } catch {
       // 2. Client-side MSG91 Web SDK fallback
       try {
         await sendMsg91Otp(cleanDigits);
         setCountdown(30);
-        setSuccessMessage(`Verification code sent to +91 ${cleanDigits}`);
+        setOtpExpirySeconds(300); // 5 minutes expiry
+        setSuccessMessage(`Verification code sent to ${getMaskedPhone(cleanDigits)}`);
       } catch (sdkErr: any) {
         throw new Error(sdkErr.message || 'Could not send OTP right now. Please try again.');
       }
@@ -301,6 +319,7 @@ export const PhoneOtpModal: React.FC = () => {
         setSuccessMessage('Verification code resent successfully.');
       }
       setCountdown(30);
+      setOtpExpirySeconds(300); // Reset 5-min timer
     } catch (err: any) {
       setErrorMessage(err.response?.data?.message || err.message || 'Failed to resend OTP.');
     } finally {
@@ -462,7 +481,7 @@ export const PhoneOtpModal: React.FC = () => {
             {step === 'COMPLETE_PROFILE'
               ? 'Choose your role and tell us a bit about yourself'
               : step === 'VERIFY_OTP'
-              ? `We sent a 6-digit verification code to ${normalizedPhone}`
+              ? `We sent a 6-digit verification code to ${getMaskedPhone(mobileNumber)}`
               : (authMode === 'SIGNUP'
                   ? 'Join India’s trusted marketplace as Customer or Professional'
                   : 'Sign in with your mobile number to access your dashboard')}
@@ -729,16 +748,18 @@ export const PhoneOtpModal: React.FC = () => {
             {/* STEP 2: 6-BOX OTP VERIFICATION */}
             {step === 'VERIFY_OTP' && (
               <form onSubmit={handleVerifyOtp} className="space-y-4 animate-in fade-in">
-                {/* Mobile confirmation badge */}
+                {/* Mobile confirmation badge with Masked number and Change button */}
                 <div className="p-3.5 rounded-2xl bg-neutral-50 border border-neutral-200 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-emerald-600" />
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                      <Phone className="w-4 h-4 text-emerald-700" />
+                    </div>
                     <div>
                       <span className="text-[10px] uppercase tracking-wider text-neutral-400 font-bold block">
-                        OTP Sent To
+                        OTP Sent via SMS
                       </span>
-                      <span className="text-xs font-black text-black">
-                        {normalizedPhone}
+                      <span className="text-xs font-black text-black tracking-wide">
+                        {getMaskedPhone(mobileNumber)}
                       </span>
                     </div>
                   </div>
@@ -749,7 +770,7 @@ export const PhoneOtpModal: React.FC = () => {
                       setErrorMessage(null);
                       setSuccessMessage(null);
                     }}
-                    className="text-xs font-bold text-emerald-700 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                    className="text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline inline-flex items-center gap-1 cursor-pointer bg-white px-2.5 py-1 rounded-lg border border-neutral-200 shadow-xs transition"
                   >
                     <ArrowLeft className="w-3 h-3" />
                     Change
@@ -781,11 +802,19 @@ export const PhoneOtpModal: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Resend OTP cooldown */}
+                {/* Expiry countdown and Resend OTP */}
                 <div className="flex items-center justify-between text-xs pt-1 px-1">
-                  <span className="text-neutral-500">Didn't receive SMS?</span>
+                  <div className="text-neutral-500 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                    {otpExpirySeconds > 0 ? (
+                      <span>Expires in <strong className="text-neutral-800 font-mono font-bold">{formatExpiryTime(otpExpirySeconds)}</strong></span>
+                    ) : (
+                      <span className="text-red-600 font-bold">OTP expired</span>
+                    )}
+                  </div>
+
                   {countdown > 0 ? (
-                    <span className="text-neutral-400 font-semibold">Resend code in {countdown}s</span>
+                    <span className="text-neutral-400 font-semibold">Resend in {countdown}s</span>
                   ) : (
                     <button
                       type="button"
@@ -799,9 +828,15 @@ export const PhoneOtpModal: React.FC = () => {
                   )}
                 </div>
 
+                {otpExpirySeconds === 0 && (
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs text-center font-medium animate-in fade-in">
+                    This OTP has expired. Please click <strong>Resend OTP</strong> above to receive a fresh code.
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  disabled={isLoading || otpDigits.join('').length < 4}
+                  disabled={isLoading || otpDigits.join('').length < 4 || otpExpirySeconds === 0}
                   className="w-full bg-black hover:bg-neutral-800 text-white py-4 rounded-2xl font-black text-sm shadow-md transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-4 cursor-pointer"
                 >
                   {isLoading ? (
@@ -823,7 +858,7 @@ export const PhoneOtpModal: React.FC = () => {
                 <div className="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-200 rounded-2xl">
                   <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-emerald-600" />
-                    <span className="text-xs font-bold text-neutral-800">{normalizedPhone}</span>
+                    <span className="text-xs font-bold text-neutral-800 tracking-wide">{getMaskedPhone(mobileNumber)}</span>
                   </div>
                   <span className="inline-flex items-center gap-1 text-[11px] font-black text-emerald-700 bg-white px-2 py-0.5 rounded-full border border-emerald-300">
                     <Check className="w-3 h-3 text-emerald-600" /> Verified
@@ -979,8 +1014,8 @@ export const PhoneOtpModal: React.FC = () => {
                   ) : (
                     <span>
                       {selectedRole === 'PROFESSIONAL'
-                        ? 'Join as Partner & Get 10 Credits'
-                        : 'Complete Registration & Get Started'}
+                        ? 'Join as Partner & Go to Dashboard (+10 Free Credits)'
+                        : 'Complete & Go to Dashboard'}
                     </span>
                   )}
                 </button>

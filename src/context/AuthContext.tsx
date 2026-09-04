@@ -321,6 +321,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
+    api.logout().catch(() => {});
     localStorage.removeItem('vaziro_token');
     localStorage.removeItem('vaziro_user');
     setUser(null);
