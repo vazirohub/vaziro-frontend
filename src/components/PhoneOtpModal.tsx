@@ -223,26 +223,35 @@ export const PhoneOtpModal: React.FC = () => {
     }
   };
 
-  // Dispatch OTP via Server API with fallback to MSG91 Web SDK
+  // Dispatch OTP: Always trigger MSG91 OTP Widget for real SMS/WhatsApp delivery, and sync with backend
   const dispatchOtp = async (cleanDigits: string, purpose: string) => {
     const formatted = `+91${cleanDigits}`;
+    let sdkDispatched = false;
+
+    // 1. Trigger MSG91 OTP Widget (delivers SMS through the configured MSG91 widget)
     try {
-      // 1. Try server-side MSG91 OTP endpoint
+      await sendMsg91Otp(cleanDigits);
+      sdkDispatched = true;
+      console.log('[Auth] OTP dispatched via MSG91 Widget for', cleanDigits);
+    } catch (sdkErr: any) {
+      console.warn('[Auth] MSG91 Widget notice:', sdkErr?.message || sdkErr);
+    }
+
+    // 2. Also register OTP request with Backend API
+    try {
       const res = await api.sendOtp(cleanDigits, purpose);
       const cd = res.data?.data?.cooldownSeconds || 30;
       setCountdown(cd);
-      setOtpExpirySeconds(300); // 5 minutes expiry
+      setOtpExpirySeconds(300);
       setSuccessMessage(`Verification code sent to ${getMaskedPhone(cleanDigits)}`);
-    } catch {
-      // 2. Client-side MSG91 Web SDK fallback
-      try {
-        await sendMsg91Otp(cleanDigits);
-        setCountdown(30);
-        setOtpExpirySeconds(300); // 5 minutes expiry
-        setSuccessMessage(`Verification code sent to ${getMaskedPhone(cleanDigits)}`);
-      } catch (sdkErr: any) {
-        throw new Error(sdkErr.message || 'Could not send OTP right now. Please try again.');
+    } catch (apiErr: any) {
+      console.warn('[Auth] Backend OTP sync notice:', apiErr?.message || apiErr);
+      if (!sdkDispatched) {
+        throw new Error(apiErr.response?.data?.error?.message || apiErr.message || 'Could not send OTP right now. Please try again.');
       }
+      setCountdown(30);
+      setOtpExpirySeconds(300);
+      setSuccessMessage(`Verification code sent to ${getMaskedPhone(cleanDigits)}`);
     }
 
     if (typeof window !== 'undefined') {
@@ -313,11 +322,11 @@ export const PhoneOtpModal: React.FC = () => {
       setIsLoading(true);
       try {
         await retryMsg91Otp(null);
-        setSuccessMessage('A new verification code has been dispatched via SMS.');
       } catch {
-        await api.resendOtp(clean, isExistingUser ? 'login' : 'signup');
-        setSuccessMessage('Verification code resent successfully.');
+        await sendMsg91Otp(clean);
       }
+      await api.resendOtp(clean, isExistingUser ? 'login' : 'signup').catch(() => {});
+      setSuccessMessage('A new verification code has been dispatched via SMS.');
       setCountdown(30);
       setOtpExpirySeconds(300); // Reset 5-min timer
     } catch (err: any) {
