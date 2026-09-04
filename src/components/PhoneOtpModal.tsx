@@ -80,7 +80,15 @@ export const PhoneOtpModal: React.FC = () => {
   useEffect(() => {
     if (isAuthModalOpen) {
       setSelectedRole(defaultRole || 'CUSTOMER');
-      setViewMode(initialMode === 'SIGNUP' ? 'SIGNUP' : 'LOGIN');
+      setViewMode(
+        initialMode === 'SIGNUP'
+          ? 'SIGNUP'
+          : initialMode === 'FORGOT_PASSWORD'
+          ? 'FORGOT_PASSWORD'
+          : initialMode === 'OTP_LOGIN'
+          ? 'OTP_LOGIN'
+          : 'LOGIN'
+      );
       setForgotStep('REQUEST');
       setOtpStep('ENTER_MOBILE');
       setErrorMessage(null);
@@ -133,7 +141,21 @@ export const PhoneOtpModal: React.FC = () => {
       setIsLoading(true);
       await login(cleanId, loginPassword);
       closeAuthModal();
-      navigate(selectedRole === 'PROFESSIONAL' ? '/requirements' : '/dashboard');
+      const savedUser = localStorage.getItem('vaziro_user');
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          const isProf = parsed.roles?.includes('PROFESSIONAL');
+          const isAdm = parsed.roles?.includes('ADMIN') || parsed.roles?.includes('SUPER_ADMIN');
+          if (isAdm) navigate('/admin');
+          else if (isProf) navigate('/requirements');
+          else navigate('/dashboard');
+        } catch {
+          navigate(selectedRole === 'PROFESSIONAL' ? '/requirements' : '/dashboard');
+        }
+      } else {
+        navigate(selectedRole === 'PROFESSIONAL' ? '/requirements' : '/dashboard');
+      }
     } catch (err: any) {
       setErrorMessage(err.message || 'Invalid email/mobile or password. Please try again.');
     } finally {
@@ -194,7 +216,7 @@ export const PhoneOtpModal: React.FC = () => {
       closeAuthModal();
       navigate(selectedRole === 'PROFESSIONAL' ? '/requirements' : '/dashboard');
     } catch (err: any) {
-      setErrorMessage(err.response?.data?.error?.message || err.message || 'Registration failed. Please check your information.');
+      setErrorMessage(err.message || 'Registration failed. Please check your information.');
     } finally {
       setIsLoading(false);
     }

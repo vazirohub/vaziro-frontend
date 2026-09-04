@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { PhoneOtpModal } from '../components/PhoneOtpModal';
 
 export const SignupPage: React.FC = () => {
   const { user, register } = useAuth();
@@ -80,7 +79,7 @@ export const SignupPage: React.FC = () => {
 
       navigate(role === 'PROFESSIONAL' ? '/requirements' : '/dashboard');
     } catch (err: any) {
-      setErrorMessage(err.response?.data?.error?.message || err.message || 'Registration failed. Please check your information.');
+      setErrorMessage(err.message || 'Registration failed. Please check your information.');
     } finally {
       setIsLoading(false);
     }
@@ -286,7 +285,6 @@ export const SignupPage: React.FC = () => {
           </p>
         </div>
       </div>
-      <PhoneOtpModal />
     </div>
   );
 };

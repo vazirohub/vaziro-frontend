@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Loader2, ShieldCheck, CheckCircle2, Phone } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Phone } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { PhoneOtpModal } from '../components/PhoneOtpModal';
 
 export const LoginPage: React.FC = () => {
   const { user, login, openAuthModal } = useAuth();
@@ -17,7 +16,14 @@ export const LoginPage: React.FC = () => {
   useEffect(() => {
     if (user) {
       const isProfessional = user.roles?.includes('PROFESSIONAL');
-      navigate(isProfessional ? '/requirements' : '/dashboard', { replace: true });
+      const isAdmin = user.roles?.includes('ADMIN') || user.roles?.includes('SUPER_ADMIN');
+      if (isAdmin) {
+        navigate('/admin', { replace: true });
+      } else if (isProfessional) {
+        navigate('/requirements', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
     }
   }, [user, navigate]);
 
@@ -39,6 +45,17 @@ export const LoginPage: React.FC = () => {
     try {
       setIsLoading(true);
       await login(cleanId, password);
+      const savedUser = localStorage.getItem('vaziro_user');
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser);
+          const isProf = parsed.roles?.includes('PROFESSIONAL');
+          const isAdm = parsed.roles?.includes('ADMIN') || parsed.roles?.includes('SUPER_ADMIN');
+          if (isAdm) navigate('/admin', { replace: true });
+          else if (isProf) navigate('/requirements', { replace: true });
+          else navigate('/dashboard', { replace: true });
+        } catch {}
+      }
     } catch (err: any) {
       setErrorMessage(err.message || 'Invalid email/mobile or password. Please try again.');
     } finally {
@@ -88,7 +105,7 @@ export const LoginPage: React.FC = () => {
               </label>
               <button
                 type="button"
-                onClick={() => openAuthModal('CUSTOMER', identifier, 'LOGIN')}
+                onClick={() => openAuthModal('CUSTOMER', identifier, 'FORGOT_PASSWORD')}
                 className="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline cursor-pointer"
               >
                 Forgot Password?
@@ -140,7 +157,7 @@ export const LoginPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => openAuthModal('CUSTOMER', identifier, 'LOGIN')}
+            onClick={() => openAuthModal('CUSTOMER', identifier, 'OTP_LOGIN')}
             className="text-xs font-semibold text-neutral-500 hover:text-black flex items-center justify-center gap-1 mx-auto cursor-pointer"
           >
             <Phone className="w-3 h-3 text-neutral-400" />
@@ -148,7 +165,6 @@ export const LoginPage: React.FC = () => {
           </button>
         </div>
       </div>
-      <PhoneOtpModal />
     </div>
   );
 };
