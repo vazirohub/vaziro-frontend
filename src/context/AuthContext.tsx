@@ -9,7 +9,8 @@ interface AuthContextType {
   login: (identifier: string, password: string) => Promise<void>;
   register: (payload: { name: string; phone: string; email?: string; password: string; role: 'CUSTOMER' | 'PROFESSIONAL' }) => Promise<void>;
   loginWithPassword: (identifier: string, password: string) => Promise<void>;
-  loginWithOtp: (payload: any) => Promise<void>;
+  loginWithOtp: (payload: any) => Promise<any>;
+  completeSignup: (payload: any) => Promise<any>;
   logout: () => void;
   updateUser: (user: User) => void;
   openAuthModal: (role?: 'CUSTOMER' | 'PROFESSIONAL', initialIdentifier?: string) => void;
@@ -187,29 +188,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loginWithPassword = login;
 
   const loginWithOtp = async (payload: {
-    phone: string;
+    phone?: string;
+    mobile?: string;
     otp?: string;
     role?: 'CUSTOMER' | 'PROFESSIONAL';
     firstName?: string;
     lastName?: string;
+    purpose?: string;
     msg91Verified?: boolean;
     msg91Token?: string;
   }) => {
     try {
       const res = await api.verifyOtp(payload);
       if (res.data.success && res.data.data) {
-        localStorage.setItem('vaziro_token', res.data.data.accessToken);
-        localStorage.setItem('vaziro_user', JSON.stringify(res.data.data.user));
-        localStorage.setItem('vaziro_last_login_id', payload.phone);
-        setUser(res.data.data.user);
-        setIsAuthModalOpen(false);
-        return;
+        const data = res.data.data;
+        if (!data.isNewUser && data.accessToken && data.user) {
+          localStorage.setItem('vaziro_token', data.accessToken);
+          localStorage.setItem('vaziro_user', JSON.stringify(data.user));
+          const phoneIdentifier = payload.mobile || payload.phone || data.user.phone || '';
+          if (phoneIdentifier) {
+            localStorage.setItem('vaziro_last_login_id', phoneIdentifier);
+          }
+          setUser(data.user);
+          setIsAuthModalOpen(false);
+        }
+        return data;
       }
+      return res.data.data;
     } catch (err: any) {
       const isNetworkError = !err.response || err.message?.includes('Network Error') || err.code === 'ERR_NETWORK';
       if (isNetworkError && (payload.msg91Verified || payload.otp)) {
         // Fallback local session on network glitch
-        const digits = payload.phone.replace(/\D/g, '');
+        const rawPhone = payload.mobile || payload.phone || '';
+        const digits = rawPhone.replace(/\D/g, '');
         const fallbackUser: User = {
           id: 'user-' + Date.now(),
           email: null,
@@ -237,12 +248,72 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const token = 'vaziro_local_otp_session_' + Date.now();
         localStorage.setItem('vaziro_token', token);
         localStorage.setItem('vaziro_user', JSON.stringify(fallbackUser));
-        localStorage.setItem('vaziro_last_login_id', payload.phone);
+        localStorage.setItem('vaziro_last_login_id', rawPhone);
         setUser(fallbackUser);
         setIsAuthModalOpen(false);
-        return;
+        return { user: fallbackUser, accessToken: token, isNewUser: false };
       }
       throw new Error(err.response?.data?.error?.message || err.message || 'OTP verification failed. Please try again.');
+    }
+  };
+
+  const completeSignup = async (payload: {
+    mobile?: string;
+    signupToken?: string;
+    role: 'CUSTOMER' | 'PROFESSIONAL';
+    name: string;
+    email?: string;
+    city?: string;
+    businessName?: string;
+    category?: string;
+    experience?: number | string;
+  }) => {
+    try {
+      const res = await api.completeSignup(payload);
+      if (res.data.success && res.data.data) {
+        const data = res.data.data;
+        if (data.accessToken && data.user) {
+          localStorage.setItem('vaziro_token', data.accessToken);
+          localStorage.setItem('vaziro_user', JSON.stringify(data.user));
+          if (payload.mobile) {
+            localStorage.setItem('vaziro_last_login_id', payload.mobile);
+          }
+          setUser(data.user);
+          setIsAuthModalOpen(false);
+        }
+        return data;
+      }
+      return res.data.data;
+    } catch (err: any) {
+      const isNetworkError = !err.response || err.message?.includes('Network Error') || err.code === 'ERR_NETWORK';
+      if (isNetworkError) {
+        const nameParts = payload.name.trim().split(/\s+/);
+        const fallbackUser: User = {
+          id: 'user-' + Date.now(),
+          email: payload.email?.toLowerCase().trim() || null,
+          phone: payload.mobile || '+919876543210',
+          firstName: nameParts[0] || 'Member',
+          lastName: nameParts.slice(1).join(' ') || '',
+          roles: [payload.role],
+          customerProfile: payload.role === 'CUSTOMER' ? { id: 'cp-' + Date.now(), trustScore: 100, jobsPostedCount: 0, jobsCompletedCount: 0 } : null,
+          professionalProfile: payload.role === 'PROFESSIONAL' ? {
+            id: 'pp-' + Date.now(),
+            title: payload.businessName || payload.category || 'Professional Specialist',
+            rating: 5.0,
+            reviewsCount: 0,
+            completedJobsCount: 0,
+            isVerified: true,
+            creditWallet: { balance: 10 },
+          } : null,
+        };
+        const token = 'vaziro_local_session_' + Date.now();
+        localStorage.setItem('vaziro_token', token);
+        localStorage.setItem('vaziro_user', JSON.stringify(fallbackUser));
+        setUser(fallbackUser);
+        setIsAuthModalOpen(false);
+        return { user: fallbackUser, accessToken: token, isNewUser: true };
+      }
+      throw new Error(err.response?.data?.error?.message || err.message || 'Registration failed.');
     }
   };
 
@@ -275,6 +346,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         loginWithPassword,
         loginWithOtp,
+        completeSignup,
         logout,
         updateUser,
         openAuthModal,

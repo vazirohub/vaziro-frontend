@@ -68,19 +68,43 @@ export const api = {
   loginWithPassword: (identifier: string, password: string) =>
     apiClient.post<ApiResponse<{ accessToken: string; user: User }>>('/auth/login', { identifier, password }),
 
+  checkMobile: (mobile: string) =>
+    apiClient.post<ApiResponse<{ exists: boolean; mobile: string; message: string }>>('/auth/check-mobile', { mobile }),
+
+  sendOtp: (mobile: string, purpose: string = 'login') =>
+    apiClient.post<ApiResponse<{ mobile: string; cooldownSeconds: number }>>('/auth/send-otp', { mobile, purpose }),
+
+  resendOtp: (mobile: string, purpose: string = 'resend') =>
+    apiClient.post<ApiResponse<{ mobile: string; cooldownSeconds: number }>>('/auth/resend-otp', { mobile, purpose }),
+
   requestOtp: (phone: string) =>
     apiClient.post<ApiResponse<{ phone: string; cooldownSeconds: number }>>('/auth/otp/request', { phone }),
 
   verifyOtp: (payload: {
-    phone: string;
+    phone?: string;
+    mobile?: string;
     otp?: string;
     role?: 'CUSTOMER' | 'PROFESSIONAL';
     firstName?: string;
     lastName?: string;
+    purpose?: string;
     msg91Verified?: boolean;
     msg91Token?: string;
   }) =>
-    apiClient.post<ApiResponse<{ accessToken: string; user: User }>>('/auth/otp/verify', payload),
+    apiClient.post<ApiResponse<{ accessToken?: string; refreshToken?: string; isNewUser: boolean; signupToken?: string; user?: User }>>('/auth/verify-otp', payload),
+
+  completeSignup: (payload: {
+    mobile?: string;
+    signupToken?: string;
+    role: 'CUSTOMER' | 'PROFESSIONAL';
+    name: string;
+    email?: string;
+    city?: string;
+    businessName?: string;
+    category?: string;
+    experience?: number | string;
+  }) =>
+    apiClient.post<ApiResponse<{ accessToken: string; refreshToken?: string; isNewUser: boolean; user: User }>>('/auth/complete-signup', payload),
 
   getMe: () => apiClient.get<ApiResponse<{ user: User }>>('/auth/me'),
 

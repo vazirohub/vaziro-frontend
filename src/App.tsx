@@ -21,6 +21,8 @@ import { DisclaimerPage } from './pages/DisclaimerPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { PaymentSuccessPage } from './pages/PaymentSuccessPage';
 import { PaymentFailedPage } from './pages/PaymentFailedPage';
+import { LoginPage } from './pages/LoginPage';
+import { SignupPage } from './pages/SignupPage';
 import { ScrollToTop } from './components/ScrollToTop';
 
 export const App: React.FC = () => {
@@ -44,6 +46,8 @@ export const App: React.FC = () => {
               <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/payment/success" element={<PaymentSuccessPage />} />
               <Route path="/payment/failed" element={<PaymentFailedPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
               
               {/* Corporate and Legal Policy Pages */}
               <Route path="/about" element={<AboutUsPage />} />
