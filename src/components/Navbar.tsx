@@ -335,20 +335,19 @@ export const Navbar: React.FC = () => {
                 <span>Browse Jobs</span>
               </Link>
 
-              {/* Post Requirement for Customers & Guests */}
-              {(!isProfessional || isAdmin) && (
-                <Link
-                  to="/post-requirement"
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all ${
-                    isActive('/post-requirement')
-                      ? 'bg-neutral-100 text-black font-bold'
-                      : 'text-neutral-700 hover:text-black hover:bg-neutral-50'
-                  }`}
-                >
-                  <PlusCircle className="w-4 h-4 text-emerald-600" />
-                  <span>Post Requirement</span>
-                </Link>
-              )}
+              {/* Gemini AI Assistant Button */}
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('vaziro:open_ai_chat'))}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-neutral-700 hover:text-black hover:bg-neutral-50 transition-all cursor-pointer font-semibold group"
+                title="Open Vaziro Gemini AI Assistant"
+              >
+                <Sparkles className="w-4 h-4 text-amber-500 group-hover:rotate-12 transition-transform" />
+                <span>AI Assistant</span>
+                <span className="text-[9px] bg-gradient-to-r from-emerald-600 to-indigo-600 text-white font-bold px-1.5 py-0.5 rounded-full shadow-xs">
+                  Gemini
+                </span>
+              </button>
 
               {/* Credit Wallet for Professionals */}
               {isProfessional && !isAdmin && (
@@ -834,6 +833,31 @@ export const Navbar: React.FC = () => {
                   </div>
                   <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    window.dispatchEvent(new CustomEvent('vaziro:open_ai_chat'));
+                  }}
+                  className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-neutral-900 to-neutral-800 text-white shadow-sm active:scale-98 transition group cursor-pointer text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-indigo-600 flex items-center justify-center text-amber-300 shadow-sm">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-extrabold text-xs text-white flex items-center gap-1.5">
+                        <span>Ask Vaziro AI</span>
+                        <span className="text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-700/50 px-1.5 py-0.2 rounded font-mono">
+                          Gemini
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-neutral-300">24/7 Support, Escrow & Policies</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
+                </button>
               </div>
 
               {/* Collapsible Explore Categories Section */}
