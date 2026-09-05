@@ -279,8 +279,17 @@ export const api = {
   triggerBatchExpiry: () => apiClient.post<ApiResponse<any>>('/admin/credits/process-expired'),
   createAdminCategory: (data: any) => apiClient.post<ApiResponse<Category>>('/admin/categories', data),
   updateAdminCategory: (id: string, data: any) => apiClient.put<ApiResponse<Category>>(`/admin/categories/${id}`, data),
-  deleteAdminCategory: (id: string) => apiClient.delete<ApiResponse<any>>(`/admin/categories/${id}`),
   createAdminSubcategory: (data: any) => apiClient.post<ApiResponse<any>>('/admin/subcategories', data),
   updateAdminSubcategory: (id: string, data: any) => apiClient.put<ApiResponse<any>>(`/admin/subcategories/${id}`, data),
   deleteAdminSubcategory: (id: string) => apiClient.delete<ApiResponse<any>>(`/admin/subcategories/${id}`),
+
+  // Gemini AI Endpoints
+  aiChat: (message: string, history?: any[]) =>
+    apiClient.post<ApiResponse<{ reply: string; isAccountSpecific?: boolean; source?: string }>>('/ai/chat', { message, history }),
+  aiExtractRequirement: (text: string) =>
+    apiClient.post<ApiResponse<{ category?: string; service?: string; location?: string; urgency?: string; requirements?: string[]; isAIExtracted: boolean }>>('/ai/extract-requirement', { text }),
+  aiPolishRequirement: (data: { categoryName?: string; rawDescription: string; city?: string }) =>
+    apiClient.post<ApiResponse<{ title: string; description: string; suggestedBudgetMin: number; suggestedBudgetMax: number; timelineDays: number; isAIPolished: boolean }>>('/ai/polish-requirement', data),
+  aiMatchRationale: (data: { requirement: any; professional: any; quotation?: any }) =>
+    apiClient.post<ApiResponse<{ score: number; ratingGrade: string; reasons: string[]; isAIMatch: boolean }>>('/ai/match-rationale', data),
 };
