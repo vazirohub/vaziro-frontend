@@ -118,6 +118,43 @@ export const PhoneOtpModal: React.FC = () => {
 
   if (!isAuthModalOpen) return null;
 
+  const navigateAfterAuth = (userRole?: string) => {
+    closeAuthModal();
+    const isProf = userRole === 'PROFESSIONAL' || selectedRole === 'PROFESSIONAL';
+    if (isProf) {
+      navigate('/requirements');
+      return;
+    }
+    const savedUser = localStorage.getItem('vaziro_user');
+    if (savedUser) {
+      try {
+        const parsed = JSON.parse(savedUser);
+        const isAdm = parsed.roles?.includes('ADMIN') || parsed.roles?.includes('SUPER_ADMIN');
+        if (isAdm) {
+          navigate('/admin');
+          return;
+        }
+      } catch {}
+    }
+
+    const savedDraft = localStorage.getItem('vaziro_pending_requirement_draft');
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed.pendingPublish) {
+          if (window.location.pathname !== '/post-requirement') {
+            navigate('/post-requirement');
+          }
+          return;
+        }
+      } catch {}
+    }
+
+    if (window.location.pathname !== '/post-requirement') {
+      navigate('/dashboard');
+    }
+  };
+
   // ============================================================================
   // 1. PRIMARY LOGIN: Email or Mobile + Password
   // ============================================================================
@@ -140,22 +177,7 @@ export const PhoneOtpModal: React.FC = () => {
     try {
       setIsLoading(true);
       await login(cleanId, loginPassword);
-      closeAuthModal();
-      const savedUser = localStorage.getItem('vaziro_user');
-      if (savedUser) {
-        try {
-          const parsed = JSON.parse(savedUser);
-          const isProf = parsed.roles?.includes('PROFESSIONAL');
-          const isAdm = parsed.roles?.includes('ADMIN') || parsed.roles?.includes('SUPER_ADMIN');
-          if (isAdm) navigate('/admin');
-          else if (isProf) navigate('/requirements');
-          else navigate('/dashboard');
-        } catch {
-          navigate(selectedRole === 'PROFESSIONAL' ? '/requirements' : '/dashboard');
-        }
-      } else {
-        navigate(selectedRole === 'PROFESSIONAL' ? '/requirements' : '/dashboard');
-      }
+      navigateAfterAuth();
     } catch (err: any) {
       setErrorMessage(err.message || 'Invalid email/mobile or password. Please try again.');
     } finally {
@@ -213,8 +235,7 @@ export const PhoneOtpModal: React.FC = () => {
         role: selectedRole,
       });
 
-      closeAuthModal();
-      navigate(selectedRole === 'PROFESSIONAL' ? '/requirements' : '/dashboard');
+      navigateAfterAuth(selectedRole);
     } catch (err: any) {
       setErrorMessage(err.message || 'Registration failed. Please check your information.');
     } finally {
@@ -346,8 +367,7 @@ export const PhoneOtpModal: React.FC = () => {
         role: selectedRole,
       });
 
-      closeAuthModal();
-      navigate(selectedRole === 'PROFESSIONAL' ? '/requirements' : '/dashboard');
+      navigateAfterAuth(selectedRole);
     } catch (err: any) {
       setErrorMessage(err.response?.data?.error?.message || err.message || 'Invalid OTP code.');
     } finally {

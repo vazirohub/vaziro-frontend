@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { Category, Subcategory, IndianState, City } from '../types';
@@ -24,6 +24,7 @@ import {
   Star,
   AlertTriangle,
   Briefcase,
+  Loader2,
 } from 'lucide-react';
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -177,9 +178,34 @@ const defaultCities: City[] = [
   { id: 'c7578c55-b999-4554-8e3e-9ed23cffbf41', stateId: '88c64a19-46e0-4f7d-baad-e1fc477c519b', name: 'Greater Noida', slug: 'greater-noida', isActive: true },
 ];
 
+const DRAFT_STORAGE_KEY = 'vaziro_pending_requirement_draft';
+
+interface RequirementDraft {
+  categoryId: string;
+  subcategoryId: string;
+  title: string;
+  description: string;
+  budgetType: 'FIXED' | 'RANGE';
+  budgetMin: number;
+  budgetMax: number;
+  cityId: string;
+  pincode: string;
+  preferredDate: string;
+  preferredTime: string;
+  frequency: string;
+  genderPreference: string;
+  specialInstructions: string;
+  step: number;
+  idempotencyKey: string;
+  pendingPublish: boolean;
+  savedAt: number;
+}
+
 export const PostRequirementPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, openAuthModal } = useAuth();
+  const isProfessional = Boolean(user?.roles?.includes('PROFESSIONAL'));
+  const isAdmin = Boolean(user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r)));
 
   const [searchParams] = useSearchParams();
   const cityQuery = searchParams.get('city');
@@ -190,7 +216,12 @@ export const PostRequirementPage: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>(defaultMasterCategories);
   const [cities, setCities] = useState<City[]>(defaultCities);
   const [submitting, setSubmitting] = useState(false);
+  const [autoPublishing, setAutoPublishing] = useState(false);
+  const [draftRestored, setDraftRestored] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isPublishingRef = useRef(false);
+  const isInitialMount = useRef(true);
 
   // Form State
   const [selectedCategory, setSelectedCategory] = useState<Category>(defaultMasterCategories[0]);
@@ -211,15 +242,74 @@ export const PostRequirementPage: React.FC = () => {
   // Step wizard: 1 = Service, 2 = Details & Location, 3 = Budget & Timeline
   const [step, setStep] = useState(1);
 
+  // 1. Restore draft on initial mount if available
   useEffect(() => {
-    // Attempt to load dynamic data from API; if not responding, fallback seamlessly
+    const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+    if (saved) {
+      try {
+        const draft: RequirementDraft = JSON.parse(saved);
+        if (draft.title || draft.description || (draft.step && draft.step > 1)) {
+          if (draft.title) setTitle(draft.title);
+          if (draft.description) setDescription(draft.description);
+          if (draft.budgetType) setBudgetType(draft.budgetType);
+          if (draft.budgetMin) setBudgetMin(draft.budgetMin);
+          if (draft.budgetMax) setBudgetMax(draft.budgetMax);
+          if (draft.cityId) setSelectedCityId(draft.cityId);
+          if (draft.pincode) setPincode(draft.pincode);
+          if (draft.preferredDate) setPreferredDate(draft.preferredDate);
+          if (draft.preferredTime) setPreferredTime(draft.preferredTime);
+          if (draft.frequency) setFrequency(draft.frequency);
+          if (draft.genderPreference) setGenderPreference(draft.genderPreference);
+          if (draft.specialInstructions) setSpecialInstructions(draft.specialInstructions);
+          if (draft.step) setStep(draft.step);
+          setDraftRestored(true);
+        }
+      } catch (e) {
+        console.error('Failed to parse saved draft', e);
+      }
+    }
+  }, []);
+
+  // 2. Load dynamic categories & cities from API while preserving selected draft IDs
+  useEffect(() => {
+    const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+    let draftCatId = '';
+    let draftSubId = '';
+    if (saved) {
+      try {
+        const d = JSON.parse(saved);
+        draftCatId = d.categoryId;
+        draftSubId = d.subcategoryId;
+      } catch {}
+    }
+
     api.getCategories()
       .then((catRes) => {
         if (catRes.data?.data && catRes.data.data.length > 0) {
-          setCategories(catRes.data.data);
-          setSelectedCategory(catRes.data.data[0]);
-          if (catRes.data.data[0].subcategories?.length > 0) {
-            setSelectedSubcategory(catRes.data.data[0].subcategories[0]);
+          const loadedCats = catRes.data.data;
+          setCategories(loadedCats);
+
+          if (draftCatId) {
+            const foundCat = loadedCats.find((c: any) => c.id === draftCatId || c.slug === draftCatId);
+            if (foundCat) {
+              setSelectedCategory(foundCat);
+              if (draftSubId && foundCat.subcategories) {
+                const foundSub = foundCat.subcategories.find((s: any) => s.id === draftSubId || s.slug === draftSubId);
+                if (foundSub) {
+                  setSelectedSubcategory(foundSub);
+                  return;
+                }
+              }
+              if (foundCat.subcategories?.length > 0) {
+                setSelectedSubcategory(foundCat.subcategories[0]);
+              }
+              return;
+            }
+          }
+
+          setSelectedCategory(loadedCats[0]);
+          if (loadedCats[0].subcategories?.length > 0) {
+            setSelectedSubcategory(loadedCats[0].subcategories[0]);
           }
         }
       })
@@ -237,6 +327,22 @@ export const PostRequirementPage: React.FC = () => {
           );
           const finalCities = ncrCities.length > 0 ? ncrCities : cRes.data.data;
           setCities(finalCities);
+
+          const savedCity = localStorage.getItem(DRAFT_STORAGE_KEY);
+          let savedCityId = '';
+          if (savedCity) {
+            try {
+              savedCityId = JSON.parse(savedCity).cityId;
+            } catch {}
+          }
+
+          if (savedCityId) {
+            const matchedSaved = finalCities.find((c: any) => c.id === savedCityId);
+            if (matchedSaved) {
+              setSelectedCityId(matchedSaved.id);
+              return;
+            }
+          }
 
           const queryCity = new URLSearchParams(window.location.search).get('city');
           if (queryCity) {
@@ -257,6 +363,68 @@ export const PostRequirementPage: React.FC = () => {
       });
   }, []);
 
+  // 3. Auto-save draft whenever user updates form fields
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    if (title.trim() || description.trim() || step > 1) {
+      const existing = localStorage.getItem(DRAFT_STORAGE_KEY);
+      let key = '';
+      let pending = false;
+      if (existing) {
+        try {
+          const parsed = JSON.parse(existing);
+          key = parsed.idempotencyKey;
+          pending = parsed.pendingPublish || false;
+        } catch {}
+      }
+      if (!key) {
+        key = 'req_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      }
+
+      const draft: RequirementDraft = {
+        categoryId: selectedCategory?.id || '',
+        subcategoryId: selectedSubcategory?.id || '',
+        title,
+        description,
+        budgetType,
+        budgetMin,
+        budgetMax,
+        cityId: selectedCityId,
+        pincode,
+        preferredDate,
+        preferredTime,
+        frequency,
+        genderPreference,
+        specialInstructions,
+        step,
+        idempotencyKey: key,
+        pendingPublish: pending,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    }
+  }, [
+    selectedCategory,
+    selectedSubcategory,
+    title,
+    description,
+    budgetType,
+    budgetMin,
+    budgetMax,
+    selectedCityId,
+    pincode,
+    preferredDate,
+    preferredTime,
+    frequency,
+    genderPreference,
+    specialInstructions,
+    step,
+  ]);
+
   const handleCategorySelect = (cat: Category) => {
     setSelectedCategory(cat);
     if (cat.subcategories && cat.subcategories.length > 0) {
@@ -264,48 +432,93 @@ export const PostRequirementPage: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isAuthenticated) {
-      openAuthModal('CUSTOMER');
-      return;
-    }
+  const handleDiscardDraft = () => {
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
+    setDraftRestored(false);
+    setTitle('');
+    setDescription('');
+    setStep(1);
+    setPincode('110001');
+    setSpecialInstructions('');
+    setError(null);
+  };
 
-    if (!selectedCategory || !selectedSubcategory || !title.trim() || !description.trim() || !selectedCityId) {
-      setError('Please fill all mandatory fields marked with an asterisk (*).');
-      return;
-    }
+  // 4. Execution logic for publishing (both manual and auto-publish after auth)
+  const executePublish = async (overrideData?: Partial<RequirementDraft>) => {
+    if (isPublishingRef.current) return;
+    isPublishingRef.current = true;
 
     try {
       setSubmitting(true);
       setError(null);
 
+      const targetCatId = overrideData?.categoryId || selectedCategory?.id;
+      const targetSubId = overrideData?.subcategoryId || selectedSubcategory?.id;
+      const targetTitle = (overrideData?.title ?? title).trim();
+      const targetDesc = (overrideData?.description ?? description).trim();
+      const targetBudgetType = overrideData?.budgetType ?? budgetType;
+      const targetBudgetMin = Number(overrideData?.budgetMin ?? budgetMin);
+      const targetBudgetMax = targetBudgetType === 'RANGE' ? Number(overrideData?.budgetMax ?? budgetMax) : targetBudgetMin;
+      const targetCityId = overrideData?.cityId ?? selectedCityId;
+      const targetPincode = overrideData?.pincode ?? pincode;
+      const targetDate = overrideData?.preferredDate ?? preferredDate;
+      const targetTime = overrideData?.preferredTime ?? preferredTime;
+      const targetFreq = overrideData?.frequency ?? frequency;
+      const targetGender = overrideData?.genderPreference ?? genderPreference;
+      const targetInstructions = overrideData?.specialInstructions ?? specialInstructions;
+
+      if (!targetCatId || !targetSubId || !targetTitle || !targetDesc || !targetCityId) {
+        setError('Please fill all mandatory fields marked with an asterisk (*).');
+        return;
+      }
+
       const payload = {
-        categoryId: selectedCategory.id,
-        subcategoryId: selectedSubcategory.id,
-        title: title.trim(),
-        description: description.trim(),
-        budgetType,
-        budgetMin: Number(budgetMin),
-        budgetMax: budgetType === 'RANGE' ? Number(budgetMax) : Number(budgetMin),
-        cityId: selectedCityId,
-        pincode: pincode || '560038',
-        preferredDate: preferredDate || undefined,
-        preferredTime,
-        frequency,
-        genderPreference,
-        specialInstructions,
+        categoryId: targetCatId,
+        subcategoryId: targetSubId,
+        title: targetTitle,
+        description: targetDesc,
+        budgetType: targetBudgetType,
+        budgetMin: targetBudgetMin,
+        budgetMax: targetBudgetMax,
+        cityId: targetCityId,
+        pincode: targetPincode || '110001',
+        preferredDate: targetDate || undefined,
+        preferredTime: targetTime,
+        frequency: targetFreq,
+        genderPreference: targetGender,
+        specialInstructions: targetInstructions,
       };
 
       const res = await api.createRequirement(payload);
       if (res.data?.success && res.data?.data) {
+        // Success: clear draft and navigate
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+        setDraftRestored(false);
         navigate(`/requirements/${res.data.data.id}`);
       } else {
         setError('Could not publish requirement. Please try again.');
+        // Safely set pendingPublish: false in localStorage so user can retry with button
+        const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            parsed.pendingPublish = false;
+            localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(parsed));
+          } catch {}
+        }
       }
     } catch (err: any) {
       const msg = err.response?.data?.error?.message || err.message || 'Failed to post requirement.';
       setError(msg);
+      // Safely set pendingPublish: false in localStorage so user can retry with button
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          parsed.pendingPublish = false;
+          localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(parsed));
+        } catch {}
+      }
       if (
         err.response?.status === 401 ||
         msg.toLowerCase().includes('token') ||
@@ -316,11 +529,65 @@ export const PostRequirementPage: React.FC = () => {
       }
     } finally {
       setSubmitting(false);
+      setAutoPublishing(false);
+      isPublishingRef.current = false;
     }
   };
 
-  const isProfessional = user?.roles?.includes('PROFESSIONAL');
-  const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
+  // 5. Auto-publish when user logs in or signs up with pending draft
+  useEffect(() => {
+    if (isAuthenticated && !isProfessional) {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (saved) {
+        try {
+          const draft: RequirementDraft = JSON.parse(saved);
+          if (draft.pendingPublish && !isPublishingRef.current) {
+            setAutoPublishing(true);
+            executePublish(draft);
+          }
+        } catch {}
+      }
+    }
+  }, [isAuthenticated, isProfessional]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedCategory || !selectedSubcategory || !title.trim() || !description.trim() || !selectedCityId) {
+      setError('Please fill all mandatory fields marked with an asterisk (*).');
+      return;
+    }
+
+    if (!isAuthenticated) {
+      // Save draft with pendingPublish = true and open auth modal
+      const draftKey = 'req_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+      const draft: RequirementDraft = {
+        categoryId: selectedCategory.id,
+        subcategoryId: selectedSubcategory.id,
+        title: title.trim(),
+        description: description.trim(),
+        budgetType,
+        budgetMin: Number(budgetMin),
+        budgetMax: budgetType === 'RANGE' ? Number(budgetMax) : Number(budgetMin),
+        cityId: selectedCityId,
+        pincode: pincode || '110001',
+        preferredDate: preferredDate || '',
+        preferredTime,
+        frequency,
+        genderPreference,
+        specialInstructions,
+        step: 3,
+        idempotencyKey: draftKey,
+        pendingPublish: true,
+        savedAt: Date.now(),
+      };
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      openAuthModal('CUSTOMER');
+      return;
+    }
+
+    await executePublish();
+  };
 
   // Service Professionals apply for jobs; they do not post requirements
   if (isAuthenticated && isProfessional && !isAdmin) {
@@ -406,24 +673,93 @@ export const PostRequirementPage: React.FC = () => {
         </div>
       </div>
 
+      {autoPublishing && (
+        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 shadow-sm animate-in fade-in duration-200">
+          <Loader2 className="w-5 h-5 text-emerald-600 animate-spin shrink-0" />
+          <div>
+            <h4 className="text-xs font-black text-emerald-900">Publishing Your Requirement...</h4>
+            <p className="text-[11px] text-emerald-700 mt-0.5">
+              Authentication verified. Publishing your job requirement to verified professionals now.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {draftRestored && !autoPublishing && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-2.5 text-blue-900 text-xs font-semibold">
+            <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+            <span>We restored your unsaved requirement draft. You can continue editing or publish.</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="text-[11px] text-neutral-500 hover:text-red-600 font-bold px-2 py-1 transition cursor-pointer"
+            >
+              Discard Draft
+            </button>
+            <button
+              type="button"
+              onClick={() => setDraftRestored(false)}
+              className="text-[11px] text-blue-700 hover:text-blue-900 font-bold px-2.5 py-1 bg-white rounded-lg border border-blue-200 shadow-2xs transition cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
           <div className="flex items-center gap-2 text-red-800 text-xs font-bold">
             <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
             <span>{error}</span>
           </div>
-          {(error.toLowerCase().includes('expired') ||
-            error.toLowerCase().includes('token') ||
-            error.toLowerCase().includes('authentication') ||
-            !isAuthenticated) && (
-            <button
-              type="button"
-              onClick={() => openAuthModal('CUSTOMER')}
-              className="shrink-0 px-4 py-2 bg-black hover:bg-neutral-800 text-white rounded-xl text-xs font-black shadow transition cursor-pointer"
-            >
-              Sign In & Publish
-            </button>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {!isAuthenticated ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const draftKey = 'req_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+                  const draft: RequirementDraft = {
+                    categoryId: selectedCategory.id,
+                    subcategoryId: selectedSubcategory.id,
+                    title: title.trim(),
+                    description: description.trim(),
+                    budgetType,
+                    budgetMin: Number(budgetMin),
+                    budgetMax: budgetType === 'RANGE' ? Number(budgetMax) : Number(budgetMin),
+                    cityId: selectedCityId,
+                    pincode: pincode || '110001',
+                    preferredDate: preferredDate || '',
+                    preferredTime,
+                    frequency,
+                    genderPreference,
+                    specialInstructions,
+                    step: 3,
+                    idempotencyKey: draftKey,
+                    pendingPublish: true,
+                    savedAt: Date.now(),
+                  };
+                  localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+                  openAuthModal('CUSTOMER');
+                }}
+                className="shrink-0 px-4 py-2 bg-black hover:bg-neutral-800 text-white rounded-xl text-xs font-black shadow transition cursor-pointer"
+              >
+                Sign In & Publish
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => executePublish()}
+                className="shrink-0 px-4 py-2 bg-black hover:bg-neutral-800 text-white rounded-xl text-xs font-black shadow transition cursor-pointer disabled:opacity-50"
+              >
+                {submitting ? 'Retrying...' : 'Retry Publish'}
+              </button>
+            )}
+          </div>
         </div>
       )}
 

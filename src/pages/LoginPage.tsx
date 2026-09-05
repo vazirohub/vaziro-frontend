@@ -22,6 +22,16 @@ export const LoginPage: React.FC = () => {
       } else if (isProfessional) {
         navigate('/requirements', { replace: true });
       } else {
+        const savedDraft = localStorage.getItem('vaziro_pending_requirement_draft');
+        if (savedDraft) {
+          try {
+            const draft = JSON.parse(savedDraft);
+            if (draft.pendingPublish) {
+              navigate('/post-requirement', { replace: true });
+              return;
+            }
+          } catch {}
+        }
         navigate('/dashboard', { replace: true });
       }
     }
@@ -46,6 +56,7 @@ export const LoginPage: React.FC = () => {
       setIsLoading(true);
       await login(cleanId, password);
       const savedUser = localStorage.getItem('vaziro_user');
+      const savedDraft = localStorage.getItem('vaziro_pending_requirement_draft');
       let targetPath = '/dashboard';
       if (savedUser) {
         try {
@@ -54,6 +65,12 @@ export const LoginPage: React.FC = () => {
           const isAdm = parsed.roles?.includes('ADMIN') || parsed.roles?.includes('SUPER_ADMIN');
           if (isAdm) targetPath = '/admin';
           else if (isProf) targetPath = '/requirements';
+          else if (savedDraft) {
+            const draft = JSON.parse(savedDraft);
+            if (draft.pendingPublish) {
+              targetPath = '/post-requirement';
+            }
+          }
         } catch {}
       }
       navigate(targetPath, { replace: true });

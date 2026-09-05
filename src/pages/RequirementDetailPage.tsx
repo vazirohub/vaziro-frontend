@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
-import { Requirement, Quotation, BoostPackage } from '../types';
+import { Requirement, Quotation, BoostPackage, DetailedCreditWallet } from '../types';
 import { useAuth } from '../context/AuthContext';
 import {
   ShieldCheck,
@@ -21,9 +21,13 @@ import {
   Check,
   X,
   Trash2,
+  Coins,
+  Send,
+  Calendar,
 } from 'lucide-react';
 import { openRazorpayCheckout } from '../utils/razorpay';
 import { CategoryIcon } from '../components/CategoryIcon';
+import { AddCreditsModal } from '../components/AddCreditsModal';
 
 export const RequirementDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -41,6 +45,19 @@ export const RequirementDetailPage: React.FC = () => {
   const [hiring, setHiring] = useState<string | null>(null);
   const [usePaymentProtection, setUsePaymentProtection] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Professional Quotation & Credit Top-Up State
+  const [wallet, setWallet] = useState<DetailedCreditWallet | null>(null);
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+  const [isAddCreditsOpen, setIsAddCreditsOpen] = useState(false);
+  const [proposedPrice, setProposedPrice] = useState<number>(5000);
+  const [estimatedTimeline, setEstimatedTimeline] = useState('3 days');
+  const [proposedStartDate, setProposedStartDate] = useState('');
+  const [message, setMessage] = useState('');
+  const [scopeSummary, setScopeSummary] = useState('');
+  const [submittingQuote, setSubmittingQuote] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [quoteSuccess, setQuoteSuccess] = useState<string | null>(null);
 
   const fetchDetails = async () => {
     if (!id) return;
@@ -68,9 +85,73 @@ export const RequirementDetailPage: React.FC = () => {
     }
   };
 
+  const fetchWallet = async () => {
+    if (user?.roles?.includes('PROFESSIONAL')) {
+      try {
+        const res = await api.getCreditWallet();
+        if (res.data?.data) {
+          setWallet(res.data.data);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
   useEffect(() => {
     fetchDetails();
   }, [id]);
+
+  useEffect(() => {
+    fetchWallet();
+  }, [user]);
+
+  const handleOpenQuoteModal = () => {
+    if (!requirement) return;
+    setProposedPrice(requirement.budgetMin);
+    setMessage(
+      `Hello! I have reviewed your requirement for "${requirement.title}". With my experience in ${
+        requirement.category?.name || 'this service'
+      }, I am confident I can provide exceptional service for your family.`
+    );
+    setScopeSummary('Complete end-to-end service delivery adhering to all instructions and hygiene standards.');
+    setQuoteError(null);
+    setQuoteSuccess(null);
+    setIsQuoteModalOpen(true);
+  };
+
+  const handleSubmitQuote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!requirement) return;
+
+    try {
+      setSubmittingQuote(true);
+      setQuoteError(null);
+
+      const payload = {
+        requirementId: requirement.id,
+        proposedPrice: Number(proposedPrice),
+        estimatedTimeline,
+        proposedStartDate: proposedStartDate || undefined,
+        message,
+        scopeSummary,
+      };
+
+      const res = await api.submitQuotation(payload);
+      if (res.data?.success) {
+        setQuoteSuccess(`Quotation submitted! ${res.data.data.creditsDeducted} Credits deducted.`);
+        await fetchWallet();
+        setTimeout(() => {
+          setIsQuoteModalOpen(false);
+          fetchDetails();
+        }, 1200);
+      }
+    } catch (err: any) {
+      setQuoteError(err.response?.data?.error?.message || err.message || 'Failed to submit quotation');
+    } finally {
+      setSubmittingQuote(false);
+    }
+  };
 
   const handleHire = async (quotationId: string) => {
     try {
@@ -194,8 +275,16 @@ export const RequirementDetailPage: React.FC = () => {
 
   const isCustomerOwner = user && user.id === (requirement as any).customer?.userId;
   const isAdmin = user && (user.roles?.includes('ADMIN') || user.roles?.includes('SUPER_ADMIN'));
+  const isProfessional = Boolean(user && user.roles?.includes('PROFESSIONAL'));
   const canManageRequirement = Boolean(isCustomerOwner || isAdmin);
   const isBoostActive = Boolean(requirement.isBoosted);
+  const myQuote = quotations.find(
+    (q) =>
+      (q.professional?.user as any)?.id === user?.id ||
+      (user?.professionalProfile && q.professionalProfileId === (user.professionalProfile as any)?.id) ||
+      (wallet?.professionalProfileId && q.professionalProfileId === wallet.professionalProfileId)
+  );
+  const currentBalance = wallet?.balance ?? 10;
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -300,6 +389,43 @@ export const RequirementDetailPage: React.FC = () => {
                   className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm transition shrink-0 cursor-pointer"
                 >
                   ⚡ Boost Requirement
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Professional Opportunity & Apply Bar */}
+        {isProfessional && !isCustomerOwner && (
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            {myQuote ? (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="text-xs font-bold text-emerald-950 block">You have applied for this job</span>
+                    <span className="text-[11px] text-emerald-800">
+                      Your proposed quote: <strong>₹{myQuote.proposedPrice.toLocaleString('en-IN')}</strong> • Est. Timeline: {myQuote.estimatedTimeline} • Status: <strong>{myQuote.status}</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-slate-900 text-white rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+                <div>
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider block">Service Professional Opportunity</span>
+                  <h3 className="text-base font-black text-white mt-0.5">Submit a Proposal to This Customer</h3>
+                  <p className="text-xs text-slate-300 mt-0.5">
+                    Send your price and timeline proposal. Requires {requirement.creditsRequired || 5} Credits upon submission.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleOpenQuoteModal}
+                  className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Apply & Submit Quote</span>
                 </button>
               </div>
             )}
@@ -554,6 +680,179 @@ export const RequirementDetailPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Quotation Submission Modal for Professionals */}
+      {isQuoteModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="relative bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-gray-200 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Submit Quotation Proposal</h3>
+                <p className="text-xs text-gray-500 mt-0.5">{requirement.title}</p>
+              </div>
+              <button
+                onClick={() => setIsQuoteModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {quoteSuccess && (
+              <div className="my-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>{quoteSuccess}</span>
+              </div>
+            )}
+
+            {quoteError && (
+              <div className="my-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-semibold">
+                {quoteError}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitQuote} className="mt-4 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Proposed Price (₹ INR) *
+                  </label>
+                  <input
+                    type="number"
+                    min={100}
+                    value={proposedPrice}
+                    onChange={(e) => setProposedPrice(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs font-bold"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Estimated Timeline *
+                  </label>
+                  <input
+                    type="text"
+                    value={estimatedTimeline}
+                    onChange={(e) => setEstimatedTimeline(e.target.value)}
+                    placeholder="e.g. 3 days / 2 hours daily"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Proposed Start Date
+                </label>
+                <input
+                  type="date"
+                  value={proposedStartDate}
+                  onChange={(e) => setProposedStartDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Personal Message to Customer *
+                </label>
+                <textarea
+                  rows={3}
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Introduce yourself, your credentials, and why you are the best fit..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Scope Summary & Deliverables
+                </label>
+                <textarea
+                  rows={2}
+                  value={scopeSummary}
+                  onChange={(e) => setScopeSummary(e.target.value)}
+                  placeholder="Specific tasks, hygiene standards, equipment provided..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs"
+                />
+              </div>
+
+              {/* Explicit Credit Confirmation & In-Context Warning */}
+              <div className={`p-3.5 rounded-xl border text-xs transition-all ${
+                currentBalance < (requirement.creditsRequired || 5)
+                  ? 'bg-amber-50 border-amber-300'
+                  : 'bg-neutral-50 border-neutral-200'
+              }`}>
+                <div className="font-bold text-neutral-900 flex items-center justify-between">
+                  <span>Application Credit Deduction:</span>
+                  <span className="text-amber-700 font-black">{requirement.creditsRequired || 5} Credits</span>
+                </div>
+                <div className="flex justify-between text-[11px] text-neutral-600 mt-1 font-medium">
+                  <span>Current Balance: <strong>{currentBalance} cr</strong></span>
+                  <span>Balance After: <strong>{Math.max(0, currentBalance - (requirement.creditsRequired || 5))} cr</strong></span>
+                </div>
+
+                {currentBalance < (requirement.creditsRequired || 5) && (
+                  <div className="mt-3 pt-3 border-t border-amber-200/80">
+                    <div className="flex items-start gap-2 text-amber-900 font-semibold text-xs">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <span>
+                        You need {requirement.creditsRequired || 5} credits to apply for this job, but your current balance is {currentBalance} credits.
+                      </span>
+                    </div>
+                    <div className="mt-2.5 flex items-center justify-between">
+                      <span className="text-[11px] text-amber-800 font-medium">
+                        Top up instantly without losing your quotation draft.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddCreditsOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+                      >
+                        <Coins className="w-3.5 h-3.5 text-amber-400" />
+                        <span>+ Add Credit</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsQuoteModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingQuote || currentBalance < (requirement.creditsRequired || 5)}
+                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  {submittingQuote ? 'Deducting & Submitting...' : 'Confirm & Spend Credits'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Add Credits Modal: Keeps quotation modal intact */}
+      <AddCreditsModal
+        isOpen={isAddCreditsOpen}
+        onClose={() => setIsAddCreditsOpen(false)}
+        onSuccess={async () => {
+          await fetchWallet();
+        }}
+        creditsNeeded={requirement?.creditsRequired || 5}
+        currentBalance={currentBalance}
+      />
     </div>
   );
 };

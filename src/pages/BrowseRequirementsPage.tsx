@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Requirement, Category, DetailedCreditWallet } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { Search, MapPin, IndianRupee, ShieldCheck, Coins, Send, X, Clock, Calendar, AlertCircle, Sparkles } from 'lucide-react';
+import { Search, MapPin, IndianRupee, ShieldCheck, Coins, Send, X, Clock, Calendar, AlertCircle, Sparkles, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CategoryIcon } from '../components/CategoryIcon';
+import { AddCreditsModal } from '../components/AddCreditsModal';
 
 export const BrowseRequirementsPage: React.FC = () => {
   const { user, isAuthenticated, openAuthModal } = useAuth();
@@ -19,6 +20,7 @@ export const BrowseRequirementsPage: React.FC = () => {
   // Quotation Modal State
   const [selectedRequirement, setSelectedRequirement] = useState<Requirement | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddCreditsOpen, setIsAddCreditsOpen] = useState(false);
   const [proposedPrice, setProposedPrice] = useState<number>(5000);
   const [estimatedTimeline, setEstimatedTimeline] = useState('3 days');
   const [proposedStartDate, setProposedStartDate] = useState('');
@@ -432,20 +434,43 @@ export const BrowseRequirementsPage: React.FC = () => {
                 />
               </div>
 
-              {/* Explicit Credit Confirmation (Section 17) */}
-              <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs">
-                <div className="font-semibold text-amber-950 flex items-center justify-between">
+              {/* Explicit Credit Confirmation & In-Context Warning */}
+              <div className={`p-3.5 rounded-xl border text-xs transition-all ${
+                currentBalance < (selectedRequirement.creditsRequired || 5)
+                  ? 'bg-amber-50 border-amber-300'
+                  : 'bg-neutral-50 border-neutral-200'
+              }`}>
+                <div className="font-bold text-neutral-900 flex items-center justify-between">
                   <span>Application Credit Deduction:</span>
-                  <span className="text-amber-700 font-extrabold">{selectedRequirement.creditsRequired || 5} Credits</span>
+                  <span className="text-amber-700 font-black">{selectedRequirement.creditsRequired || 5} Credits</span>
                 </div>
-                <div className="flex justify-between text-[11px] text-amber-800 mt-1">
-                  <span>Current Balance: {currentBalance} cr</span>
-                  <span>Balance After: {currentBalance - (selectedRequirement.creditsRequired || 5)} cr</span>
+                <div className="flex justify-between text-[11px] text-neutral-600 mt-1 font-medium">
+                  <span>Current Balance: <strong>{currentBalance} cr</strong></span>
+                  <span>Balance After: <strong>{Math.max(0, currentBalance - (selectedRequirement.creditsRequired || 5))} cr</strong></span>
                 </div>
+
                 {currentBalance < (selectedRequirement.creditsRequired || 5) && (
-                  <p className="text-red-600 font-semibold mt-1">
-                    Insufficient credits. Please purchase a credit pack to apply.
-                  </p>
+                  <div className="mt-3 pt-3 border-t border-amber-200/80">
+                    <div className="flex items-start gap-2 text-amber-900 font-semibold text-xs">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <span>
+                        You need {selectedRequirement.creditsRequired || 5} credits to apply for this job, but your current balance is {currentBalance} credits.
+                      </span>
+                    </div>
+                    <div className="mt-2.5 flex items-center justify-between">
+                      <span className="text-[11px] text-amber-800 font-medium">
+                        Top up instantly without losing your quotation draft.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddCreditsOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+                      >
+                        <Coins className="w-3.5 h-3.5 text-amber-400" />
+                        <span>+ Add Credit</span>
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -453,14 +478,14 @@ export const BrowseRequirementsPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingQuote || currentBalance < (selectedRequirement.creditsRequired || 5)}
-                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center gap-1.5 shadow-sm cursor-pointer"
                 >
                   <Send className="w-3.5 h-3.5" />
                   {submittingQuote ? 'Deducting & Submitting...' : 'Confirm & Spend Credits'}
@@ -470,6 +495,17 @@ export const BrowseRequirementsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Inline Add Credits Modal: Keeps quotation modal intact */}
+      <AddCreditsModal
+        isOpen={isAddCreditsOpen}
+        onClose={() => setIsAddCreditsOpen(false)}
+        onSuccess={async () => {
+          await fetchWallet();
+        }}
+        creditsNeeded={selectedRequirement?.creditsRequired || 5}
+        currentBalance={currentBalance}
+      />
     </div>
   );
 };

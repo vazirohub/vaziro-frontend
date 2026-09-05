@@ -32,9 +32,9 @@ export const App: React.FC = () => {
     <AuthProvider>
       <Router>
         <ScrollToTop />
-        <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-emerald-500 selection:text-white">
+        <div className="min-h-screen min-h-[100dvh] flex flex-col text-slate-900 selection:bg-emerald-500 selection:text-white">
           <Navbar />
-          <main className="flex-1 pb-16 md:pb-0">
+          <main className="flex-1 bg-slate-50 pb-16 md:pb-0">
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/post-requirement" element={<PostRequirementPage />} />

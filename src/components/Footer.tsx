@@ -4,7 +4,7 @@ import { ShieldCheck, MapPin, Mail, ArrowRight, Lock, CheckCircle2 } from 'lucid
 
 export const Footer: React.FC = () => {
   return (
-    <footer className="bg-black text-neutral-400 pt-16 pb-12 border-t border-neutral-900">
+    <footer className="bg-black text-neutral-400 pt-16 pb-28 md:pb-12 border-t border-neutral-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* TOP ROW: Brand and NCR Availability Banner */}

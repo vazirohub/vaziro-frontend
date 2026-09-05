@@ -27,7 +27,21 @@ export const SignupPage: React.FC = () => {
   useEffect(() => {
     if (user) {
       const isProfessional = user.roles?.includes('PROFESSIONAL');
-      navigate(isProfessional ? '/requirements' : '/dashboard', { replace: true });
+      if (isProfessional) {
+        navigate('/requirements', { replace: true });
+      } else {
+        const savedDraft = localStorage.getItem('vaziro_pending_requirement_draft');
+        if (savedDraft) {
+          try {
+            const draft = JSON.parse(savedDraft);
+            if (draft.pendingPublish) {
+              navigate('/post-requirement', { replace: true });
+              return;
+            }
+          } catch {}
+        }
+        navigate('/dashboard', { replace: true });
+      }
     }
   }, [user, navigate]);
 
@@ -77,7 +91,21 @@ export const SignupPage: React.FC = () => {
         role,
       });
 
-      navigate(role === 'PROFESSIONAL' ? '/requirements' : '/dashboard');
+      if (role === 'PROFESSIONAL') {
+        navigate('/requirements');
+      } else {
+        const savedDraft = localStorage.getItem('vaziro_pending_requirement_draft');
+        if (savedDraft) {
+          try {
+            const draft = JSON.parse(savedDraft);
+            if (draft.pendingPublish) {
+              navigate('/post-requirement');
+              return;
+            }
+          } catch {}
+        }
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       setErrorMessage(err.message || 'Registration failed. Please check your information.');
     } finally {
