@@ -65,6 +65,7 @@ export const Navbar: React.FC = () => {
 
   const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
   const isProfessional = user?.roles?.includes('PROFESSIONAL');
+  const effectiveCredits = proBalance !== null ? proBalance : (user?.professionalProfile?.creditWallet?.balance ?? 10);
 
   // Close menus on route change
   useEffect(() => {
@@ -350,20 +351,6 @@ export const Navbar: React.FC = () => {
                 </button>
               )}
 
-              {isProfessional && !isAdmin && (
-                <Link
-                  to="/credits"
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all ${
-                    isActive('/credits')
-                      ? 'bg-amber-50 text-amber-900 font-bold border border-amber-200'
-                      : 'text-neutral-700 hover:text-black hover:bg-neutral-50'
-                  }`}
-                >
-                  <Coins className="w-4 h-4 text-amber-500" />
-                  <span>Credit Wallet</span>
-                </Link>
-              )}
-
               {/* Admin Console */}
               {isAdmin && (
                 <Link
@@ -378,29 +365,8 @@ export const Navbar: React.FC = () => {
 
             {/* Right: Actions, Balance, Notifications & Profile */}
             <div className="flex items-center gap-2 sm:gap-3">
-              {/* Pro Credit Balance Pill */}
-              {isProfessional && !isAdmin && proBalance !== null && (
-                <Link
-                  to="/credits"
-                  className="flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100/80 border border-amber-200 text-amber-900 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-extrabold shadow-sm transition group"
-                  title="Your Active Credit Balance"
-                >
-                  <Zap className="w-3.5 h-3.5 text-amber-600 group-hover:scale-110 transition-transform" />
-                  <span>{proBalance}</span>
-                  <span className="hidden sm:inline text-[10px] text-amber-700 font-semibold">Credits</span>
-                </Link>
-              )}
-
-              {/* Primary Action Button (Desktop) */}
-              {isProfessional && !isAdmin ? (
-                <Link
-                  to="/requirements"
-                  className="hidden md:inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition active:scale-98"
-                >
-                  <Briefcase className="w-3.5 h-3.5" />
-                  <span>Find Leads</span>
-                </Link>
-              ) : (
+              {/* Primary Action Button (Desktop) - Customers & Guests */}
+              {(!isProfessional || isAdmin) && (
                 <Link
                   to="/post-requirement"
                   className="hidden md:inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition active:scale-98"
@@ -516,6 +482,19 @@ export const Navbar: React.FC = () => {
                     )}
                   </div>
 
+                  {/* Pro Credit Balance Pill (Placed near username dropdown trigger) */}
+                  {isProfessional && !isAdmin && (
+                    <Link
+                      to="/credits"
+                      className="flex items-center gap-1.5 bg-amber-50 hover:bg-amber-100 border border-amber-300/80 text-amber-900 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-extrabold shadow-xs transition group cursor-pointer"
+                      title="Active Credit Balance — Click to manage credits"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-600 group-hover:scale-110 transition-transform" />
+                      <span>{effectiveCredits}</span>
+                      <span className="hidden sm:inline text-[10px] text-amber-700 font-semibold">Credits</span>
+                    </Link>
+                  )}
+
                   {/* Desktop Profile Dropdown Trigger */}
                   <div className="relative hidden md:block" ref={dropdownRef}>
                     <button
@@ -569,6 +548,37 @@ export const Navbar: React.FC = () => {
                           </div>
                         </div>
 
+                        {/* Find Leads (For Professionals) */}
+                        {isProfessional && (
+                          <Link
+                            to="/requirements"
+                            onClick={() => setDropdownOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-emerald-800 hover:bg-emerald-50/80 font-bold transition border-b border-neutral-100"
+                          >
+                            <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
+                              <Briefcase className="w-3.5 h-3.5" />
+                            </div>
+                            <span>Find Leads</span>
+                          </Link>
+                        )}
+
+                        {/* Credit Wallet (In Username Dropdown) */}
+                        {(isProfessional || isAdmin) && (
+                          <Link
+                            to="/credits"
+                            onClick={() => setDropdownOpen(false)}
+                            className="flex items-center justify-between px-4 py-2.5 text-neutral-800 hover:bg-amber-50/70 font-semibold transition"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Coins className="w-4 h-4 text-amber-500" />
+                              <span>Credit Wallet</span>
+                            </div>
+                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                              {effectiveCredits} Cr
+                            </span>
+                          </Link>
+                        )}
+
                         <Link
                           to="/dashboard"
                           onClick={() => setDropdownOpen(false)}
@@ -586,24 +596,6 @@ export const Navbar: React.FC = () => {
                           <User className="w-4 h-4 text-emerald-600" />
                           <span>Edit Profile & Password</span>
                         </Link>
-
-                        {(isProfessional || isAdmin) && (
-                          <Link
-                            to="/credits"
-                            onClick={() => setDropdownOpen(false)}
-                            className="flex items-center justify-between px-4 py-2.5 text-neutral-700 hover:bg-neutral-50 font-semibold"
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <Coins className="w-4 h-4 text-amber-500" />
-                              <span>Credit Wallet</span>
-                            </div>
-                            {proBalance !== null && (
-                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
-                                {proBalance} Cr
-                              </span>
-                            )}
-                          </Link>
-                        )}
 
                         <Link
                           to="/chat"
@@ -745,12 +737,12 @@ export const Navbar: React.FC = () => {
                   </div>
 
                   {/* Professional Wallet Pill in Mobile Drawer */}
-                  {isProfessional && proBalance !== null && (
+                  {isProfessional && (
                     <div className="mt-3 pt-3 border-t border-neutral-200/70 flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-xs text-amber-900 font-bold">
                         <Zap className="w-4 h-4 text-amber-500" />
                         <span>Credit Wallet:</span>
-                        <span className="font-black text-sm">{proBalance}</span>
+                        <span className="font-black text-sm">{effectiveCredits}</span>
                       </div>
                       <Link
                         to="/credits"
@@ -941,11 +933,9 @@ export const Navbar: React.FC = () => {
                       <Coins className="w-4 h-4 text-amber-500" />
                       <span>Credit Wallet & Packs</span>
                     </div>
-                    {proBalance !== null && (
-                      <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-amber-100 text-amber-900">
-                        {proBalance} Cr
-                      </span>
-                    )}
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-amber-100 text-amber-900">
+                      {effectiveCredits} Cr
+                    </span>
                   </Link>
                 )}
 
