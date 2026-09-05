@@ -283,7 +283,7 @@ export const api = {
   updateAdminSubcategory: (id: string, data: any) => apiClient.put<ApiResponse<any>>(`/admin/subcategories/${id}`, data),
   deleteAdminSubcategory: (id: string) => apiClient.delete<ApiResponse<any>>(`/admin/subcategories/${id}`),
 
-  // Gemini AI Endpoints
+  // Isha AI Assistant Endpoints
   aiChat: (message: string, history?: any[]) =>
     apiClient.post<ApiResponse<{ reply: string; isAccountSpecific?: boolean; source?: string }>>('/ai/chat', { message, history }),
   aiExtractRequirement: (text: string) =>

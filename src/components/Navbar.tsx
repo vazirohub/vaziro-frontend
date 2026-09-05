@@ -335,19 +335,7 @@ export const Navbar: React.FC = () => {
                 <span>Browse Jobs</span>
               </Link>
 
-              {/* Gemini AI Assistant Button */}
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('vaziro:open_ai_chat'))}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-neutral-700 hover:text-black hover:bg-neutral-50 transition-all cursor-pointer font-semibold group"
-                title="Open Vaziro Gemini AI Assistant"
-              >
-                <Sparkles className="w-4 h-4 text-amber-500 group-hover:rotate-12 transition-transform" />
-                <span>AI Assistant</span>
-                <span className="text-[9px] bg-gradient-to-r from-emerald-600 to-indigo-600 text-white font-bold px-1.5 py-0.5 rounded-full shadow-xs">
-                  Gemini
-                </span>
-              </button>
+
 
               {/* Credit Wallet for Professionals */}
               {isProfessional && !isAdmin && (
@@ -847,13 +835,10 @@ export const Navbar: React.FC = () => {
                       <Sparkles className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="font-extrabold text-xs text-white flex items-center gap-1.5">
-                        <span>Ask Vaziro AI</span>
-                        <span className="text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-700/50 px-1.5 py-0.2 rounded font-mono">
-                          Gemini
-                        </span>
+                      <div className="font-extrabold text-xs text-white">
+                        <span>Ask Isha</span>
                       </div>
-                      <div className="text-[10px] text-neutral-300">24/7 Support, Escrow & Policies</div>
+                      <div className="text-[10px] text-neutral-300">24/7 Verified Support & Policies</div>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />

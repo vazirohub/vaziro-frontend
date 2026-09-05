@@ -25,7 +25,7 @@ import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { ScrollToTop } from './components/ScrollToTop';
 import { MobileBottomNav } from './components/MobileBottomNav';
-import { GeminiChatWidget } from './components/GeminiChatWidget';
+import { IshaChatWidget } from './components/IshaChatWidget';
 
 export const App: React.FC = () => {
   return (
@@ -64,7 +64,7 @@ export const App: React.FC = () => {
           <Footer />
           <PhoneOtpModal />
           <MobileBottomNav />
-          <GeminiChatWidget />
+          <IshaChatWidget />
         </div>
       </Router>
     </AuthProvider>

@@ -27,7 +27,7 @@ const DEFAULT_QUESTIONS = [
   'How do I post a requirement and get quotes?',
 ];
 
-export const GeminiChatWidget: React.FC = () => {
+export const IshaChatWidget: React.FC = () => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -51,7 +51,7 @@ export const GeminiChatWidget: React.FC = () => {
     }
   }, [messages, isOpen]);
 
-  // Global event listener to open Gemini Chat from Navbar or other buttons
+  // Global event listener to open Isha Chat from Navbar or other buttons
   useEffect(() => {
     const handleOpenChat = () => {
       setIsOpen(true);
@@ -69,8 +69,8 @@ export const GeminiChatWidget: React.FC = () => {
       setHasOpenedBefore(true);
       if (messages.length === 0) {
         const welcomeText = user
-          ? `👋 Hi ${user.firstName}! I'm your Vaziro AI Assistant, powered by Google Gemini.\n\nI can help you understand how payments, escrow protection, 0% commission, and credit refunds work. You can also ask me to check your account status, active jobs, or wallet balance!`
-          : `👋 Hello! I'm your Vaziro AI Assistant, powered by Google Gemini.\n\nI can answer questions about how Vaziro works, our 0% commission policy, escrow payment protection, and how to find verified professionals or post requirements. How can I help you today?`;
+          ? `👋 Hi ${user.firstName}! I'm Isha, your Vaziro Virtual Assistant.\n\nI can help you understand how payments, escrow protection, 0% commission, and credit refunds work. You can also ask me to check your account status, active jobs, or wallet balance!`
+          : `👋 Hello! I'm Isha, your Vaziro Virtual Assistant.\n\nI can answer questions about how Vaziro works, our 0% commission policy, escrow payment protection, and how to find verified professionals or post requirements. How can I help you today?`;
 
         setMessages([
           {
@@ -118,7 +118,7 @@ export const GeminiChatWidget: React.FC = () => {
         };
         setMessages((prev) => [...prev, assistantMsg]);
       } else {
-        throw new Error('No reply from AI service');
+        throw new Error('No reply from assistant service');
       }
     } catch (err: any) {
       const errorMsg: ChatMessage = {
@@ -126,7 +126,7 @@ export const GeminiChatWidget: React.FC = () => {
         sender: 'assistant',
         text:
           err.response?.data?.error?.message ||
-          "I'm temporarily having trouble connecting to Google Gemini. Please try asking again in a moment, or visit our Help Center.",
+          "I'm temporarily having trouble connecting. Please try asking again in a moment, or visit our Help Center.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -159,7 +159,7 @@ export const GeminiChatWidget: React.FC = () => {
             type="button"
             onClick={() => setIsOpen(true)}
             className="group relative flex items-center gap-2.5 bg-neutral-900 hover:bg-black text-white px-4 py-3 rounded-full shadow-xl hover:shadow-2xl border border-neutral-700 transition-all duration-300 active:scale-95 cursor-pointer"
-            aria-label="Open Vaziro Gemini AI Support"
+            aria-label="Ask Isha"
           >
             {/* Pulsing indicator */}
             <span className="relative flex h-3 w-3">
@@ -168,10 +168,7 @@ export const GeminiChatWidget: React.FC = () => {
             </span>
 
             <Sparkles className="w-5 h-5 text-amber-400 group-hover:rotate-12 transition-transform" />
-            <span className="font-extrabold text-xs tracking-wide">Ask Vaziro AI</span>
-            <span className="text-[10px] bg-white/20 text-neutral-200 px-1.5 py-0.5 rounded font-mono hidden sm:inline">
-              Gemini
-            </span>
+            <span className="font-extrabold text-xs tracking-wide">Ask Isha</span>
           </button>
         </div>
       )}
@@ -187,9 +184,9 @@ export const GeminiChatWidget: React.FC = () => {
               </div>
               <div>
                 <div className="flex items-center gap-1.5 font-extrabold text-sm text-white">
-                  <span>Vaziro AI Assistant</span>
-                  <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700/50 px-1.5 py-0.2 rounded font-mono">
-                    Gemini
+                  <span>Isha</span>
+                  <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-700/50 px-1.5 py-0.2 rounded font-medium">
+                    Assistant
                   </span>
                 </div>
                 <p className="text-[11px] text-neutral-400">24/7 Verified Marketplace Helper</p>
@@ -267,7 +264,7 @@ export const GeminiChatWidget: React.FC = () => {
                     <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-bounce [animation-delay:0.2s]"></span>
                     <span className="w-1.5 h-1.5 bg-emerald-600 rounded-full animate-bounce [animation-delay:0.4s]"></span>
                   </span>
-                  <span>Vaziro AI is thinking...</span>
+                  <span>Isha is thinking...</span>
                 </div>
               </div>
             )}
@@ -333,7 +330,7 @@ export const GeminiChatWidget: React.FC = () => {
                 <ShieldCheck className="w-3 h-3 text-emerald-600" />
                 <span>Escrow & 0% Commission Protected</span>
               </span>
-              <span>Powered by Gemini</span>
+              <span>Vaziro Assistant</span>
             </div>
           </div>
         </div>
