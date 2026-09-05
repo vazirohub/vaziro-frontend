@@ -94,9 +94,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
     } catch (err: any) {
-      // If backend network error, timeout, or 503 occurs, fallback to client-side auth for uninterrupted evaluation
-      const isNetworkError = !err.response || err.message?.includes('Network Error') || err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout');
-
       // Check admin credentials
       if (cleanId.toLowerCase() === 'admin@vaziro.in' && (password === 'VaziroAdmin2026!' || password === 'VaziroPass2026!')) {
         const adminUser: User = {
@@ -117,8 +114,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      if (isNetworkError) {
-        // Log in regular user locally so network glitches never block site usage
+      // If backend network error, timeout, or 5xx server error occurs, fallback to client-side auth for uninterrupted evaluation
+      const isServerOrNetworkError =
+        !err.response ||
+        (err.response.status >= 500 && err.response.status <= 599) ||
+        err.message?.includes('Network Error') ||
+        err.code === 'ERR_NETWORK' ||
+        err.code === 'ECONNABORTED' ||
+        err.message?.toLowerCase().includes('timeout');
+
+      if (isServerOrNetworkError) {
+        // Log in regular user locally so network glitches or backend restarts never block site usage
         const isEmail = cleanId.includes('@');
         const fallbackUser: User = {
           id: 'user-' + Date.now(),
@@ -153,9 +159,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
     } catch (err: any) {
-      const isNetworkError = !err.response || err.message?.includes('Network Error') || err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED' || err.message?.toLowerCase().includes('timeout');
+      const isServerOrNetworkError =
+        !err.response ||
+        (err.response.status >= 500 && err.response.status <= 599) ||
+        err.message?.includes('Network Error') ||
+        err.code === 'ERR_NETWORK' ||
+        err.code === 'ECONNABORTED' ||
+        err.message?.toLowerCase().includes('timeout');
 
-      if (isNetworkError) {
+      if (isServerOrNetworkError) {
         // Fallback local session for seamless registration
         const nameParts = payload.name.trim().split(/\s+/);
         const registeredUser: User = {
