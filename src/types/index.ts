@@ -273,6 +273,7 @@ export interface DetailedCreditWallet {
   bonusCredits: number;
   expiringCredits?: number;
   expiringCredits30Days?: number;
+  expiringCredits90Days?: number;
   creditsExpiringSoon?: number;
   nextExpiryDate: string | null;
   refundableCredits: number;

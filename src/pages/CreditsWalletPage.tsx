@@ -25,7 +25,6 @@ import {
   Calendar,
   Layers,
   History,
-  TrendingUp,
   RotateCcw,
   ExternalLink,
   Wallet,
@@ -223,10 +222,7 @@ export const CreditsWalletPage: React.FC = () => {
   const creditValue = wallet?.creditValueInr ?? balance * 10;
   const purchased = wallet?.purchasedCredits ?? 0;
   const bonus = wallet?.bonusCredits ?? 0;
-  const pendingRefund = wallet?.creditsPendingRefund ?? 0;
-  const refunded = wallet?.creditsRefunded ?? 0;
-  const used = wallet?.creditsUsed ?? 0;
-  const expiringSoon = wallet?.creditsExpiringSoon ?? wallet?.expiringCredits30Days ?? 0;
+  const expiringSoon = wallet?.creditsExpiringSoon ?? wallet?.expiringCredits90Days ?? wallet?.expiringCredits30Days ?? 0;
   const tier = wallet?.visibilityTier ?? 'STANDARD';
 
   const getTransactionCategory = (tx: ProfessionalTransaction): 'CREDIT' | 'PAYMENT' | 'REFUND' => {
@@ -314,7 +310,7 @@ export const CreditsWalletPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Real-time Credit Wallet Breakdown (6 Core Metrics) */}
+      {/* Real-time Credit Wallet Breakdown (Core Metrics) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         {/* Metric 1: Available Credits & Value */}
         <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-5 text-white shadow-md flex flex-col justify-between">
@@ -333,59 +329,11 @@ export const CreditsWalletPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Metric 2: Credits Pending Refund */}
+        {/* Metric 2: Expiring in 90 days */}
         <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
           <div>
             <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
-              <span>Credits Pending Refund</span>
-              <RotateCcw className={`w-4 h-4 ${pendingRefund > 0 ? 'text-amber-500' : 'text-gray-400'}`} />
-            </div>
-            <div className={`text-3xl font-extrabold ${pendingRefund > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
-              {pendingRefund} <span className="text-xs text-gray-500 font-normal">Credits</span>
-            </div>
-          </div>
-          <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
-            From open leads awaiting customer hiring decision.
-          </div>
-        </div>
-
-        {/* Metric 3: Credits Refunded (Safe Guarantee) */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
-              <span>Credits Refunded</span>
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            </div>
-            <div className="text-3xl font-extrabold text-emerald-700">
-              +{refunded} <span className="text-xs text-gray-500 font-normal">Credits</span>
-            </div>
-          </div>
-          <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-emerald-700 font-medium">
-            100% credited back when customer chose another pro or lead expired.
-          </div>
-        </div>
-
-        {/* Metric 4: Credits Used */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
-              <span>Credits Used</span>
-              <TrendingUp className="w-4 h-4 text-gray-400" />
-            </div>
-            <div className="text-3xl font-extrabold text-gray-900">
-              {used} <span className="text-xs text-gray-500 font-normal">Credits</span>
-            </div>
-          </div>
-          <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
-            Total credits committed to verified lead applications.
-          </div>
-        </div>
-
-        {/* Metric 5: Expiring Soon */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
-              <span>Expiring in 30 Days</span>
+              <span>Expiring in 90 days</span>
               <Clock className={`w-4 h-4 ${expiringSoon > 0 ? 'text-amber-500' : 'text-gray-400'}`} />
             </div>
             <div className={`text-3xl font-extrabold ${expiringSoon > 0 ? 'text-amber-600' : 'text-gray-900'}`}>
@@ -401,7 +349,7 @@ export const CreditsWalletPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Metric 6: Visibility Tier */}
+        {/* Metric 3: Visibility Status */}
         <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between">
           <div>
             <div className="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center justify-between">
