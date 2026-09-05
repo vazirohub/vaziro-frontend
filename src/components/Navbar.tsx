@@ -335,9 +335,21 @@ export const Navbar: React.FC = () => {
                 <span>Browse Jobs</span>
               </Link>
 
+              {/* Highlighted Become a Pro for Logged-In Customers */}
+              {user && !isProfessional && !isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => openAuthModal('PROFESSIONAL', undefined, 'SIGNUP')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-extrabold text-xs text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 shadow-xs transition-all hover:scale-[1.02] active:scale-98 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Become a Pro</span>
+                  <span className="text-[10px] bg-emerald-600 text-white font-black px-1.5 py-0.5 rounded-full">
+                    Free +10
+                  </span>
+                </button>
+              )}
 
-
-              {/* Credit Wallet for Professionals */}
               {isProfessional && !isAdmin && (
                 <Link
                   to="/credits"
@@ -629,26 +641,28 @@ export const Navbar: React.FC = () => {
                 </div>
               ) : (
                 /* Visitor / Guest Desktop Action Buttons */
-                <div className="hidden md:flex items-center gap-2">
+                <div className="hidden md:flex items-center gap-2.5">
+                  {/* Highlighted Become a Pro Button */}
                   <button
                     type="button"
                     onClick={() => openAuthModal('PROFESSIONAL', undefined, 'SIGNUP')}
-                    className="text-xs font-bold text-neutral-600 hover:text-emerald-700 px-3 py-2 rounded-xl transition cursor-pointer flex items-center gap-1"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-extrabold text-xs text-emerald-800 bg-emerald-50 hover:bg-emerald-100/90 border border-emerald-300 shadow-xs transition-all hover:scale-[1.02] active:scale-98 cursor-pointer"
                   >
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Become a Pro</span>
-                    <span className="text-[9px] bg-emerald-100 text-emerald-800 font-black px-1.5 py-0.5 rounded-full">
+                    <span className="text-[10px] bg-emerald-600 text-white font-black px-2 py-0.5 rounded-full shadow-xs">
                       Free +10
                     </span>
                   </button>
 
-                  {/* Unified Sign In / Sign Up Button Styled Like Post Requirement */}
+                  {/* Unified Sign In Button Styled Like Post Requirement */}
                   <button
                     type="button"
                     onClick={() => openAuthModal('CUSTOMER', undefined, 'LOGIN')}
                     className="hidden md:inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition active:scale-98 cursor-pointer"
                   >
                     <User className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Sign In / Sign Up</span>
+                    <span>Sign In</span>
                   </button>
                 </div>
               )}
