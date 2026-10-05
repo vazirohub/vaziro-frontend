@@ -40,6 +40,30 @@ app.get('*', (req, res) => {
 });
 
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Vaziro Frontend running on port ${PORT}`);
 });
+
+// Hostinger optimization: Close idle connections quickly to avoid process exhaustion
+server.keepAliveTimeout = 5000;
+server.headersTimeout = 6000;
+
+const gracefulShutdown = (signal) => {
+  console.log(`${signal} signal received: closing HTTP server and terminating frontend process gracefully`);
+
+  // Hard exit fallback after 3 seconds so Hostinger never accumulates zombie processes
+  const forceTimer = setTimeout(() => {
+    console.error('Graceful shutdown timeout exceeded, forcing process exit.');
+    process.exit(0);
+  }, 3000);
+  forceTimer.unref();
+
+  server.close(() => {
+    console.log('Frontend HTTP server closed.');
+    process.exit(0);
+  });
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
