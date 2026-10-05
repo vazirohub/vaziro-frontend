@@ -230,6 +230,10 @@ export const api = {
   updateProfessionalProfile: (data: any) => apiClient.put<ApiResponse<any>>('/professionals/me', data),
   verifyDigiLocker: (aadhaarReference?: string) =>
     apiClient.post<ApiResponse<any>>('/professionals/verify/digilocker', { aadhaarReference, consentGiven: true }),
+  initiateApiSetuVerification: () =>
+    apiClient.get<ApiResponse<{ authUrl: string; state: string; provider: string }>>('/professionals/verify/apisetu/initiate'),
+  completeApiSetuVerification: (code: string, state: string) =>
+    apiClient.post<ApiResponse<any>>('/professionals/verify/apisetu/callback', { code, state }),
   getPublicProfessionalProfile: (id: string) => apiClient.get<ApiResponse<any>>(`/professionals/${id}`),
 
   // Disputes & Reviews

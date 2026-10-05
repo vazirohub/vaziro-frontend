@@ -94,56 +94,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
     } catch (err: any) {
-      // Check admin credentials
-      if (cleanId.toLowerCase() === 'admin@vaziro.in' && (password === 'VaziroAdmin2026!' || password === 'VaziroPass2026!')) {
-        const adminUser: User = {
-          id: 'admin-1',
-          email: 'admin@vaziro.in',
-          phone: '+919876543210',
-          firstName: 'Vaziro',
-          lastName: 'Administrator',
-          roles: ['SUPER_ADMIN', 'ADMIN'],
-          customerProfile: null,
-          professionalProfile: null,
-        };
-        const token = 'vaziro_local_admin_session_' + Date.now();
-        localStorage.setItem('vaziro_token', token);
-        localStorage.setItem('vaziro_user', JSON.stringify(adminUser));
-        setUser(adminUser);
-        setIsAuthModalOpen(false);
-        return;
-      }
-
-      // If backend network error, timeout, or 5xx server error occurs, fallback to client-side auth for uninterrupted evaluation
-      const isServerOrNetworkError =
-        !err.response ||
-        (err.response.status >= 500 && err.response.status <= 599) ||
-        err.message?.includes('Network Error') ||
-        err.code === 'ERR_NETWORK' ||
-        err.code === 'ECONNABORTED' ||
-        err.message?.toLowerCase().includes('timeout');
-
-      if (isServerOrNetworkError) {
-        // Log in regular user locally so network glitches or backend restarts never block site usage
-        const isEmail = cleanId.includes('@');
-        const fallbackUser: User = {
-          id: 'user-' + Date.now(),
-          email: isEmail ? cleanId.toLowerCase() : null,
-          phone: isEmail ? '+919876543210' : (cleanId.length === 10 ? `+91${cleanId}` : cleanId),
-          firstName: cleanId.split('@')[0].replace(/\D/g, '') ? 'Vaziro' : cleanId.split('@')[0],
-          lastName: 'User',
-          roles: ['CUSTOMER'],
-          customerProfile: { id: 'cp-1', trustScore: 100, jobsPostedCount: 0, jobsCompletedCount: 0 },
-          professionalProfile: null,
-        };
-        const token = 'vaziro_local_session_' + Date.now();
-        localStorage.setItem('vaziro_token', token);
-        localStorage.setItem('vaziro_user', JSON.stringify(fallbackUser));
-        setUser(fallbackUser);
-        setIsAuthModalOpen(false);
-        return;
-      }
-
       throw new Error(err.response?.data?.error?.message || err.message || 'Invalid mobile/email or password.');
     }
   };
@@ -159,43 +109,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
     } catch (err: any) {
-      const isServerOrNetworkError =
-        !err.response ||
-        (err.response.status >= 500 && err.response.status <= 599) ||
-        err.message?.includes('Network Error') ||
-        err.code === 'ERR_NETWORK' ||
-        err.code === 'ECONNABORTED' ||
-        err.message?.toLowerCase().includes('timeout');
-
-      if (isServerOrNetworkError) {
-        // Fallback local session for seamless registration
-        const nameParts = payload.name.trim().split(/\s+/);
-        const registeredUser: User = {
-          id: 'user-' + Date.now(),
-          email: payload.email?.toLowerCase().trim() || null,
-          phone: payload.phone.length === 10 ? `+91${payload.phone}` : payload.phone,
-          firstName: nameParts[0] || 'Member',
-          lastName: nameParts.slice(1).join(' ') || '',
-          roles: [payload.role],
-          customerProfile: payload.role === 'CUSTOMER' ? { id: 'cp-1', trustScore: 100, jobsPostedCount: 0, jobsCompletedCount: 0 } : null,
-          professionalProfile: payload.role === 'PROFESSIONAL' ? {
-            id: 'pp-1',
-            title: 'Verified Professional',
-            rating: 5.0,
-            reviewsCount: 0,
-            completedJobsCount: 0,
-            isVerified: true,
-            creditWallet: { balance: 10 },
-          } : null,
-        };
-        const token = 'vaziro_local_session_' + Date.now();
-        localStorage.setItem('vaziro_token', token);
-        localStorage.setItem('vaziro_user', JSON.stringify(registeredUser));
-        setUser(registeredUser);
-        setIsAuthModalOpen(false);
-        return;
-      }
-
       throw new Error(err.response?.data?.error?.message || err.message || 'Registration failed.');
     }
   };
@@ -231,43 +144,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return res.data.data;
     } catch (err: any) {
-      const isNetworkError = !err.response || err.message?.includes('Network Error') || err.code === 'ERR_NETWORK';
-      if (isNetworkError && (payload.msg91Verified || payload.otp)) {
-        // Fallback local session on network glitch
-        const rawPhone = payload.mobile || payload.phone || '';
-        const digits = rawPhone.replace(/\D/g, '');
-        const fallbackUser: User = {
-          id: 'user-' + Date.now(),
-          email: null,
-          phone: `+91${digits.slice(-10)}`,
-          firstName: payload.firstName || (payload.role === 'PROFESSIONAL' ? 'Professional' : 'Customer'),
-          lastName: payload.lastName || 'User',
-          roles: [payload.role || 'CUSTOMER'],
-          customerProfile:
-            payload.role === 'CUSTOMER'
-              ? { id: 'cp-' + Date.now(), trustScore: 100, jobsPostedCount: 0, jobsCompletedCount: 0 }
-              : null,
-          professionalProfile:
-            payload.role === 'PROFESSIONAL'
-              ? {
-                  id: 'pp-' + Date.now(),
-                  title: 'Verified Specialist',
-                  rating: 5.0,
-                  reviewsCount: 0,
-                  completedJobsCount: 0,
-                  isVerified: true,
-                  creditWallet: { balance: 20 },
-                }
-              : null,
-        };
-        const token = 'vaziro_local_otp_session_' + Date.now();
-        localStorage.setItem('vaziro_token', token);
-        localStorage.setItem('vaziro_user', JSON.stringify(fallbackUser));
-        localStorage.setItem('vaziro_last_login_id', rawPhone);
-        setUser(fallbackUser);
-        setIsAuthModalOpen(false);
-        return { user: fallbackUser, accessToken: token, isNewUser: false };
-      }
       throw new Error(err.response?.data?.error?.message || err.message || 'OTP verification failed. Please try again.');
     }
   };
@@ -300,34 +176,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return res.data.data;
     } catch (err: any) {
-      const isNetworkError = !err.response || err.message?.includes('Network Error') || err.code === 'ERR_NETWORK';
-      if (isNetworkError) {
-        const nameParts = payload.name.trim().split(/\s+/);
-        const fallbackUser: User = {
-          id: 'user-' + Date.now(),
-          email: payload.email?.toLowerCase().trim() || null,
-          phone: payload.mobile || '+919876543210',
-          firstName: nameParts[0] || 'Member',
-          lastName: nameParts.slice(1).join(' ') || '',
-          roles: [payload.role],
-          customerProfile: payload.role === 'CUSTOMER' ? { id: 'cp-' + Date.now(), trustScore: 100, jobsPostedCount: 0, jobsCompletedCount: 0 } : null,
-          professionalProfile: payload.role === 'PROFESSIONAL' ? {
-            id: 'pp-' + Date.now(),
-            title: payload.businessName || payload.category || 'Professional Specialist',
-            rating: 5.0,
-            reviewsCount: 0,
-            completedJobsCount: 0,
-            isVerified: true,
-            creditWallet: { balance: 10 },
-          } : null,
-        };
-        const token = 'vaziro_local_session_' + Date.now();
-        localStorage.setItem('vaziro_token', token);
-        localStorage.setItem('vaziro_user', JSON.stringify(fallbackUser));
-        setUser(fallbackUser);
-        setIsAuthModalOpen(false);
-        return { user: fallbackUser, accessToken: token, isNewUser: true };
-      }
       throw new Error(err.response?.data?.error?.message || err.message || 'Registration failed.');
     }
   };

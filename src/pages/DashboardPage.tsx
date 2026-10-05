@@ -69,15 +69,23 @@ export const DashboardPage: React.FC = () => {
   const handleDigiLockerVerify = async () => {
     try {
       setVerifying(true);
-      const res = await api.verifyDigiLocker();
-      if (res.data?.success) {
+      const res = await api.initiateApiSetuVerification();
+      if (res.data?.data?.authUrl) {
+        // Redirect to official MeriPehchaan / DigiLocker consent portal
+        window.location.href = res.data.data.authUrl;
+        return;
+      }
+
+      // Fallback
+      const fallbackRes = await api.verifyDigiLocker();
+      if (fallbackRes.data?.success) {
         setVerificationSuccess(true);
         setTimeout(() => {
           window.location.reload();
         }, 1200);
       }
     } catch (err: any) {
-      alert('Verification failed: ' + err.message);
+      alert('Verification could not be initiated: ' + (err.response?.data?.error?.message || err.message));
     } finally {
       setVerifying(false);
     }

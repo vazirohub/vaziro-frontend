@@ -23,6 +23,7 @@ import { PaymentSuccessPage } from './pages/PaymentSuccessPage';
 import { PaymentFailedPage } from './pages/PaymentFailedPage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
+import { DigiLockerCallbackPage } from './pages/DigiLockerCallbackPage';
 import { ScrollToTop } from './components/ScrollToTop';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { IshaChatWidget } from './components/IshaChatWidget';
@@ -50,6 +51,7 @@ export const App: React.FC = () => {
               <Route path="/payment/failed" element={<PaymentFailedPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
+              <Route path="/verify/callback" element={<DigiLockerCallbackPage />} />
               
               {/* Corporate and Legal Policy Pages */}
               <Route path="/about" element={<AboutUsPage />} />
