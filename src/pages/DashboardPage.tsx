@@ -23,6 +23,9 @@ import {
 } from 'lucide-react';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { ProfileVerificationCard } from '../components/ProfileVerificationCard';
+import { ProfileStrengthCard } from '../components/ProfileStrengthCard';
+import { TrustScoreCard } from '../components/TrustScoreCard';
+import { ProfileStrengthResult, TrustScoreResult } from '../types';
 
 export const DashboardPage: React.FC = () => {
   const { user, openAuthModal } = useAuth();
@@ -31,6 +34,8 @@ export const DashboardPage: React.FC = () => {
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [wallet, setWallet] = useState<DetailedCreditWallet | null>(null);
+  const [strength, setStrength] = useState<ProfileStrengthResult | null>(null);
+  const [trust, setTrust] = useState<TrustScoreResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(false);
   const [verificationSuccess, setVerificationSuccess] = useState(false);
@@ -47,13 +52,22 @@ export const DashboardPage: React.FC = () => {
 
       if (isProfessional) {
         promises.push(api.getCreditWallet().catch(() => null));
+        promises.push(api.getProfileStrength().catch(() => null));
+        promises.push(api.getTrustScore().catch(() => null));
       }
 
-      const [reqRes, jobRes, walletRes] = await Promise.all(promises);
+      const results = await Promise.all(promises);
+      const reqRes = results[0];
+      const jobRes = results[1];
+      const walletRes = isProfessional ? results[2] : null;
+      const strengthRes = isProfessional ? results[3] : null;
+      const trustRes = isProfessional ? results[4] : null;
 
       if (reqRes?.data?.data) setRequirements(reqRes.data.data);
       if (jobRes?.data?.data) setJobs(jobRes.data.data);
       if (walletRes?.data?.data) setWallet(walletRes.data.data);
+      if (strengthRes?.data?.data) setStrength(strengthRes.data.data);
+      if (trustRes?.data?.data) setTrust(trustRes.data.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -172,6 +186,46 @@ export const DashboardPage: React.FC = () => {
       {/* Professional: Profile Verification Card */}
       {isProfessional && (
         <ProfileVerificationCard className="mb-6" />
+      )}
+
+      {/* Professional: Profile Strength & Trust Score */}
+      {isProfessional && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Profile Strength</span>
+              <Link to="/profile" className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1">
+                <span>Edit Profile</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+            <ProfileStrengthCard
+              strength={strength}
+              compact={true}
+              onSelectSection={() => {
+                window.location.href = '/profile';
+              }}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Trust Score & Identity</span>
+              <Link
+                to={`/professionals/${user.professionalProfile?.slug || user.professionalProfile?.id || user.id}`}
+                target="_blank"
+                className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+              >
+                <span>Preview Public View</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+            <TrustScoreCard
+              trust={trust}
+              compact={true}
+            />
+          </div>
+        </div>
       )}
 
       {/* Professional: Prominent Wallet Card */}

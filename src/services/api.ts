@@ -21,6 +21,9 @@ import {
   ProfessionalTransaction,
   NotificationItem,
   NotificationListResponse,
+  ProfileStrengthResult,
+  TrustScoreResult,
+  PublicProfessionalProfile,
 } from '../types';
 
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -227,7 +230,12 @@ export const api = {
 
   // Professional Profiles & Verification
   getMyProfessionalProfile: () => apiClient.get<ApiResponse<any>>('/professionals/me'),
+  getProfessionalMe: () => apiClient.get<ApiResponse<any>>('/professionals/me'),
   updateProfessionalProfile: (data: any) => apiClient.put<ApiResponse<any>>('/professionals/me', data),
+  getProfileStrength: () => apiClient.get<ApiResponse<ProfileStrengthResult>>('/professionals/profile/strength'),
+  getTrustScore: () => apiClient.get<ApiResponse<TrustScoreResult>>('/professionals/profile/trust-score'),
+  getProfilePreview: () => apiClient.get<ApiResponse<PublicProfessionalProfile>>('/professionals/profile/preview'),
+  uploadAvatar: (avatarUrl: string) => apiClient.post<ApiResponse<{ avatarUrl: string }>>('/professionals/avatar', { avatarUrl }),
   getVerificationStatus: () => apiClient.get<ApiResponse<any>>('/professionals/verification/status'),
   startVerification: () =>
     apiClient.post<ApiResponse<{ authUrl: string; state: string; requestId: string; provider: string }>>('/professionals/verification/start'),
@@ -241,7 +249,7 @@ export const api = {
     apiClient.post<ApiResponse<{ authUrl: string; state: string; requestId: string; provider: string }>>('/professionals/verification/start'),
   completeApiSetuVerification: (code: string, state: string) =>
     apiClient.post<ApiResponse<any>>('/professionals/verification/callback', { code, state }),
-  getPublicProfessionalProfile: (id: string) => apiClient.get<ApiResponse<any>>(`/professionals/${id}`),
+  getPublicProfessionalProfile: (idOrSlug: string) => apiClient.get<ApiResponse<PublicProfessionalProfile>>(`/professionals/${idOrSlug}`),
 
   // Disputes & Reviews
   raiseDispute: (data: { jobId: string; reason: string; description: string; evidenceUrls?: string[] }) =>

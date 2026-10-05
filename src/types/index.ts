@@ -13,6 +13,7 @@ export interface User {
   } | null;
   professionalProfile?: {
     id: string;
+    slug?: string | null;
     title: string | null;
     rating: number;
     reviewsCount: number;
@@ -22,10 +23,134 @@ export interface User {
     hourlyRate?: number;
     bio?: string | null;
     languages?: string | null;
+    avatarUrl?: string | null;
+    profileStrength?: number | ProfileStrengthResult | null;
+    trustScore?: number | TrustScoreResult | null;
+    categoryId?: string | null;
+    subcategoryId?: string | null;
+    availabilityStatus?: 'AVAILABLE' | 'BUSY' | 'NOT_AVAILABLE';
+    workingDays?: string | null;
+    workingHours?: string | null;
+    workingPreferences?: string | null;
+    qualifications?: string | null;
+    serviceDescription?: string | null;
+    experienceDescription?: string | null;
+    visibility?: 'PUBLIC' | 'HIDDEN';
     creditWallet?: {
       balance: number;
     } | null;
   } | null;
+}
+
+export interface ProfileStrengthItem {
+  id: string;
+  label: string;
+  weight: number;
+  completed: boolean;
+  actionKey: string;
+  actionLabel: string;
+}
+
+export interface ProfileStrengthResult {
+  score: number;
+  level: 'INCOMPLETE' | 'BASIC' | 'GOOD' | 'STRONG' | 'COMPLETE';
+  levelLabel: string;
+  completedCount: number;
+  totalCount: number;
+  missingItems: ProfileStrengthItem[];
+  completedItems: ProfileStrengthItem[];
+  recommendations: Array<{
+    id: string;
+    label: string;
+    actionKey: string;
+    actionLabel: string;
+    points: number;
+  }>;
+}
+
+export interface TrustSignalBreakdown {
+  id: string;
+  name: string;
+  points: number;
+  maxPoints: number;
+  isVerified: boolean;
+  description: string;
+}
+
+export interface TrustScoreResult {
+  score: number;
+  trustLevel: 'HIGH_TRUST' | 'ESTABLISHED' | 'BUILDING_TRUST' | 'NEW_PROFESSIONAL';
+  trustBadgeText: string;
+  trustDescription: string;
+  isNewProfessional: boolean;
+  tooltipText: string;
+  signals: TrustSignalBreakdown[];
+  publicSummary: {
+    digilockerVerified: boolean;
+    mobileVerified: boolean;
+    emailVerified: boolean;
+    rating: number;
+    reviewsCount: number;
+    completedJobsCount: number;
+    yearsOfExperience: number;
+    badgeText: string;
+  };
+}
+
+export interface PublicProfessionalProfile {
+  id: string;
+  slug?: string;
+  name: string;
+  displayName: string;
+  title: string;
+  bio?: string;
+  avatarUrl?: string;
+  yearsOfExperience: number;
+  hourlyRate: number;
+  currency: string;
+  category?: { id: string; name: string; slug: string } | null;
+  subcategory?: { id: string; name: string; slug: string } | null;
+  serviceDescription?: string | null;
+  experienceDescription?: string | null;
+  qualifications?: string | null;
+  workingPreferences?: string | null;
+  languages?: string;
+  availabilityStatus: 'AVAILABLE' | 'BUSY' | 'NOT_AVAILABLE';
+  workingDays?: string;
+  workingHours?: string;
+  rating: number;
+  reviewsCount: number;
+  completedJobsCount: number;
+  responseRatePercentage: number;
+  isVerified: boolean;
+  verificationBadge?: string | null;
+  memberSince?: string;
+  skills: string[];
+  serviceAreas: string[];
+  trustSummary: {
+    digilockerVerified: boolean;
+    mobileVerified: boolean;
+    emailVerified: boolean;
+    rating: number;
+    reviewsCount: number;
+    completedJobsCount: number;
+    yearsOfExperience: number;
+    badgeText: string;
+    trustLevel: string;
+    trustBadgeText: string;
+    trustDescription: string;
+    isNewProfessional: boolean;
+    tooltipText: string;
+  };
+  reviews: Array<{
+    id: string;
+    rating: number;
+    comment?: string;
+    tags?: string;
+    responseComment?: string;
+    createdAt: string;
+    customerName: string;
+  }>;
 }
 
 export type VerificationStatus = 'NOT_STARTED' | 'PENDING' | 'VERIFIED' | 'FAILED' | 'REVIEW_REQUIRED' | 'EXPIRED';
