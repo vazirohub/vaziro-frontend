@@ -228,12 +228,19 @@ export const api = {
   // Professional Profiles & Verification
   getMyProfessionalProfile: () => apiClient.get<ApiResponse<any>>('/professionals/me'),
   updateProfessionalProfile: (data: any) => apiClient.put<ApiResponse<any>>('/professionals/me', data),
+  getVerificationStatus: () => apiClient.get<ApiResponse<any>>('/professionals/verification/status'),
+  startVerification: () =>
+    apiClient.post<ApiResponse<{ authUrl: string; state: string; requestId: string; provider: string }>>('/professionals/verification/start'),
+  completeVerification: (code: string, state: string) =>
+    apiClient.post<ApiResponse<any>>('/professionals/verification/callback', { code, state }),
+  retryVerification: () =>
+    apiClient.post<ApiResponse<{ authUrl: string; state: string; requestId: string; provider: string }>>('/professionals/verification/retry'),
   verifyDigiLocker: (aadhaarReference?: string) =>
     apiClient.post<ApiResponse<any>>('/professionals/verify/digilocker', { aadhaarReference, consentGiven: true }),
   initiateApiSetuVerification: () =>
-    apiClient.get<ApiResponse<{ authUrl: string; state: string; provider: string }>>('/professionals/verify/apisetu/initiate'),
+    apiClient.post<ApiResponse<{ authUrl: string; state: string; requestId: string; provider: string }>>('/professionals/verification/start'),
   completeApiSetuVerification: (code: string, state: string) =>
-    apiClient.post<ApiResponse<any>>('/professionals/verify/apisetu/callback', { code, state }),
+    apiClient.post<ApiResponse<any>>('/professionals/verification/callback', { code, state }),
   getPublicProfessionalProfile: (id: string) => apiClient.get<ApiResponse<any>>(`/professionals/${id}`),
 
   // Disputes & Reviews
@@ -262,7 +269,13 @@ export const api = {
   getAdminJobs: () => apiClient.get<ApiResponse<any[]>>('/admin/jobs'),
   updateAdminJobStatus: (id: string, status: string, reason?: string) =>
     apiClient.patch<ApiResponse<any>>(`/admin/jobs/${id}/status`, { status, reason }),
-  getAdminVerifications: () => apiClient.get<ApiResponse<any[]>>('/admin/verifications'),
+  getAdminVerifications: (params?: { status?: string; search?: string }) =>
+    apiClient.get<ApiResponse<any[]>>('/admin/verifications', { params }),
+  getAdminVerificationById: (id: string) => apiClient.get<ApiResponse<any>>(`/admin/verifications/${id}`),
+  markAdminVerificationReview: (id: string, reviewReason: string) =>
+    apiClient.post<ApiResponse<any>>(`/admin/verifications/${id}/review`, { reviewReason }),
+  adminVerificationOverride: (id: string, action: 'APPROVE' | 'REJECT', reason: string) =>
+    apiClient.post<ApiResponse<any>>(`/admin/verifications/${id}/override`, { action, reason }),
   reviewVerification: (id: string, status: string, rejectionReason?: string) =>
     apiClient.patch<ApiResponse<any>>(`/admin/verifications/${id}`, { status, rejectionReason }),
   getAdminSettings: () => apiClient.get<ApiResponse<any[]>>('/admin/settings'),

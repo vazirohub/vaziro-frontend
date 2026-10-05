@@ -120,6 +120,18 @@ export const AdminDashboardPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [submittingPassword, setSubmittingPassword] = useState(false);
 
+  // Professional Verification Queue States
+  const [verificationFilterStatus, setVerificationFilterStatus] = useState<string>('ALL');
+  const [verificationSearch, setVerificationSearch] = useState<string>('');
+  const [overrideModalCase, setOverrideModalCase] = useState<any | null>(null);
+  const [overrideAction, setOverrideAction] = useState<'APPROVE' | 'REJECT'>('APPROVE');
+  const [overrideReason, setOverrideReason] = useState<string>('');
+  const [submittingOverride, setSubmittingOverride] = useState<boolean>(false);
+  const [reviewModalCase, setReviewModalCase] = useState<any | null>(null);
+  const [reviewReasonInput, setReviewReasonInput] = useState<string>('');
+  const [submittingReview, setSubmittingReview] = useState<boolean>(false);
+  const [viewDetailsModalCase, setViewDetailsModalCase] = useState<any | null>(null);
+
   const fetchAdminData = async () => {
     try {
       setLoading(true);
@@ -304,6 +316,42 @@ export const AdminDashboardPage: React.FC = () => {
       await fetchAdminData();
     } catch (err: any) {
       alert('Failed to update verification: ' + err.message);
+    }
+  };
+
+  const handleMarkReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewModalCase) return;
+    try {
+      setSubmittingReview(true);
+      await api.markAdminVerificationReview(reviewModalCase.id, reviewReasonInput || 'Flagged for compliance review');
+      setReviewModalCase(null);
+      setReviewReasonInput('');
+      await fetchAdminData();
+    } catch (err: any) {
+      alert('Failed to mark for review: ' + (err.response?.data?.error?.message || err.message));
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const handleOverrideSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!overrideModalCase) return;
+    if (!overrideReason.trim()) {
+      alert('An audit justification reason is strictly required for administrative overrides.');
+      return;
+    }
+    try {
+      setSubmittingOverride(true);
+      await api.adminVerificationOverride(overrideModalCase.id, overrideAction, overrideReason.trim());
+      setOverrideModalCase(null);
+      setOverrideReason('');
+      await fetchAdminData();
+    } catch (err: any) {
+      alert('Failed to process override: ' + (err.response?.data?.error?.message || err.message));
+    } finally {
+      setSubmittingOverride(false);
     }
   };
 
@@ -1034,58 +1082,207 @@ export const AdminDashboardPage: React.FC = () => {
       {activeTab === 'verifications' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-200">
-            <h3 className="font-bold text-gray-900 text-sm">Professional Verification Queue</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Review government Aadhaar / DigiLocker credentials before granting the Verified Service Partner badge.
-            </p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-gray-900 text-base">Professional Verification Queue</h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Review government Aadhaar / DigiLocker credentials and manage compliance verification workflows.
+                </p>
+              </div>
+
+              {/* Status Filters */}
+              <div className="flex flex-wrap items-center gap-1.5 bg-neutral-100 p-1 rounded-xl">
+                {['ALL', 'PENDING', 'VERIFIED', 'FAILED', 'REVIEW_REQUIRED', 'EXPIRED'].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setVerificationFilterStatus(st)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      verificationFilterStatus === st
+                        ? 'bg-white text-black shadow-sm'
+                        : 'text-neutral-600 hover:text-black'
+                    }`}
+                  >
+                    {st === 'ALL' ? 'All' : st.replace('_', ' ')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <div className="mt-4">
+              <div className="relative">
+                <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  placeholder="Search by professional name, phone, email, reference ID, or professional ID..."
+                  value={verificationSearch}
+                  onChange={(e) => setVerificationSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-black focus:bg-white"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="divide-y divide-gray-100">
-            {verifications.length === 0 ? (
+            {verifications.filter((v) => {
+              const matchesStatus =
+                verificationFilterStatus === 'ALL' ||
+                (v.status || 'NOT_STARTED').toUpperCase() === verificationFilterStatus;
+
+              const q = verificationSearch.toLowerCase().trim();
+              if (!q) return matchesStatus;
+
+              const name = `${v.professional?.user?.firstName || ''} ${v.professional?.user?.lastName || ''}`.toLowerCase();
+              const phone = (v.professional?.user?.phone || '').toLowerCase();
+              const email = (v.professional?.user?.email || '').toLowerCase();
+              const refId = (v.referenceId || '').toLowerCase();
+              const profId = (v.professionalProfileId || v.professional?.id || '').toLowerCase();
+              const reqId = (v.requestId || '').toLowerCase();
+
+              const matchesSearch =
+                name.includes(q) ||
+                phone.includes(q) ||
+                email.includes(q) ||
+                refId.includes(q) ||
+                profId.includes(q) ||
+                reqId.includes(q);
+
+              return matchesStatus && matchesSearch;
+            }).length === 0 ? (
               <div className="p-8 text-center text-xs text-gray-500">
-                No verifications currently pending. All service partners are up to date!
+                No verifications matching your filter criteria.
               </div>
             ) : (
-              verifications.map((v) => (
-                <div key={v.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-gray-900 text-sm">
-                        {v.professional?.user?.firstName} {v.professional?.user?.lastName}
-                      </span>
-                      <span className="text-xs text-gray-400">({v.professional?.user?.phone})</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Provider: <strong className="text-gray-700">{v.provider}</strong> • Ref ID:{' '}
-                      <span className="font-mono text-gray-700">{v.referenceId || 'N/A'}</span>
-                    </p>
-                    <span className={`inline-block mt-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                      v.status === 'VERIFIED'
-                        ? 'bg-emerald-50 text-emerald-800'
-                        : v.status === 'FAILED'
-                        ? 'bg-red-50 text-red-800'
-                        : 'bg-amber-50 text-amber-800'
-                    }`}>
-                      {v.status}
-                    </span>
-                  </div>
+              verifications
+                .filter((v) => {
+                  const matchesStatus =
+                    verificationFilterStatus === 'ALL' ||
+                    (v.status || 'NOT_STARTED').toUpperCase() === verificationFilterStatus;
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleReviewVerification(v.id, 'VERIFIED')}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition"
-                    >
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Approve KYC
-                    </button>
-                    <button
-                      onClick={() => handleReviewVerification(v.id, 'FAILED')}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl text-xs font-bold transition"
-                    >
-                      <XCircle className="w-3.5 h-3.5" /> Reject
-                    </button>
+                  const q = verificationSearch.toLowerCase().trim();
+                  if (!q) return matchesStatus;
+
+                  const name = `${v.professional?.user?.firstName || ''} ${v.professional?.user?.lastName || ''}`.toLowerCase();
+                  const phone = (v.professional?.user?.phone || '').toLowerCase();
+                  const email = (v.professional?.user?.email || '').toLowerCase();
+                  const refId = (v.referenceId || '').toLowerCase();
+                  const profId = (v.professionalProfileId || v.professional?.id || '').toLowerCase();
+                  const reqId = (v.requestId || '').toLowerCase();
+
+                  return (
+                    matchesStatus &&
+                    (name.includes(q) ||
+                      phone.includes(q) ||
+                      email.includes(q) ||
+                      refId.includes(q) ||
+                      profId.includes(q) ||
+                      reqId.includes(q))
+                  );
+                })
+                .map((v) => (
+                  <div key={v.id} className="p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-gray-900 text-sm">
+                          {v.professional?.user?.firstName} {v.professional?.user?.lastName}
+                        </span>
+                        <span className="text-xs text-gray-400">({v.professional?.user?.phone || 'No phone'})</span>
+                        <span className="text-xs text-gray-400">• {v.professional?.user?.email || 'No email'}</span>
+                        <span className="text-[10px] bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded font-mono">
+                          ID: {v.professionalProfileId?.slice(0, 8) || v.id.slice(0, 8)}...
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                        <span>Provider: <strong className="text-gray-700">{v.provider}</strong></span>
+                        <span>•</span>
+                        <span>
+                          Ref ID: <span className="font-mono text-gray-700">{v.referenceId || 'N/A'}</span>
+                        </span>
+                        {v.requestId && (
+                          <>
+                            <span>•</span>
+                            <span>Req ID: <span className="font-mono text-gray-700">{v.requestId.slice(0, 8)}...</span></span>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            v.status === 'VERIFIED'
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                              : v.status === 'FAILED'
+                              ? 'bg-red-50 text-red-800 border border-red-200'
+                              : v.status === 'REVIEW_REQUIRED'
+                              ? 'bg-blue-50 text-blue-800 border border-blue-200'
+                              : v.status === 'PENDING'
+                              ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                              : 'bg-neutral-100 text-neutral-700 border border-neutral-200'
+                          }`}
+                        >
+                          {v.status === 'VERIFIED' ? '✓ VERIFIED VIA DIGILOCKER' : v.status}
+                        </span>
+
+                        {v.nameMatchStatus && (
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
+                              v.nameMatchStatus === 'MATCH'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : v.nameMatchStatus === 'PARTIAL'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
+                            Name Match: {v.nameMatchStatus}
+                          </span>
+                        )}
+
+                        {v.verifiedAt && (
+                          <span className="text-[10px] text-gray-400">
+                            Verified on: {new Date(v.verifiedAt).toLocaleDateString('en-IN')}
+                          </span>
+                        )}
+                      </div>
+
+                      {v.failureReason && (
+                        <p className="text-xs text-red-600 bg-red-50/70 p-2 rounded-xl mt-1">
+                          Failure Reason: {v.failureReason}
+                        </p>
+                      )}
+
+                      {v.reviewReason && (
+                        <p className="text-xs text-blue-700 bg-blue-50/70 p-2 rounded-xl mt-1">
+                          Review Reason: {v.reviewReason}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap items-center gap-2 self-start lg:self-center">
+                      <button
+                        onClick={() => {
+                          setReviewModalCase(v);
+                          setReviewReasonInput(v.reviewReason || '');
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                      >
+                        <Clock className="w-3.5 h-3.5" /> Mark for Review
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setOverrideModalCase(v);
+                          setOverrideAction('APPROVE');
+                          setOverrideReason('');
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-neutral-900 hover:bg-black text-white rounded-xl text-xs font-bold shadow-sm transition cursor-pointer"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" /> Administrative Override
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                ))
             )}
           </div>
         </div>
@@ -1766,6 +1963,166 @@ export const AdminDashboardPage: React.FC = () => {
                   className="flex-1 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-xl text-xs font-black shadow-md transition cursor-pointer"
                 >
                   {submittingPassword ? 'Resetting...' : 'Set Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4. ADMINISTRATIVE VERIFICATION OVERRIDE MODAL */}
+      {overrideModalCase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-200 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-gray-900 text-sm">Administrative Override</h3>
+                  <span className="text-[11px] text-gray-500">
+                    {overrideModalCase.professional?.user?.firstName} {overrideModalCase.professional?.user?.lastName}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setOverrideModalCase(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="mt-4 p-3 bg-amber-50 rounded-2xl border border-amber-200 text-amber-800 text-xs">
+              <p className="font-bold mb-0.5">⚠️ Caution: Manual Compliance Override</p>
+              <p className="text-[11px] text-amber-700 leading-relaxed">
+                Administrative overrides must never silently bypass DigiLocker protocols without legitimate legal/support justification. This action and your explanation will be permanently recorded in the system audit logs.
+              </p>
+            </div>
+
+            <form onSubmit={handleOverrideSubmit} className="mt-4 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-gray-700 block mb-1">
+                  Override Decision *
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setOverrideAction('APPROVE')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition border cursor-pointer ${
+                      overrideAction === 'APPROVE'
+                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                        : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:bg-neutral-100'
+                    }`}
+                  >
+                    Approve (VERIFIED)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOverrideAction('REJECT')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition border cursor-pointer ${
+                      overrideAction === 'REJECT'
+                        ? 'bg-red-600 text-white border-red-600 shadow-sm'
+                        : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:bg-neutral-100'
+                    }`}
+                  >
+                    Reject (FAILED)
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-700 block mb-1">
+                  Audit Justification Reason * (Required)
+                </label>
+                <textarea
+                  required
+                  rows={3}
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  placeholder="State the verifiable reason, verified document number, or support ticket reference..."
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-black focus:bg-white"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOverrideModalCase(null)}
+                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingOverride}
+                  className={`flex-1 py-2.5 text-white rounded-xl text-xs font-black shadow-md transition cursor-pointer ${
+                    overrideAction === 'APPROVE'
+                      ? 'bg-emerald-600 hover:bg-emerald-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}
+                >
+                  {submittingOverride ? 'Recording...' : `Confirm ${overrideAction === 'APPROVE' ? 'Approval' : 'Rejection'}`}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5. MARK FOR REVIEW MODAL */}
+      {reviewModalCase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-gray-200 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-gray-900 text-sm">Flag for Manual Review</h3>
+                  <span className="text-[11px] text-gray-500">
+                    {reviewModalCase.professional?.user?.firstName} {reviewModalCase.professional?.user?.lastName}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setReviewModalCase(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleMarkReviewSubmit} className="mt-4 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-gray-700 block mb-1">
+                  Reason for Review Flag
+                </label>
+                <textarea
+                  rows={3}
+                  value={reviewReasonInput}
+                  onChange={(e) => setReviewReasonInput(e.target.value)}
+                  placeholder="e.g. Identity discrepancy, name mismatch, manual Aadhaar document inspection needed..."
+                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReviewModalCase(null)}
+                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingReview}
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-md transition cursor-pointer"
+                >
+                  {submittingReview ? 'Updating...' : 'Set Review Status'}
                 </button>
               </div>
             </form>

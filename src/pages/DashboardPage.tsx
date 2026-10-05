@@ -22,6 +22,7 @@ import {
   ArrowUpRight,
 } from 'lucide-react';
 import { CategoryIcon } from '../components/CategoryIcon';
+import { ProfileVerificationCard } from '../components/ProfileVerificationCard';
 
 export const DashboardPage: React.FC = () => {
   const { user, openAuthModal } = useAuth();
@@ -138,21 +139,11 @@ export const DashboardPage: React.FC = () => {
               <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                 {user.roles.join(', ')}
               </span>
-              {isProfessional && (
-                user.professionalProfile?.isVerified || verificationSuccess ? (
-                  <span className="flex items-center gap-1 font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded border border-emerald-300">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>✓ Verified via DigiLocker</span>
-                  </span>
-                ) : (
-                  <button
-                    onClick={handleDigiLockerVerify}
-                    disabled={verifying}
-                    className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold px-2.5 py-1 rounded shadow-sm cursor-pointer"
-                  >
-                    {verifying ? 'Verifying...' : '⚡ Verify with DigiLocker'}
-                  </button>
-                )
+              {isProfessional && (user.professionalProfile?.isVerified || verificationSuccess) && (
+                <span className="flex items-center gap-1 font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded border border-emerald-300">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>✓ Verified via DigiLocker</span>
+                </span>
               )}
             </div>
           </div>
@@ -177,6 +168,11 @@ export const DashboardPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Professional: Profile Verification Card */}
+      {isProfessional && (
+        <ProfileVerificationCard className="mb-6" />
+      )}
 
       {/* Professional: Prominent Wallet Card */}
       {isProfessional && (

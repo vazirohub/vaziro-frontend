@@ -18,6 +18,7 @@ export interface User {
     reviewsCount: number;
     completedJobsCount: number;
     isVerified: boolean;
+    verification?: ProfessionalVerification | null;
     hourlyRate?: number;
     bio?: string | null;
     languages?: string | null;
@@ -25,6 +26,31 @@ export interface User {
       balance: number;
     } | null;
   } | null;
+}
+
+export type VerificationStatus = 'NOT_STARTED' | 'PENDING' | 'VERIFIED' | 'FAILED' | 'REVIEW_REQUIRED' | 'EXPIRED';
+
+export interface ProfessionalVerification {
+  id: string;
+  professionalProfileId: string;
+  status: VerificationStatus;
+  provider: string;
+  referenceId?: string | null;
+  requestId?: string | null;
+  transactionId?: string | null;
+  verificationReference?: string | null;
+  documentType?: string | null;
+  nameMatchStatus?: string | null;
+  dobMatchStatus?: string | null;
+  verifiedAt?: string | null;
+  expiresAt?: string | null;
+  failureReason?: string | null;
+  reviewReason?: string | null;
+  rejectionReason?: string | null;
+  attemptCount?: number;
+  lastAttemptAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Subcategory {

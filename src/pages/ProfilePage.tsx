@@ -15,6 +15,7 @@ import {
   KeyRound,
   Sparkles,
 } from 'lucide-react';
+import { ProfileVerificationCard } from '../components/ProfileVerificationCard';
 
 export const ProfilePage: React.FC = () => {
   const { user, isAuthenticated, updateUser, openAuthModal } = useAuth();
@@ -281,27 +282,20 @@ export const ProfilePage: React.FC = () => {
                 <MapPin className="w-3.5 h-3.5 text-black" />
                 <span>Delhi NCR (Active)</span>
               </div>
-              {isProfessional && (
-                user?.professionalProfile?.isVerified ? (
-                  <div className="flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>✓ Verified via DigiLocker</span>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleDigiLockerVerify}
-                    disabled={verifying}
-                    className="bg-amber-500 hover:bg-amber-600 text-white text-[11px] font-bold px-3 py-1 rounded-lg shadow-sm transition flex items-center gap-1 cursor-pointer"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    <span>{verifying ? 'Connecting...' : '⚡ Verify with DigiLocker'}</span>
-                  </button>
-                )
+              {isProfessional && user?.professionalProfile?.isVerified && (
+                <div className="flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>✓ Verified via DigiLocker</span>
+                </div>
               )}
             </div>
           </div>
         </div>
+
+        {/* Professional Verification Section */}
+        {isProfessional && (
+          <ProfileVerificationCard />
+        )}
 
         {/* Tab Switcher */}
         <div className="flex bg-neutral-200/70 p-1 rounded-2xl max-w-sm">

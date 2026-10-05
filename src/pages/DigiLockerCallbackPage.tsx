@@ -2,14 +2,14 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, CheckCircle2, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, AlertCircle, Loader2, ArrowRight, Clock } from 'lucide-react';
 
 export const DigiLockerCallbackPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { updateUser } = useAuth();
 
-  const [status, setStatus] = useState<'PROCESSING' | 'SUCCESS' | 'ERROR'>('PROCESSING');
+  const [status, setStatus] = useState<'PROCESSING' | 'SUCCESS' | 'REVIEW_REQUIRED' | 'ERROR'>('PROCESSING');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [verificationData, setVerificationData] = useState<any>(null);
   const hasExecutedRef = useRef(false);
@@ -24,46 +24,72 @@ export const DigiLockerCallbackPage: React.FC = () => {
 
     if (errorParam) {
       setStatus('ERROR');
-      setErrorMessage(errorParam || 'Verification was cancelled or denied on the DigiLocker portal.');
+      if (
+        errorParam.toLowerCase().includes('cancel') ||
+        errorParam.toLowerCase().includes('access_denied') ||
+        errorParam.toLowerCase().includes('denied')
+      ) {
+        setErrorMessage("Verification was cancelled. You can try again whenever you're ready.");
+      } else {
+        setErrorMessage("We couldn't verify your identity. Please check your details and try again.");
+      }
       return;
     }
 
     if (!code || !state) {
       setStatus('ERROR');
-      setErrorMessage('Missing required authorization parameters. Please restart verification from your dashboard.');
+      setErrorMessage("Your verification session expired. Please start verification again.");
       return;
     }
 
     // Call backend to exchange code and record verified status
-    api.completeApiSetuVerification(code, state)
+    api.completeVerification(code, state)
       .then((res) => {
         if (res.data?.success) {
-          setStatus('SUCCESS');
-          setVerificationData(res.data.data);
+          const vData = res.data.data;
+          setVerificationData(vData);
 
-          // Update user profile in local context
+          if (vData?.verificationStatus === 'REVIEW_REQUIRED') {
+            setStatus('REVIEW_REQUIRED');
+          } else {
+            setStatus('SUCCESS');
+          }
+
+          // Update user profile in local auth context
           api.getMe().then((meRes) => {
             if (meRes.data?.data?.user) {
               updateUser(meRes.data.data.user);
             }
           }).catch(() => {});
 
-          // Auto-redirect to dashboard after 3 seconds
-          setTimeout(() => {
-            navigate('/dashboard');
-          }, 3000);
+          // Auto-redirect to dashboard after 4 seconds if successful
+          if (vData?.verificationStatus !== 'REVIEW_REQUIRED') {
+            setTimeout(() => {
+              navigate('/dashboard');
+            }, 4000);
+          }
         } else {
           setStatus('ERROR');
-          setErrorMessage(res.data?.message || 'Verification could not be confirmed.');
+          setErrorMessage(
+            res.data?.message || "We couldn't verify your identity. Please check your details and try again."
+          );
         }
       })
       .catch((err: any) => {
         setStatus('ERROR');
-        setErrorMessage(
-          err.response?.data?.error?.message ||
-          err.message ||
-          'Failed to complete DigiLocker verification with API Setu. Please try again.'
-        );
+        const rawErr = (err.response?.data?.error?.message || err.message || '').toLowerCase();
+
+        if (rawErr.includes('expired') || rawErr.includes('timeout')) {
+          setErrorMessage("Your verification session expired. Please start verification again.");
+        } else if (rawErr.includes('network') || rawErr.includes('connect') || rawErr.includes('service unavailable')) {
+          setErrorMessage("We're unable to connect to the verification service right now. Please try again later.");
+        } else if (rawErr.includes('review')) {
+          setStatus('REVIEW_REQUIRED');
+        } else if (rawErr.includes('cancel')) {
+          setErrorMessage("Verification was cancelled. You can try again whenever you're ready.");
+        } else {
+          setErrorMessage("We couldn't verify your identity. Please check your details and try again.");
+        }
       });
   }, [searchParams, navigate, updateUser]);
 
@@ -136,6 +162,29 @@ export const DigiLockerCallbackPage: React.FC = () => {
           </div>
         )}
 
+        {/* Review Required State */}
+        {status === 'REVIEW_REQUIRED' && (
+          <div className="space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+              <Clock className="w-9 h-9" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-black tracking-tight">Verification Under Review</h2>
+              <p className="text-xs text-neutral-600 mt-1.5 font-medium leading-relaxed">
+                Your verification requires additional review by Vaziro. We will update your status once the review is complete.
+              </p>
+            </div>
+            <div className="pt-2 flex items-center gap-3">
+              <Link
+                to="/dashboard"
+                className="flex-1 bg-black hover:bg-neutral-800 text-white py-3 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-md transition text-center"
+              >
+                Return to Dashboard
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* Error State */}
         {status === 'ERROR' && (
           <div className="space-y-4">
@@ -145,13 +194,19 @@ export const DigiLockerCallbackPage: React.FC = () => {
             <div>
               <h2 className="text-xl font-black text-black tracking-tight">Verification Incomplete</h2>
               <p className="text-xs text-red-600 mt-1.5 font-medium leading-relaxed">
-                {errorMessage || 'Unable to complete DigiLocker verification.'}
+                {errorMessage || "We couldn't verify your identity. Please check your details and try again."}
               </p>
             </div>
             <div className="pt-2 flex items-center gap-3">
               <Link
-                to="/dashboard"
+                to="/profile"
                 className="flex-1 bg-black hover:bg-neutral-800 text-white py-3 rounded-2xl font-bold text-xs uppercase tracking-wider shadow-md transition text-center"
+              >
+                Try Again
+              </Link>
+              <Link
+                to="/dashboard"
+                className="flex-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 py-3 rounded-2xl font-bold text-xs uppercase tracking-wider transition text-center"
               >
                 Dashboard
               </Link>
