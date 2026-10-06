@@ -17,6 +17,10 @@
     {
       "name": "Build Project",
       "command": "npm run build"
+    },
+    {
+      "name": "Build Android APK",
+      "command": "npm run android:build"
     }
   ],
   "runStep": [
