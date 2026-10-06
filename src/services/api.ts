@@ -17,6 +17,8 @@ import {
   BoostPackage,
   ChatThread,
   Message,
+  CallRequest,
+  CallSession,
   Dispute,
   ProfessionalTransaction,
   NotificationItem,
@@ -207,10 +209,48 @@ export const api = {
   getRequirementBoost: (requirementId: string) =>
     apiClient.get<ApiResponse<any>>(`/boost/requirement/${requirementId}`),
 
-  // Chat & Calling
-  getChatThreads: () => apiClient.get<ApiResponse<ChatThread[]>>('/chat/threads'),
-  getChatMessages: (threadId: string) => apiClient.get<ApiResponse<Message[]>>(`/chat/threads/${threadId}/messages`),
-  sendMessage: (threadId: string, content: string) => apiClient.post<ApiResponse<Message>>(`/chat/threads/${threadId}/messages`, { content }),
+  // Chat, Messaging & Call Requests
+  getConversations: (params?: { status?: string; search?: string }) =>
+    apiClient.get<ApiResponse<ChatThread[]>>('/conversations', { params }),
+  createConversation: (data: { jobId?: string; requirementId?: string; otherUserId: string }) =>
+    apiClient.post<ApiResponse<ChatThread>>('/conversations', data),
+  getConversation: (id: string) =>
+    apiClient.get<ApiResponse<ChatThread>>(`/conversations/${id}`),
+  getConversationMessages: (id: string, params?: { limit?: number; beforeId?: string }) =>
+    apiClient.get<ApiResponse<Message[]>>(`/conversations/${id}/messages`, { params }),
+  sendConversationMessage: (id: string, data: { content?: string; body?: string; messageType?: string; attachmentUrl?: string; fileName?: string; fileType?: string; fileSize?: number }) =>
+    apiClient.post<ApiResponse<Message>>(`/conversations/${id}/messages`, data),
+  markConversationRead: (id: string) =>
+    apiClient.post<ApiResponse<any>>(`/conversations/${id}/read`),
+  archiveConversation: (id: string, isArchived: boolean) =>
+    apiClient.post<ApiResponse<any>>(`/conversations/${id}/archive`, { isArchived }),
+  uploadConversationAttachment: (id: string, data: { fileName: string; base64Data: string }) =>
+    apiClient.post<ApiResponse<{ fileUrl: string; fileSize: number; fileType: string }>>(`/conversations/${id}/attachments`, data),
+
+  // Call Requests
+  createCallRequest: (conversationId: string, data: { requestedDate: string; requestedStartTime: string; requestedEndTime?: string; message?: string }) =>
+    apiClient.post<ApiResponse<CallRequest>>(`/conversations/${conversationId}/call-requests`, data),
+  getCallRequests: (conversationId: string) =>
+    apiClient.get<ApiResponse<CallRequest[]>>(`/conversations/${conversationId}/call-requests`),
+  acceptCallRequest: (id: string) =>
+    apiClient.post<ApiResponse<{ callRequest: CallRequest; session: CallSession }>>(`/call-requests/${id}/accept`),
+  declineCallRequest: (id: string, reason?: string) =>
+    apiClient.post<ApiResponse<CallRequest>>(`/call-requests/${id}/decline`, { reason }),
+  cancelCallRequest: (id: string) =>
+    apiClient.post<ApiResponse<CallRequest>>(`/call-requests/${id}/cancel`),
+
+  // Moderation & Safety
+  reportConversation: (id: string, data: { reportedUserId: string; messageId?: string; reason: string; description?: string }) =>
+    apiClient.post<ApiResponse<any>>(`/conversations/${id}/report`, data),
+  blockConversationUser: (id: string, data: { blockedUserId: string; reason?: string }) =>
+    apiClient.post<ApiResponse<any>>(`/conversations/${id}/block`, data),
+  unblockConversationUser: (id: string, data: { blockedUserId: string }) =>
+    apiClient.post<ApiResponse<any>>(`/conversations/${id}/unblock`, data),
+
+  // Backward-Compatible Chat & Calling Aliases
+  getChatThreads: () => apiClient.get<ApiResponse<ChatThread[]>>('/conversations'),
+  getChatMessages: (threadId: string) => apiClient.get<ApiResponse<Message[]>>(`/conversations/${threadId}/messages`),
+  sendMessage: (threadId: string, content: string) => apiClient.post<ApiResponse<Message>>(`/conversations/${threadId}/messages`, { content }),
   initiateMaskedCall: (jobId: string) => apiClient.post<ApiResponse<any>>('/calls/initiate', { jobId }),
 
   // Payments & Payouts

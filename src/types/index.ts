@@ -520,21 +520,98 @@ export interface CreditWallet {
   transactions: CreditTransaction[];
 }
 
+export interface MessageAttachment {
+  id: string;
+  messageId?: string;
+  fileUrl: string;
+  fileName?: string | null;
+  fileType?: string | null;
+  fileSize?: number | null;
+  createdAt?: string;
+}
+
+export interface CallRequest {
+  id: string;
+  chatThreadId?: string | null;
+  jobId?: string | null;
+  requirementId?: string | null;
+  requesterUserId: string;
+  receiverUserId: string;
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'CANCELLED' | 'EXPIRED' | 'COMPLETED';
+  requestedDate: string;
+  requestedStartTime: string;
+  requestedEndTime?: string | null;
+  message?: string | null;
+  acceptedAt?: string | null;
+  callSessionId?: string | null;
+  createdAt: string;
+  requester?: { id: string; firstName: string; lastName: string };
+  receiver?: { id: string; firstName: string; lastName: string };
+}
+
+export interface CallSession {
+  sessionId: string;
+  id?: string;
+  status: 'CREATED' | 'READY' | 'RINGING' | 'ACTIVE' | 'COMPLETED' | 'MISSED' | 'FAILED' | 'CANCELLED';
+  provider: string;
+  callerName?: string;
+  receiverName?: string;
+  scheduledTime?: string;
+  displayInstructions: string;
+}
+
 export interface ChatThread {
   id: string;
   jobId?: string | null;
   requirementId?: string | null;
+  status?: string;
+  isArchived?: boolean;
+  isBlocked?: boolean;
+  unreadCount?: number;
   participants: {
     userId: string;
-    user: { id: string; firstName: string; lastName: string };
+    user: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      professionalProfile?: {
+        id: string;
+        slug?: string | null;
+        title?: string | null;
+        avatarUrl?: string | null;
+        isVerified?: boolean;
+      } | null;
+    };
   }[];
+  otherParticipant?: {
+    id: string;
+    name: string;
+    firstName: string;
+    avatarUrl?: string | null;
+    isVerified?: boolean;
+    title?: string;
+  } | null;
   job?: {
     id: string;
     status: string;
     agreedPrice: number;
+    title?: string;
     requirement?: { title: string };
   } | null;
+  requirement?: {
+    id: string;
+    title: string;
+    status: string;
+  } | null;
   messages: Message[];
+  lastMessage?: {
+    id: string;
+    content: string;
+    messageType: string;
+    createdAt: string;
+    senderName: string;
+    isMe: boolean;
+  } | null;
   updatedAt: string;
 }
 
@@ -543,13 +620,19 @@ export interface Message {
   chatThreadId: string;
   senderUserId: string;
   content: string;
-  messageType: string;
+  body?: string;
+  messageType: 'TEXT' | 'IMAGE' | 'FILE' | 'SYSTEM' | string;
+  status?: 'SENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED' | string;
+  isContactWarning?: boolean;
+  warningMessage?: string | null;
+  isMe?: boolean;
   createdAt: string;
   sender?: {
     id: string;
     firstName: string;
     lastName: string;
   };
+  attachments?: MessageAttachment[];
 }
 
 export interface Dispute {
