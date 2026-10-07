@@ -28,6 +28,7 @@ import { PublicProfessionalProfilePage } from './pages/PublicProfessionalProfile
 import { ScrollToTop } from './components/ScrollToTop';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { IshaChatWidget } from './components/IshaChatWidget';
+import { WorkflowPreviewPage } from './pages/WorkflowPreviewPage';
 
 export const App: React.FC = () => {
   return (
@@ -39,6 +40,7 @@ export const App: React.FC = () => {
           <main className="flex-1 bg-slate-50 pb-16 md:pb-0">
             <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/workflow-preview" element={<WorkflowPreviewPage />} />
               <Route path="/post-requirement" element={<PostRequirementPage />} />
               <Route path="/requirements" element={<BrowseRequirementsPage />} />
               <Route path="/requirements/:id" element={<RequirementDetailPage />} />

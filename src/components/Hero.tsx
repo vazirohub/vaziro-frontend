@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Search, MapPin, Star, ShieldCheck, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -108,6 +108,14 @@ export const Hero: React.FC = () => {
                 <span>Privacy-Masked Telephony</span>
               </div>
             </div>
+
+            <Link
+              to="/workflow-preview"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-bold text-neutral-800 transition hover:border-emerald-700 hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
+            >
+              Preview the complete workflow
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
           </div>
 
           {/* RIGHT VISUAL COLUMN (Real Indian Professional Photography & Floating Social Proof) */}
