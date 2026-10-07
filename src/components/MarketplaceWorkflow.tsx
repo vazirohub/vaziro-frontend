@@ -95,35 +95,48 @@ export const MarketplaceWorkflow: React.FC<MarketplaceWorkflowProps> = ({
 
   const nextStep = steps.findIndex((step) => !step.complete);
   const activeStep = nextStep < 0 ? steps.length - 1 : nextStep;
+  const completedCount = steps.filter((step) => step.complete).length;
+  const progress = (completedCount / steps.length) * 100;
 
   return (
-    <section className="mb-8 overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm" aria-labelledby="workflow-title">
-      <div className="flex flex-col gap-4 border-b border-neutral-100 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
-            {isProfessional ? 'Professional journey' : 'Customer journey'}
-          </p>
-          <h2 id="workflow-title" className="mt-1 text-xl font-extrabold tracking-tight text-neutral-950">
-            {nextStep < 0 ? 'You completed a full service cycle' : `Next up: ${steps[activeStep].title}`}
-          </h2>
-          <p className="mt-1 text-sm text-neutral-600">
-            {nextStep < 0
-              ? 'Your completed work stays here while you take on your next opportunity.'
-              : isProfessional
-              ? 'Move from a trusted profile to a completed service.'
-              : 'Follow each step from your first request through service completion.'}
-          </p>
+    <section className="mb-8 overflow-hidden rounded-[1.75rem] border border-[#dce6df] bg-white shadow-[0_18px_50px_-36px_rgba(16,36,30,0.55)]" aria-labelledby="workflow-title" aria-busy={loading}>
+      <div className="relative overflow-hidden bg-[#eef4ef] px-5 py-6 sm:px-8 sm:py-7">
+        <div className="pointer-events-none absolute -right-12 -top-20 h-52 w-52 rounded-full border-[28px] border-emerald-900/[0.035]" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.16em] text-emerald-800">
+              <span className="h-2 w-2 rounded-full bg-emerald-600" />
+              {isProfessional ? 'Your Vaziro journey' : 'Your service journey'}
+            </p>
+            <h2 id="workflow-title" className="mt-2 text-2xl font-black leading-tight tracking-tight text-[#10241e] sm:text-3xl">
+              {nextStep < 0 ? 'A full service cycle, completed.' : steps[activeStep].title}
+            </h2>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-[#52665d]">
+              {nextStep < 0
+                ? 'Your completed work stays here while you take on your next opportunity.'
+                : isProfessional
+                ? 'One clear next step takes you from building trust to delivering great work.'
+                : 'Follow your request from the first details to a completed, protected service.'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={loading}
+            aria-label="Refresh workflow status"
+            className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl border border-[#cad9ce] bg-white/80 px-4 text-sm font-bold text-[#29463a] transition hover:bg-white disabled:cursor-wait disabled:opacity-60 sm:self-auto"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Updating...' : 'Refresh status'}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={loading}
-          aria-label="Refresh workflow status"
-          className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl border border-neutral-200 px-4 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:cursor-wait disabled:opacity-60 sm:self-auto"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Updating...' : 'Refresh'}
-        </button>
+
+        <div className="relative mt-6 flex items-center gap-3">
+          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#d6e2d9]" role="progressbar" aria-label="Workflow progress" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={completedCount}>
+            <div className="h-full rounded-full bg-emerald-700 transition-[width] duration-500" style={{ width: `${progress}%` }} />
+          </div>
+          <span className="shrink-0 text-xs font-bold tabular-nums text-[#52665d]">{completedCount} of {steps.length} complete</span>
+        </div>
       </div>
 
       {quotationError && isProfessional && (
@@ -135,28 +148,33 @@ export const MarketplaceWorkflow: React.FC<MarketplaceWorkflowProps> = ({
         </div>
       )}
 
-      <ol className="grid grid-cols-1 divide-y divide-neutral-100 sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4">
+      <ol className="grid grid-cols-1 divide-y divide-[#edf1ee] sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4">
         {steps.map((step, index) => {
           const isCurrent = index === activeStep && !step.complete;
           return (
-            <li key={step.title} className={`relative min-w-0 ${index < steps.length - 1 ? 'lg:border-r lg:border-neutral-100' : ''}`}>
+            <li key={step.title} className={`relative min-w-0 ${index < steps.length - 1 ? 'lg:border-r lg:border-[#edf1ee]' : ''}`}>
               <Link
+                aria-current={isCurrent ? 'step' : undefined}
                 to={step.href}
-                className={`group flex min-h-[104px] items-start gap-3 px-5 py-4 outline-none transition hover:bg-neutral-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 sm:px-6 ${isCurrent ? 'bg-emerald-50/60' : ''}`}
+                className={`group relative flex min-h-[132px] items-start gap-3 px-5 py-5 outline-none transition-colors focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-700 sm:px-6 ${isCurrent ? 'bg-[#f2f8f3]' : 'hover:bg-[#fafcf9]'}`}
               >
-                <span className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${step.complete ? 'border-emerald-600 bg-emerald-600 text-white' : isCurrent ? 'border-emerald-700 bg-white text-emerald-700' : 'border-neutral-300 bg-white text-neutral-400'}`} aria-label={step.complete ? 'Complete' : isCurrent ? 'Current step' : 'Upcoming step'}>
-                  {step.complete ? <Check className="h-4 w-4" aria-hidden="true" /> : <span className="text-xs font-bold">{index + 1}</span>}
+                <span className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-sm font-extrabold shadow-sm transition ${step.complete ? 'border-emerald-700 bg-emerald-700 text-white' : isCurrent ? 'border-[#10241e] bg-[#10241e] text-white ring-4 ring-emerald-900/10' : 'border-[#dce6df] bg-white text-[#728279]'}`} aria-label={step.complete ? 'Complete' : isCurrent ? 'Current step' : 'Upcoming step'}>
+                  {step.complete ? <Check className="h-4 w-4" aria-hidden="true" /> : String(index + 1).padStart(2, '0')}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-bold text-neutral-900">{step.title}</span>
-                  <span className="mt-1 block text-sm leading-5 text-neutral-600">{step.detail}</span>
+                  <span className="flex min-h-10 items-center justify-between gap-2">
+                    <span className={`text-sm font-extrabold leading-5 ${isCurrent ? 'text-[#10241e]' : step.complete ? 'text-emerald-900' : 'text-neutral-800'}`}>{step.title}</span>
+                    {step.complete && <span className="shrink-0 text-[10px] font-extrabold uppercase tracking-wider text-emerald-700">Done</span>}
+                    {isCurrent && <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-900">Next</span>}
+                  </span>
+                  <span className="mt-1 block text-sm leading-5 text-[#65736a]">{step.detail}</span>
                   {isCurrent && (
-                    <span className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-emerald-800">
-                      Continue <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span className="mt-3 inline-flex items-center gap-1.5 text-xs font-extrabold text-emerald-800">
+                      Continue this step <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" aria-hidden="true" />
                     </span>
                   )}
                 </span>
-                {!step.complete && !isCurrent && <Circle className="mt-2 h-3 w-3 shrink-0 text-neutral-300" aria-hidden="true" />}
+                {!step.complete && !isCurrent && <Circle className="mt-3 h-3 w-3 shrink-0 text-[#c6d1c9]" aria-hidden="true" />}
               </Link>
             </li>
           );

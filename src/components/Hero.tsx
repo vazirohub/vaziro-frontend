@@ -24,7 +24,8 @@ export const Hero: React.FC = () => {
   };
 
   return (
-    <section className="relative bg-white pt-8 pb-16 lg:pt-14 lg:pb-24 border-b border-neutral-200 overflow-hidden">
+    <section className="relative isolate overflow-hidden border-b border-[#dce6df] bg-[#f3f5f2] pb-16 pt-8 lg:pb-24 lg:pt-14">
+      <div className="pointer-events-none absolute -right-28 top-10 -z-10 h-[34rem] w-[34rem] rounded-full bg-emerald-900/[0.035] blur-3xl" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
           
@@ -32,21 +33,21 @@ export const Hero: React.FC = () => {
           <div className="lg:col-span-7 space-y-6 text-left">
             
             {/* Urban Company Style Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-black tracking-tight leading-[1.12]">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#10241e] tracking-tight leading-[1.08]">
               Delhi NCR’s Verified{' '}
-              <span className="block text-neutral-800">
+              <span className="block text-emerald-800">
                 Home & Personal Care Experts.
               </span>
             </h1>
 
             {/* Subtitle */}
-            <p className="text-base sm:text-lg text-neutral-600 font-medium leading-relaxed max-w-xl">
+            <p className="text-base sm:text-lg text-[#52665d] font-medium leading-relaxed max-w-xl">
               Post your service requirement across Delhi NCR, name your budget in ₹ INR, and compare transparent quotes from background-checked physiotherapists, nurses, cooks, trainers, and tutors.
             </p>
 
             {/* Search Bar with Service Zone Dropdown inside the Get Quotes box */}
             <form onSubmit={handleSearchSubmit} className="pt-2">
-              <div className="bg-white p-2 sm:p-2.5 rounded-2xl border-2 border-neutral-900 shadow-xl flex flex-col sm:flex-row items-center gap-2 max-w-xl">
+              <div className="bg-white p-2 sm:p-2.5 rounded-2xl border border-[#cfdbd2] shadow-[0_20px_50px_-32px_rgba(16,36,30,0.55)] flex flex-col sm:flex-row items-center gap-2 max-w-xl">
                 
                 {/* Select Your NCR Service Zone Dropdown */}
                 <div className="flex items-center gap-2 px-3 py-1.5 border-b sm:border-b-0 sm:border-r border-neutral-200 w-full sm:w-auto text-xs font-bold text-neutral-800 shrink-0">
@@ -85,7 +86,7 @@ export const Hero: React.FC = () => {
                 {/* Get Quotes / Find Jobs Button */}
                 <button
                   type="submit"
-                  className="w-full sm:w-auto bg-black hover:bg-neutral-800 text-white text-xs font-bold px-6 py-3 rounded-xl transition flex items-center justify-center gap-1.5 shrink-0 shadow-md cursor-pointer"
+                  className="w-full sm:w-auto bg-[#10241e] hover:bg-emerald-900 text-white text-xs font-bold px-6 py-3 rounded-xl transition flex items-center justify-center gap-1.5 shrink-0 shadow-md cursor-pointer"
                 >
                   <span>{isProfessional && !isAdmin ? 'Browse Jobs' : 'Get Quotes'}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -96,22 +97,22 @@ export const Hero: React.FC = () => {
             {/* Value Checkmarks */}
             <div className="pt-2 flex flex-wrap items-center gap-y-2 gap-x-6 text-xs font-semibold text-neutral-600">
               <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-black" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                 <span>₹0 Commission to Pros</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-black" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                 <span>6% Escrow Protection</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-black" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-700" />
                 <span>Privacy-Masked Telephony</span>
               </div>
             </div>
 
             <Link
               to="/workflow-preview"
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-bold text-neutral-800 transition hover:border-emerald-700 hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-[#cad9ce] bg-white/80 px-4 text-sm font-bold text-[#29463a] transition hover:border-emerald-700 hover:text-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
             >
               How the Vaziro workflow works
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -123,7 +124,7 @@ export const Hero: React.FC = () => {
             <div className="relative mx-auto max-w-md lg:max-w-none">
               
               {/* Main Real Indian Healthcare & Caregiver Photo */}
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-neutral-900 aspect-[4/5] bg-neutral-100">
+              <div className="relative rounded-[2rem] overflow-hidden shadow-[0_36px_80px_-38px_rgba(16,36,30,0.65)] border-[7px] border-white aspect-[4/5] bg-neutral-100">
                 <img
                   src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=1000&q=80"
                   alt="Verified Indian Healthcare Specialist"

@@ -100,52 +100,69 @@ export const WorkflowPreviewPage: React.FC = () => {
   const workflow = workflows[audience];
 
   return (
-    <div className="min-h-full bg-[#f6f7f5] px-4 py-8 sm:px-6 sm:py-12">
+    <div className="min-h-full bg-[#f3f5f2] px-4 py-8 sm:px-6 sm:py-12">
       <div className="mx-auto max-w-5xl">
-        <Link to="/" className="mb-7 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-neutral-600 transition hover:text-neutral-950">
+        <Link to="/" className="mb-6 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-neutral-600 transition hover:text-emerald-900">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to Vaziro
         </Link>
 
-        <header className="max-w-3xl">
-          <p className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-900">
-            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-            Vaziro, step by step
-          </p>
-          <h1 className="mt-4 text-3xl font-black tracking-tight text-neutral-950 sm:text-5xl">A clear path from first step to finished service.</h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-neutral-600">Explore the customer and professional journeys. Every step below links to its corresponding screen in the app.</p>
+        <header className="relative isolate overflow-hidden rounded-[2rem] bg-[#10241e] px-6 py-8 text-white shadow-[0_24px_70px_-42px_rgba(16,36,30,0.8)] sm:px-10 sm:py-11">
+          <div className="pointer-events-none absolute -right-14 -top-24 -z-10 h-80 w-80 rounded-full border-[42px] border-emerald-300/[0.07]" />
+          <div className="pointer-events-none absolute bottom-[-7rem] right-1/4 -z-10 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
+          <div className="relative max-w-3xl">
+            <p className="inline-flex items-center gap-2 rounded-full border border-emerald-200/20 bg-emerald-200/10 px-3 py-1.5 text-xs font-bold text-emerald-100">
+              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              A better way to book local care
+            </p>
+            <h1 className="mt-5 text-3xl font-black leading-[1.08] tracking-tight sm:text-5xl">Good work starts with a clear next step.</h1>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-emerald-50/75 sm:text-base sm:leading-7">See how customers and independent professionals meet, agree on work, and move through each service milestone on Vaziro.</p>
+          </div>
         </header>
 
-        <div className="mt-8 inline-flex w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-1.5 shadow-sm" role="group" aria-label="Choose a workflow">
+        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-[0.15em] text-emerald-800">Choose your path</p>
+            <p className="mt-1 text-sm text-neutral-600">Each step connects to the live app.</p>
+          </div>
+          <div className="inline-flex w-full max-w-md rounded-2xl border border-[#dce6df] bg-white p-1.5 shadow-sm" role="group" aria-label="Choose a workflow">
           {(['CUSTOMER', 'PROFESSIONAL'] as Audience[]).map((role) => (
             <button
               key={role}
               type="button"
               onClick={() => setAudience(role)}
               aria-pressed={audience === role}
-              className={`min-h-12 flex-1 rounded-xl px-4 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 ${audience === role ? 'bg-neutral-950 text-white shadow-sm' : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950'}`}
+              className={`min-h-12 flex-1 rounded-xl px-4 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 ${audience === role ? 'bg-[#10241e] text-white shadow-sm' : 'text-neutral-600 hover:bg-[#eef4ef] hover:text-neutral-950'}`}
             >
               {role === 'CUSTOMER' ? 'I need a service' : 'I provide a service'}
             </button>
           ))}
+          </div>
         </div>
 
-        <section className="mt-8 overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm" aria-live="polite">
-          <div className="border-b border-neutral-100 px-5 py-6 sm:px-8 sm:py-7">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">{audience === 'CUSTOMER' ? 'Customer workflow' : 'Professional workflow'}</p>
-            <h2 className="mt-2 text-xl font-extrabold tracking-tight text-neutral-950 sm:text-2xl">{workflow.title}</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-neutral-600">{workflow.intro}</p>
+        <section className="mt-6 overflow-hidden rounded-[1.75rem] border border-[#dce6df] bg-white shadow-[0_18px_50px_-36px_rgba(16,36,30,0.55)]" aria-live="polite">
+          <div className="flex flex-col gap-3 border-b border-[#e8eee9] bg-[#edf4ef] px-5 py-6 sm:flex-row sm:items-end sm:justify-between sm:px-8">
+            <div>
+              <p className="text-xs font-extrabold uppercase tracking-[0.14em] text-emerald-800">{audience === 'CUSTOMER' ? 'For customers' : 'For professionals'}</p>
+              <h2 className="mt-2 text-xl font-black tracking-tight text-[#10241e] sm:text-2xl">{workflow.title}</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-[#52665d]">{workflow.intro}</p>
+            </div>
+            <span className="inline-flex min-h-10 items-center gap-2 self-start rounded-xl border border-[#d5e1d8] bg-white/80 px-3 text-xs font-bold text-[#385448] sm:self-auto">
+              <span className="h-2 w-2 rounded-full bg-emerald-600" />
+              {workflow.steps.length} simple steps
+            </span>
           </div>
 
-          <ol className="divide-y divide-neutral-100">
+          <ol className="divide-y divide-[#edf1ee]">
             {workflow.steps.map((step, index) => {
               const Icon = step.icon;
               return (
-                <li key={step.title} className="relative px-5 py-5 sm:px-8 sm:py-6">
+                <li key={step.title} className="relative px-5 py-5 transition-colors hover:bg-[#fbfcfa] sm:px-8 sm:py-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start gap-4">
-                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800 ring-1 ring-emerald-100">
+                      <span className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#10241e] text-emerald-200 shadow-[0_8px_18px_-12px_rgba(16,36,30,0.7)]">
                         <Icon className="h-5 w-5" aria-hidden="true" />
+                        <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-emerald-300 text-[9px] font-black text-[#10241e]">{index + 1}</span>
                       </span>
                       <div className="min-w-0">
                         <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">Step {index + 1}</p>
@@ -153,7 +170,7 @@ export const WorkflowPreviewPage: React.FC = () => {
                         <p className="mt-1 max-w-2xl text-sm leading-6 text-neutral-600">{step.summary}</p>
                       </div>
                     </div>
-                    <Link to={step.destination} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-neutral-950 px-4 text-sm font-bold text-white transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 sm:ml-16">
+                    <Link to={step.destination} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#10241e] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 sm:ml-16">
                       {step.action}
                       <ArrowRight className="h-4 w-4" aria-hidden="true" />
                     </Link>
@@ -169,7 +186,7 @@ export const WorkflowPreviewPage: React.FC = () => {
           </ol>
         </section>
 
-        <p className="mt-4 text-sm text-neutral-500">
+        <p className="mt-4 text-sm leading-6 text-neutral-500">
           Some screens require sign-in or an existing request/job. Start with the first step to create your own live workflow.
         </p>
         <div className="mt-7 flex flex-col gap-3 sm:flex-row">

@@ -7,8 +7,13 @@ import {
   ShieldCheck,
   Star,
   MapPin,
+  ClipboardList,
+  MessagesSquare,
+  UserRoundCheck,
+  Route,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 
 export const HomePage: React.FC = () => {
   const { openAuthModal } = useAuth();
@@ -89,61 +94,74 @@ export const HomePage: React.FC = () => {
       {/* 8-Category Grid with Real Indian Photography Cards */}
       <CategoryGrid />
 
-      {/* HOW IT WORKS: 3-Step Process */}
-      <section id="how-it-works" className="py-20 bg-white border-b border-neutral-200">
+      {/* HOW IT WORKS: a complete service journey */}
+      <section id="how-it-works" className="relative overflow-hidden border-b border-[#dce6df] bg-[#f0f5f0] py-16 sm:py-20">
+        <div className="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full border-[42px] border-emerald-900/[0.035]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <span className="text-xs font-black uppercase tracking-wider text-neutral-500 bg-neutral-100 px-3 py-1 rounded-full">
-              Transparent NCR Marketplace
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-black text-black tracking-tight mt-3">
-              How the Vaziro Marketplace Works
-            </h2>
-            <p className="mt-3 text-sm text-neutral-600 font-medium">
-              State your service requirement and budget. Verified independent professionals compete transparently to win your business.
-            </p>
+          <div className="relative mb-10 flex flex-col gap-5 md:mb-12 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.13em] text-emerald-900">
+                <Route className="h-3.5 w-3.5" /> The Vaziro service journey
+              </span>
+              <h2 className="mt-4 text-3xl font-black leading-tight tracking-tight text-[#10241e] sm:text-4xl">
+                From first request to finished work.
+              </h2>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-[#52665d] sm:text-base">
+                One clear process for households and independent professionals. You stay in control at every step.
+              </p>
+            </div>
+            <Link to="/workflow-preview" className="inline-flex min-h-11 items-center gap-2 self-start rounded-xl border border-[#cad9ce] bg-white px-4 text-sm font-bold text-[#29463a] transition hover:border-emerald-700 hover:text-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 md:self-auto">
+              Explore both workflows <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="relative p-8 rounded-3xl bg-neutral-50 border border-neutral-200 hover:border-black transition">
-              <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-black text-lg mb-6 shadow-md">
-                01
-              </div>
-              <h3 className="text-xl font-black text-black mb-2">Post Your Requirement</h3>
-              <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-                Choose your NCR location (Delhi, Noida, Gurugram, Ghaziabad, or Greater Noida), describe your needs, and set your budget in ₹ INR.
-              </p>
-            </div>
-
-            <div className="relative p-8 rounded-3xl bg-neutral-50 border border-neutral-200 hover:border-black transition">
-              <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-black text-lg mb-6 shadow-md">
-                02
-              </div>
-              <h3 className="text-xl font-black text-black mb-2">Compare Verified Quotes</h3>
-              <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-                Background-checked pros spend platform credits to submit proposals. Compare their AI compatibility match, experience, and pricing.
-              </p>
-            </div>
-
-            <div className="relative p-8 rounded-3xl bg-neutral-50 border border-neutral-200 hover:border-black transition">
-              <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-black text-lg mb-6 shadow-md">
-                03
-              </div>
-              <h3 className="text-xl font-black text-black mb-2">Hire with 100% Escrow</h3>
-              <p className="text-xs text-neutral-600 leading-relaxed font-medium">
-                Funds are held in secure Vaziro Escrow. Inspect discrete service milestones, approve completed work, and release funds safely with official GST invoices.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-14 text-center">
-            <button
-              onClick={() => openAuthModal('CUSTOMER')}
-              className="inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white px-8 py-4 rounded-xl font-bold text-sm shadow-md transition"
-            >
-              <span>Post a Requirement in Delhi NCR</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+          <div className="relative grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="pointer-events-none absolute left-[12%] right-[12%] top-10 hidden h-px bg-[#cbd9ce] xl:block" />
+            {[
+              {
+                title: 'Tell us what you need',
+                body: 'Describe the service, preferred timing and Delhi NCR location. Set a budget that works for you.',
+                action: 'Post a request',
+                href: '/post-requirement',
+                icon: ClipboardList,
+              },
+              {
+                title: 'Compare real proposals',
+                body: 'Review the professional, their verification, approach, quote and estimated timeline in one place.',
+                action: 'Go to dashboard',
+                href: '/dashboard',
+                icon: MessagesSquare,
+              },
+              {
+                title: 'Choose who to hire',
+                body: 'Shortlist the right fit. Add optional payment protection when you create the service contract.',
+                action: 'Review your requests',
+                href: '/dashboard',
+                icon: UserRoundCheck,
+              },
+              {
+                title: 'Track work to completion',
+                body: 'Follow service updates, inspect finished work and control protected payment release.',
+                action: 'Track your service',
+                href: '/dashboard',
+                icon: ShieldCheck,
+              },
+            ].map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <article key={step.title} className="group relative rounded-[1.5rem] border border-[#dce6df] bg-white p-5 shadow-[0_16px_40px_-34px_rgba(16,36,30,0.6)] transition duration-200 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-[0_22px_46px_-34px_rgba(16,36,30,0.55)] sm:p-6">
+                  <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#10241e] text-emerald-200 shadow-sm">
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                    <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-emerald-300 text-[10px] font-black text-[#10241e]">{index + 1}</span>
+                  </div>
+                  <h3 className="mt-5 text-lg font-extrabold tracking-tight text-[#10241e]">{step.title}</h3>
+                  <p className="mt-2 min-h-[4.5rem] text-sm leading-6 text-[#617168]">{step.body}</p>
+                  <Link to={step.href} className="mt-4 inline-flex min-h-10 items-center gap-1.5 text-sm font-extrabold text-emerald-800 transition hover:text-emerald-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2">
+                    {step.action}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
