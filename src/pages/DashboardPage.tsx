@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { Requirement, Job, DetailedCreditWallet } from '../types';
+import { Requirement, Job, DetailedCreditWallet, Quotation } from '../types';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -25,6 +25,7 @@ import { CategoryIcon } from '../components/CategoryIcon';
 import { ProfileVerificationCard } from '../components/ProfileVerificationCard';
 import { ProfileStrengthCard } from '../components/ProfileStrengthCard';
 import { TrustScoreCard } from '../components/TrustScoreCard';
+import { MarketplaceWorkflow } from '../components/MarketplaceWorkflow';
 import { ProfileStrengthResult, TrustScoreResult } from '../types';
 
 export const DashboardPage: React.FC = () => {
@@ -33,6 +34,8 @@ export const DashboardPage: React.FC = () => {
 
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [quotationError, setQuotationError] = useState<string | null>(null);
   const [wallet, setWallet] = useState<DetailedCreditWallet | null>(null);
   const [strength, setStrength] = useState<ProfileStrengthResult | null>(null);
   const [trust, setTrust] = useState<TrustScoreResult | null>(null);
@@ -54,6 +57,18 @@ export const DashboardPage: React.FC = () => {
         promises.push(api.getCreditWallet().catch(() => null));
         promises.push(api.getProfileStrength().catch(() => null));
         promises.push(api.getTrustScore().catch(() => null));
+        promises.push(
+          api.getMyQuotations().then((res) => {
+            setQuotationError(null);
+            return res;
+          }).catch(() => {
+            setQuotationError('Your proposals could not be loaded.');
+            return null;
+          })
+        );
+      } else {
+        setQuotations([]);
+        setQuotationError(null);
       }
 
       const results = await Promise.all(promises);
@@ -62,12 +77,14 @@ export const DashboardPage: React.FC = () => {
       const walletRes = isProfessional ? results[2] : null;
       const strengthRes = isProfessional ? results[3] : null;
       const trustRes = isProfessional ? results[4] : null;
+      const quotationsRes = isProfessional ? results[5] : null;
 
       if (reqRes?.data?.data) setRequirements(reqRes.data.data);
       if (jobRes?.data?.data) setJobs(jobRes.data.data);
       if (walletRes?.data?.data) setWallet(walletRes.data.data);
       if (strengthRes?.data?.data) setStrength(strengthRes.data.data);
       if (trustRes?.data?.data) setTrust(trustRes.data.data);
+      if (quotationsRes?.data?.data) setQuotations(quotationsRes.data.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -187,6 +204,17 @@ export const DashboardPage: React.FC = () => {
       {isProfessional && (
         <ProfileVerificationCard className="mb-6" />
       )}
+
+      <MarketplaceWorkflow
+        isProfessional={Boolean(isProfessional)}
+        isVerified={Boolean(user.professionalProfile?.isVerified || verificationSuccess)}
+        requirements={requirements}
+        quotations={quotations}
+        jobs={jobs}
+        loading={loading}
+        quotationError={quotationError}
+        onRefresh={loadDashboardData}
+      />
 
       {/* Professional: Profile Strength & Trust Score */}
       {isProfessional && (
