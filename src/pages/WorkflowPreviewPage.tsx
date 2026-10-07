@@ -177,8 +177,8 @@ export const WorkflowPreviewPage: React.FC = () => {
             {audience === 'CUSTOMER' ? 'Start a service request' : 'Join as a professional'}
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
-          <Link to={audience === 'CUSTOMER' ? '/requirements' : '/dashboard'} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-5 text-sm font-bold text-neutral-800 transition hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2">
-            {audience === 'CUSTOMER' ? 'Explore services' : 'Open professional dashboard'}
+          <Link to={audience === 'CUSTOMER' ? '/#categories' : '/dashboard'} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-5 text-sm font-bold text-neutral-800 transition hover:bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2">
+            {audience === 'CUSTOMER' ? 'Browse service categories' : 'Open professional dashboard'}
             <BriefcaseBusiness className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>

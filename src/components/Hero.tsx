@@ -113,7 +113,7 @@ export const Hero: React.FC = () => {
               to="/workflow-preview"
               className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-neutral-300 bg-white px-4 text-sm font-bold text-neutral-800 transition hover:border-emerald-700 hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2"
             >
-              Preview the complete workflow
+              How the Vaziro workflow works
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </div>

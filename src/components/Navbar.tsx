@@ -336,6 +336,18 @@ export const Navbar: React.FC = () => {
                 <span>Browse Jobs</span>
               </Link>
 
+              <Link
+                to="/workflow-preview"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all ${
+                  isActive('/workflow-preview')
+                    ? 'bg-neutral-100 text-black font-bold'
+                    : 'text-neutral-700 hover:text-black hover:bg-neutral-50'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>How It Works</span>
+              </Link>
+
               {/* Highlighted Become a Pro for Logged-In Customers */}
               {user && !isProfessional && !isAdmin && (
                 <button
@@ -900,6 +912,15 @@ export const Navbar: React.FC = () => {
                   Navigation
                 </div>
 
+                <Link
+                  to="/workflow-preview"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3 p-3 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold text-xs transition"
+                >
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>How the Vaziro workflow works</span>
+                </Link>
+
                 {/* Dashboard & Messages (Visible Only to Logged-In Users) */}
                 {user && (
                   <>
@@ -1030,4 +1051,3 @@ export const Navbar: React.FC = () => {
     </>
   );
 };
-
