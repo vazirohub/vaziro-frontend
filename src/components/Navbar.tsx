@@ -255,7 +255,7 @@ export const Navbar: React.FC = () => {
                   }`}
                 >
                   <Compass className="w-4 h-4 text-emerald-600" />
-                  <span>Explore Services</span>
+                  <span>{isProfessional ? 'Find Work' : 'Explore Services'}</span>
                   <ChevronDown
                     className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${
                       categoriesOpen ? 'rotate-180 text-black' : ''
@@ -325,15 +325,15 @@ export const Navbar: React.FC = () => {
 
               {/* Browse Jobs */}
               <Link
-                to="/requirements"
+                to={isProfessional ? '/dashboard?tab=jobs' : '/requirements'}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all ${
-                  isActive('/requirements')
+                  isActive(isProfessional ? '/dashboard' : '/requirements')
                     ? 'bg-neutral-100 text-black font-bold'
                     : 'text-neutral-700 hover:text-black hover:bg-neutral-50'
                 }`}
               >
                 <Briefcase className="w-4 h-4 text-neutral-500" />
-                <span>Browse Jobs</span>
+                <span>{isProfessional ? 'My Jobs' : 'Browse Jobs'}</span>
               </Link>
 
               <Link
@@ -833,8 +833,8 @@ export const Navbar: React.FC = () => {
                       <Briefcase className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="font-extrabold text-xs text-neutral-900">Browse Jobs & Leads</div>
-                      <div className="text-[10px] text-neutral-500">View real customer requirements</div>
+                      <div className="font-extrabold text-xs text-neutral-900">{isProfessional ? 'Find Work' : 'Browse Service Requests'}</div>
+                      <div className="text-[10px] text-neutral-500">{isProfessional ? 'Explore customer requests' : 'Explore local service requests'}</div>
                     </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
@@ -872,7 +872,7 @@ export const Navbar: React.FC = () => {
                 >
                   <div className="flex items-center gap-2">
                     <Compass className="w-4 h-4 text-emerald-600" />
-                    <span>Explore Service Categories</span>
+                    <span>{isProfessional ? 'Find Work by Category' : 'Explore Service Categories'}</span>
                   </div>
                   <ChevronDown
                     className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${

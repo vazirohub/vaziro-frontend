@@ -2,20 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Requirement, Category, DetailedCreditWallet } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { Search, MapPin, IndianRupee, ShieldCheck, Coins, Send, X, Clock, Calendar, AlertCircle, Sparkles, Plus } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Search, MapPin, ShieldCheck, Coins, Send, X, Clock, Calendar, AlertCircle, Sparkles, ArrowRight } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { AddCreditsModal } from '../components/AddCreditsModal';
 
 export const BrowseRequirementsPage: React.FC = () => {
   const { user, isAuthenticated, openAuthModal } = useAuth();
+  const [searchParams] = useSearchParams();
 
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [wallet, setWallet] = useState<DetailedCreditWallet | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [searchCity, setSearchCity] = useState<string>('');
+  const [searchCity, setSearchCity] = useState<string>(() => searchParams.get('city') || '');
+  const [searchText, setSearchText] = useState(() => searchParams.get('q') || '');
 
   // Quotation Modal State
   const [selectedRequirement, setSelectedRequirement] = useState<Requirement | null>(null);
@@ -35,9 +38,9 @@ export const BrowseRequirementsPage: React.FC = () => {
   const fetchRequirements = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const params: any = {};
       if (selectedCategory) params.categoryId = selectedCategory;
-      if (searchCity) params.cityId = searchCity;
 
       const [reqRes, catRes] = await Promise.all([
         api.getRequirements(params),
@@ -49,9 +52,12 @@ export const BrowseRequirementsPage: React.FC = () => {
       }
       if (catRes.data?.data) {
         setCategories(catRes.data.data);
+        const categorySlug = searchParams.get('category');
+        const matchingCategory = categorySlug ? catRes.data.data.find((category) => category.slug === categorySlug) : undefined;
+        if (matchingCategory) setSelectedCategory(matchingCategory.id);
       }
     } catch (err) {
-      console.error(err);
+      setLoadError('Could not load work requests. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -84,7 +90,7 @@ export const BrowseRequirementsPage: React.FC = () => {
       return;
     }
     if (!isProfessional) {
-      alert('Only registered professionals can submit quotations. Please switch to a Professional account.');
+      openAuthModal('PROFESSIONAL', undefined, 'SIGNUP');
       return;
     }
     setSelectedRequirement(req);
@@ -130,201 +136,168 @@ export const BrowseRequirementsPage: React.FC = () => {
     }
   };
 
-  const currentBalance = wallet?.balance ?? 10;
+  const currentBalance = wallet?.balance ?? user?.professionalProfile?.creditWallet?.balance ?? 0;
+  const visibleRequirements = requirements.filter((req) => {
+    const normalizedSearch = searchText.trim().toLocaleLowerCase();
+    const normalizedCity = searchCity.trim().toLocaleLowerCase();
+    const searchableText = `${req.title} ${req.description} ${req.category?.name || ''} ${req.subcategory?.name || ''}`.toLocaleLowerCase();
+    const cityName = (req.city?.name || '').toLocaleLowerCase();
+    return (!normalizedSearch || searchableText.includes(normalizedSearch)) && (!normalizedCity || cityName.includes(normalizedCity));
+  });
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      {/* Header & Wallet Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">
-            Discover Customer Requirements
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Browse live verified job requirements across India. Pay Credits only when you choose to submit a quotation.
-          </p>
-        </div>
-
-        {isAuthenticated && isProfessional && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 flex items-center gap-4 shrink-0 shadow-sm">
-            <div className="p-2.5 bg-emerald-600 rounded-lg text-white">
-              <Coins className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-xs text-emerald-800 font-semibold uppercase tracking-wider">Credit Wallet</div>
-              <div className="text-xl font-extrabold text-emerald-950">
-                {currentBalance} <span className="text-xs font-normal text-emerald-700">Credits Available</span>
-              </div>
-            </div>
-            <Link
-              to="/credits"
-              className="ml-auto bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition"
-            >
-              Buy Plans
-            </Link>
+    <div className="min-h-full bg-[#f7f8f6]">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+        <header className="mb-7 flex flex-col gap-5 border-b border-[#e2e8e3] pb-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.14em] text-emerald-800">
+              <span className="h-2 w-2 rounded-full bg-emerald-600" /> Find work
+            </p>
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-[#10241e] sm:text-4xl">Make your next move.</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[#52665d]">
+              Explore customer requests, review the scope and budget, then send a proposal when the work fits you.
+            </p>
           </div>
-        )}
-      </div>
 
-      {/* Category Tabs Filter */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-6 scrollbar-thin">
-        <button
-          onClick={() => setSelectedCategory('')}
-          className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition ${
-            selectedCategory === ''
-              ? 'bg-emerald-600 text-white shadow-sm'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          All Categories ({requirements.length})
-        </button>
-        {categories.map((cat) => (
-          <button
-            key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
-            className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition flex items-center gap-1.5 ${
-              selectedCategory === cat.id
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <CategoryIcon icon={cat.icon} className="w-4 h-4" />
-            <span>{cat.name}</span>
-          </button>
-        ))}
-      </div>
+          {isAuthenticated && isProfessional ? (
+            <div className="flex items-center gap-4 rounded-2xl border border-[#dce6df] bg-white px-4 py-3 shadow-sm sm:min-w-[270px]">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#10241e] text-emerald-200"><Coins className="h-5 w-5" /></div>
+              <div className="min-w-0 flex-1">
+                <span className="block text-xs font-semibold text-neutral-500">Available to apply</span>
+                <span className="mt-0.5 block text-xl font-black text-[#10241e]">{currentBalance} <span className="text-xs font-bold text-neutral-500">credits</span></span>
+              </div>
+              <Link to="/credits" className="inline-flex min-h-10 items-center rounded-lg px-3 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-50">Add credits</Link>
+            </div>
+          ) : (
+            <button type="button" onClick={() => openAuthModal('PROFESSIONAL', undefined, 'SIGNUP')} className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-[#10241e] px-4 text-sm font-bold text-white transition hover:bg-emerald-800 lg:self-auto">
+              Join as a professional <ArrowRight className="h-4 w-4" />
+            </button>
+          )}
+        </header>
 
-      {/* Requirement List */}
-      {loading ? (
-        <div className="text-center py-16">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-emerald-600 border-t-transparent"></div>
-          <p className="mt-3 text-sm text-gray-500 font-medium">Finding requirements in your area...</p>
+        <div className="mb-7 grid gap-3 rounded-2xl border border-[#dce6df] bg-white p-3 shadow-sm md:grid-cols-[minmax(0,1fr)_minmax(220px,0.44fr)] md:p-4">
+          <label className="flex min-h-12 items-center gap-3 rounded-xl border border-[#e2e8e3] bg-[#fbfcfa] px-4 focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-700/10">
+            <Search className="h-4 w-4 shrink-0 text-emerald-800" />
+            <span className="sr-only">Search customer requests</span>
+            <input type="search" value={searchText} onChange={(event) => setSearchText(event.target.value)} placeholder="Search services, skills or keywords" className="w-full bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400" />
+          </label>
+          <label className="flex min-h-12 items-center gap-3 rounded-xl border border-[#e2e8e3] bg-[#fbfcfa] px-4 focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-700/10">
+            <MapPin className="h-4 w-4 shrink-0 text-emerald-800" />
+            <span className="sr-only">Filter by city</span>
+            <input type="search" value={searchCity} onChange={(event) => setSearchCity(event.target.value)} placeholder="City or service area" className="w-full bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400" />
+          </label>
         </div>
-      ) : requirements.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-          <h3 className="text-lg font-bold text-gray-900">No Requirements Found</h3>
-          <p className="text-sm text-gray-500 mt-1 max-w-sm mx-auto">
-            There are currently no active requirements matching this filter. Try selecting "All Categories".
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {requirements.map((req) => {
+
+        <div className="grid items-start gap-6 lg:grid-cols-[236px_minmax(0,1fr)]">
+          <aside className="space-y-4 lg:sticky lg:top-24">
+            <section className="rounded-2xl border border-[#dce6df] bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-extrabold text-[#10241e]">Service category</h2>
+                {selectedCategory && <button type="button" onClick={() => setSelectedCategory('')} className="text-xs font-bold text-emerald-800 hover:underline">Clear</button>}
+              </div>
+              <div className="space-y-1">
+                <button type="button" onClick={() => setSelectedCategory('')} aria-pressed={!selectedCategory} className={`flex min-h-10 w-full items-center justify-between rounded-lg px-3 text-left text-sm transition ${!selectedCategory ? 'bg-[#edf4ef] font-bold text-emerald-950' : 'text-neutral-600 hover:bg-neutral-50'}`}>
+                  <span>All work</span><span className="text-xs tabular-nums text-neutral-500">{requirements.length}</span>
+                </button>
+                {categories.map((category) => (
+                  <button key={category.id} type="button" onClick={() => setSelectedCategory(category.id)} aria-pressed={selectedCategory === category.id} className={`flex min-h-10 w-full items-center gap-2 rounded-lg px-3 text-left text-sm transition ${selectedCategory === category.id ? 'bg-[#edf4ef] font-bold text-emerald-950' : 'text-neutral-600 hover:bg-neutral-50'}`}>
+                    <CategoryIcon icon={category.icon} className="h-4 w-4 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{category.name}</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-[#dce6df] bg-[#edf4ef] p-4">
+              <h2 className="text-sm font-extrabold text-[#10241e]">Before you apply</h2>
+              <p className="mt-2 text-xs leading-5 text-[#52665d]">Review the customer&apos;s scope and location. Credits are deducted only when you submit a proposal.</p>
+              {isAuthenticated && isProfessional && <Link to="/credits" className="mt-3 inline-flex min-h-10 items-center gap-1 text-xs font-extrabold text-emerald-900 hover:underline">Manage credits <ArrowRight className="h-3.5 w-3.5" /></Link>}
+            </section>
+          </aside>
+
+          <main className="min-w-0">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-extrabold tracking-tight text-[#10241e]">Customer requests</h2>
+                <p className="mt-1 text-sm text-neutral-500">{loading ? 'Updating opportunities...' : `${visibleRequirements.length} ${visibleRequirements.length === 1 ? 'request' : 'requests'}${searchCity ? ` near ${searchCity}` : ''}`}</p>
+              </div>
+              <button type="button" onClick={fetchRequirements} disabled={loading} aria-label="Refresh customer requests" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#dce6df] bg-white px-3 text-xs font-bold text-neutral-700 transition hover:bg-[#edf4ef] disabled:opacity-60">
+                <Clock className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Refreshing...' : 'Refresh list'}
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="space-y-3" role="status" aria-label="Loading customer requests">
+                {[1, 2, 3].map((item) => <div key={item} className="h-48 animate-pulse rounded-2xl border border-[#e2e8e3] bg-white" />)}
+              </div>
+            ) : loadError ? (
+              <div className="rounded-2xl border border-red-200 bg-white p-8 text-center" role="alert">
+                <AlertCircle className="mx-auto h-9 w-9 text-red-600" />
+                <h3 className="mt-3 font-bold text-neutral-900">Work requests didn&apos;t load</h3>
+                <p className="mt-1 text-sm text-neutral-600">{loadError}</p>
+                <button type="button" onClick={fetchRequirements} className="mt-4 min-h-11 rounded-xl bg-[#10241e] px-5 text-sm font-bold text-white hover:bg-emerald-800">Try again</button>
+              </div>
+            ) : visibleRequirements.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-[#cad9ce] bg-white px-6 py-12 text-center">
+                <Search className="mx-auto h-9 w-9 text-emerald-800" />
+                <h3 className="mt-3 text-lg font-extrabold text-[#10241e]">No matching requests</h3>
+                <p className="mx-auto mt-1 max-w-md text-sm text-neutral-600">Try another service, city, or category to widen your search.</p>
+                {(searchText || searchCity || selectedCategory) && <button type="button" onClick={() => { setSearchText(''); setSearchCity(''); setSelectedCategory(''); }} className="mt-4 min-h-11 rounded-xl border border-[#cad9ce] px-4 text-sm font-bold text-emerald-900 hover:bg-[#edf4ef]">Clear all filters</button>}
+              </div>
+            ) : (
+              <div className="space-y-3">
+          {visibleRequirements.map((req) => {
             const reqCost = req.creditsRequired || 5;
             const remainingAfter = currentBalance - reqCost;
-            const canAfford = currentBalance >= reqCost;
-
             return (
-              <div
+              <article
                 key={req.id}
-                className={`bg-white rounded-2xl border p-6 flex flex-col justify-between hover:shadow-md transition relative ${
-                  req.isBoosted ? 'border-amber-300 ring-2 ring-amber-400/20 bg-gradient-to-b from-amber-50/20 to-white' : 'border-gray-200'
-                }`}
+                className={`rounded-2xl border bg-white p-5 shadow-sm transition hover:border-emerald-300 hover:shadow-md sm:p-6 ${req.isBoosted ? 'border-amber-300' : 'border-[#e0e7e2]'}`}
               >
-                <div>
-                  {/* Category & Boosted Badge */}
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                        <CategoryIcon icon={req.category?.icon} className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>{req.subcategory?.name || req.category?.name}</span>
+                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_210px]">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#edf4ef] px-2.5 py-1 text-xs font-bold text-emerald-900">
+                        <CategoryIcon icon={req.category?.icon} className="h-3.5 w-3.5" /> {req.subcategory?.name || req.category?.name}
                       </span>
-                      {req.isBoosted && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-amber-900 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300 shadow-xs">
-                          <Sparkles className="w-3 h-3 text-amber-600 fill-amber-500" />
-                          Boosted
-                        </span>
-                      )}
+                      {req.isBoosted && <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-900"><Sparkles className="h-3 w-3" /> Featured request</span>}
+                      <span className="text-xs text-neutral-400">Posted {new Date(req.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
                     </div>
-                    <span className="text-xs text-gray-400 font-medium flex items-center gap-1 shrink-0">
-                      <Clock className="w-3.5 h-3.5" />
-                      {new Date(req.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
-                    </span>
-                  </div>
-
-                  {/* Title & Description */}
-                  <h3 className="font-bold text-gray-900 text-base mb-2 line-clamp-2">
-                    {req.title}
-                  </h3>
-                  <p className="text-gray-600 text-xs line-clamp-3 mb-4 leading-relaxed">
-                    {req.description}
-                  </p>
-
-                  {/* Meta Information */}
-                  <div className="space-y-1.5 text-xs text-gray-600 mb-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500 flex items-center gap-1">
-                        <IndianRupee className="w-3.5 h-3.5 text-emerald-600" /> Stated Budget:
-                      </span>
-                      <span className="font-bold text-gray-900">
-                        {req.budgetType === 'RANGE' && req.budgetMax
-                          ? `₹${req.budgetMin.toLocaleString('en-IN')} - ₹${req.budgetMax.toLocaleString('en-IN')}`
-                          : `₹${req.budgetMin.toLocaleString('en-IN')}`}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500 flex items-center gap-1">
-                        <MapPin className="w-3.5 h-3.5 text-blue-500" /> Location:
-                      </span>
-                      <span className="font-medium text-gray-800">
-                        {req.city?.name || 'India'}
-                        {(() => {
-                          const pin = typeof req.pincode === 'string' ? req.pincode : (req.pincode as any)?.pincode || (req.pincodeId && req.pincodeId.length === 6 && !req.pincodeId.includes('-') ? req.pincodeId : null);
-                          return pin ? `, ${pin}` : '';
-                        })()}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500 flex items-center gap-1">
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Posted By:
-                      </span>
-                      <span className="font-medium text-gray-800">
-                        {req.customerTrust?.firstName || 'Verified Customer'} ({req.customerTrust?.jobsPostedCount || 1} jobs)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  {/* Dynamic Credit Fee Box (Section 17 & 18) */}
-                  <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200 mb-3 text-xs">
-                    <div className="flex items-center justify-between text-amber-900 font-semibold mb-1">
-                      <span className="flex items-center gap-1">
-                        <Coins className="w-4 h-4 text-amber-600" /> Application Cost:
-                      </span>
-                      <span className="text-sm font-extrabold text-amber-950">{reqCost} Credits</span>
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] text-amber-800">
-                      <span>Your Balance: <strong>{currentBalance} cr</strong></span>
-                      <span>Remaining: <strong className={remainingAfter < 0 ? 'text-red-600' : 'text-emerald-700'}>{remainingAfter} cr</strong></span>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    <Link
-                      to={`/requirements/${req.id}`}
-                      className="flex-1 py-2 px-3 border border-gray-300 text-center rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
-                    >
-                      View Details
+                    <Link to={`/requirements/${req.id}`} className="mt-3 inline-block text-lg font-extrabold tracking-tight text-[#10241e] hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700">
+                      {req.title}
                     </Link>
-                    <button
-                      onClick={() => handleOpenQuoteModal(req)}
-                      className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-center rounded-lg text-xs font-bold text-white transition flex items-center justify-center gap-1 shadow-sm"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      Apply & Quote
-                    </button>
+                    <p className="mt-2 line-clamp-3 text-sm leading-6 text-neutral-600">{req.description}</p>
+                    <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-neutral-600">
+                      <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-emerald-800" />{req.city?.name || 'Location not specified'}</span>
+                      <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-emerald-800" />{req.customerTrust?.firstName || 'Verified customer'}{req.customerTrust?.jobsPostedCount ? ` · ${req.customerTrust.jobsPostedCount} requests` : ''}</span>
+                      {req.preferredDate && <span className="inline-flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-emerald-800" />{new Date(req.preferredDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col justify-between gap-4 border-t border-neutral-100 pt-4 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
+                    <div>
+                      <span className="text-xs font-semibold text-neutral-500">Customer&apos;s budget</span>
+                      <p className="mt-1 text-xl font-black tabular-nums text-[#10241e]">
+                        {req.budgetType === 'RANGE' && req.budgetMax ? `₹${req.budgetMin.toLocaleString('en-IN')} – ₹${req.budgetMax.toLocaleString('en-IN')}` : `₹${req.budgetMin.toLocaleString('en-IN')}`}
+                      </p>
+                      {isProfessional && <p className="mt-2 text-xs text-neutral-500">Apply for <strong className="text-neutral-800">{reqCost} credits</strong>{currentBalance > 0 && <span> · {Math.max(0, remainingAfter)} left after</span>}</p>}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Link to={`/requirements/${req.id}`} className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#d5e1d8] px-3 text-sm font-bold text-[#29463a] transition hover:bg-[#edf4ef]">View details</Link>
+                      <button type="button" onClick={() => handleOpenQuoteModal(req)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#108a54] px-3 text-sm font-extrabold text-white transition hover:bg-[#087443] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2">
+                        <Send className="h-4 w-4" /> {isProfessional ? 'Send a proposal' : isAuthenticated ? 'Join to apply' : 'Sign in to apply'}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </article>
             );
           })}
+              </div>
+            )}
+          </main>
         </div>
-      )}
+      </div>
 
       {/* QUOTATION SUBMISSION MODAL */}
       {isModalOpen && selectedRequirement && (

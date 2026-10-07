@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Hero } from '../components/Hero';
 import { TrustBadges } from '../components/TrustBadges';
 import { CategoryGrid } from '../components/CategoryGrid';
@@ -11,12 +11,14 @@ import {
   MessagesSquare,
   UserRoundCheck,
   Route,
+  Search,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 
 export const HomePage: React.FC = () => {
   const { openAuthModal } = useAuth();
+  const [workflowRole, setWorkflowRole] = useState<'CUSTOMER' | 'PROFESSIONAL'>('CUSTOMER');
 
   // Strictly Delhi NCR customer reviews with authentic Indian avatars
   const ncrCustomerReviews = [
@@ -104,20 +106,28 @@ export const HomePage: React.FC = () => {
                 <Route className="h-3.5 w-3.5" /> The Vaziro service journey
               </span>
               <h2 className="mt-4 text-3xl font-black leading-tight tracking-tight text-[#10241e] sm:text-4xl">
-                From first request to finished work.
+                {workflowRole === 'CUSTOMER' ? 'From first request to finished work.' : 'From your profile to paid work.'}
               </h2>
               <p className="mt-3 max-w-xl text-sm leading-6 text-[#52665d] sm:text-base">
-                One clear process for households and independent professionals. You stay in control at every step.
+                {workflowRole === 'CUSTOMER'
+                  ? 'Post a service need, compare independent pros, choose your fit, and stay in control through completion.'
+                  : 'Build a trusted profile, find service work, send a clear proposal, and manage delivery from one place.'}
               </p>
             </div>
-            <Link to="/workflow-preview" className="inline-flex min-h-11 items-center gap-2 self-start rounded-xl border border-[#cad9ce] bg-white px-4 text-sm font-bold text-[#29463a] transition hover:border-emerald-700 hover:text-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 md:self-auto">
-              Explore both workflows <ArrowRight className="h-4 w-4" />
-            </Link>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="inline-flex rounded-xl border border-[#cad9ce] bg-white p-1" role="group" aria-label="Choose a marketplace workflow">
+                <button type="button" onClick={() => setWorkflowRole('CUSTOMER')} aria-pressed={workflowRole === 'CUSTOMER'} className={`min-h-10 rounded-lg px-3 text-xs font-extrabold transition ${workflowRole === 'CUSTOMER' ? 'bg-[#10241e] text-white' : 'text-[#52665d] hover:bg-[#f0f5f0]'}`}>I&apos;m hiring</button>
+                <button type="button" onClick={() => setWorkflowRole('PROFESSIONAL')} aria-pressed={workflowRole === 'PROFESSIONAL'} className={`min-h-10 rounded-lg px-3 text-xs font-extrabold transition ${workflowRole === 'PROFESSIONAL' ? 'bg-[#10241e] text-white' : 'text-[#52665d] hover:bg-[#f0f5f0]'}`}>I&apos;m finding work</button>
+              </div>
+              <Link to="/workflow-preview" className="inline-flex min-h-11 items-center gap-2 self-start rounded-xl border border-[#cad9ce] bg-white px-4 text-sm font-bold text-[#29463a] transition hover:border-emerald-700 hover:text-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 sm:self-auto">
+                Full workflow <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
 
           <div className="relative grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div className="pointer-events-none absolute left-[12%] right-[12%] top-10 hidden h-px bg-[#cbd9ce] xl:block" />
-            {[
+            {(workflowRole === 'CUSTOMER' ? [
               {
                 title: 'Tell us what you need',
                 body: 'Describe the service, preferred timing and Delhi NCR location. Set a budget that works for you.',
@@ -146,7 +156,36 @@ export const HomePage: React.FC = () => {
                 href: '/dashboard',
                 icon: ShieldCheck,
               },
-            ].map((step, index) => {
+            ] : [
+              {
+                title: 'Build your professional profile',
+                body: 'Show customers your services, experience and credentials. A verified profile helps customers evaluate your proposal.',
+                action: 'Edit your profile',
+                href: '/profile',
+                icon: UserRoundCheck,
+              },
+              {
+                title: 'Find work that fits',
+                body: 'Browse customer requests by service, review scope and budget, and choose opportunities that match your schedule.',
+                action: 'Find work',
+                href: '/requirements',
+                icon: Search,
+              },
+              {
+                title: 'Send a clear proposal',
+                body: 'Set a price and timeline, explain your approach, and see the credit cost before you submit.',
+                action: 'Browse requests',
+                href: '/requirements',
+                icon: MessagesSquare,
+              },
+              {
+                title: 'Deliver and track the work',
+                body: 'Keep customers updated at each stage. With payment protection, customers approve completion and release escrow.',
+                action: 'View your dashboard',
+                href: '/dashboard',
+                icon: ShieldCheck,
+              },
+            ]).map((step, index) => {
               const Icon = step.icon;
               return (
                 <article key={step.title} className="group relative rounded-[1.5rem] border border-[#dce6df] bg-white p-5 shadow-[0_16px_40px_-34px_rgba(16,36,30,0.6)] transition duration-200 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-[0_22px_46px_-34px_rgba(16,36,30,0.55)] sm:p-6">
