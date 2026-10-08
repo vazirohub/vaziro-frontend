@@ -41,18 +41,27 @@ export const DashboardPage: React.FC = () => {
   const [strength, setStrength] = useState<ProfileStrengthResult | null>(null);
   const [trust, setTrust] = useState<TrustScoreResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [verificationSuccess, setVerificationSuccess] = useState(false);
 
   const isProfessional = user?.roles?.includes('PROFESSIONAL');
   const showJobsView = Boolean(isProfessional && searchParams.get('tab') === 'jobs');
+  const showRequestsView = Boolean(!isProfessional && searchParams.get('tab') === 'requests');
 
   const loadDashboardData = async () => {
     try {
       setLoading(true);
+      setDashboardError(null);
       const promises: Promise<any>[] = [
-        api.getMyRequirements().catch(() => ({ data: { data: [] } })),
-        api.getMyJobs().catch(() => ({ data: { data: [] } })),
+        api.getMyRequirements().catch(() => {
+          setDashboardError('Your posted requests could not be loaded. Retry to check again.');
+          return null;
+        }),
+        api.getMyJobs().catch(() => {
+          setDashboardError('Some dashboard information could not be loaded. Retry to check again.');
+          return null;
+        }),
       ];
 
       if (isProfessional) {
@@ -88,7 +97,7 @@ export const DashboardPage: React.FC = () => {
       if (trustRes?.data?.data) setTrust(trustRes.data.data);
       if (quotationsRes?.data?.data) setQuotations(quotationsRes.data.data);
     } catch (err) {
-      console.error(err);
+      setDashboardError('Your dashboard data could not be loaded. Check your connection and retry.');
     } finally {
       setLoading(false);
     }
@@ -157,9 +166,11 @@ export const DashboardPage: React.FC = () => {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 4);
   const visibleJobs = showJobsView ? jobs : jobs.slice(0, 2);
+  const visibleRequirements = showRequestsView ? requirements : requirements.slice(0, 2);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+      {dashboardError && <div role="alert" className="mb-5 flex flex-col gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900 sm:flex-row sm:items-center sm:justify-between"><span>{dashboardError}</span><button type="button" onClick={loadDashboardData} disabled={loading} className="min-h-11 self-start font-semibold underline disabled:opacity-50 sm:self-auto">{loading ? 'Retrying...' : 'Retry'}</button></div>}
       {isProfessional && !showJobsView ? (
         <section className="relative isolate mb-6 overflow-hidden rounded-[2rem] bg-[#10241e] px-5 py-6 text-white shadow-xl sm:px-8 sm:py-8 lg:px-10">
           <div className="pointer-events-none absolute -right-20 -top-32 -z-10 h-80 w-80 rounded-full bg-emerald-400/15 blur-3xl" />
@@ -224,6 +235,17 @@ export const DashboardPage: React.FC = () => {
             Find more work <ArrowRight className="h-4 w-4" />
           </Link>
         </section>
+      ) : showRequestsView ? (
+        <section className="mb-6 flex flex-col gap-4 rounded-2xl border border-[#dce6df] bg-[#f1f4e9] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#718044]">Customer workspace</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[#29382e] sm:text-3xl">My requests</h1>
+            <p className="mt-1 text-sm text-[#68716b]">See your posted services, incoming proposals, and each request’s current status.</p>
+          </div>
+          <Link to="/post-requirement" className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-md bg-[#203c32] px-4 text-sm font-semibold text-white transition hover:bg-[#2d5144] sm:self-auto">
+            Post another request <ArrowRight className="h-4 w-4" />
+          </Link>
+        </section>
       ) : (
         <div className="mb-6 flex flex-col items-start justify-between gap-5 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:p-7">
           <div className="flex items-center gap-3.5">
@@ -255,7 +277,7 @@ export const DashboardPage: React.FC = () => {
         <ProfileVerificationCard className="mb-6" />
       )}
 
-      {!showJobsView && <MarketplaceWorkflow
+      {!showJobsView && !showRequestsView && <MarketplaceWorkflow
         isProfessional={Boolean(isProfessional)}
         isVerified={Boolean(user.professionalProfile?.isVerified || verificationSuccess)}
         requirements={requirements}
@@ -436,7 +458,7 @@ export const DashboardPage: React.FC = () => {
       )}
 
       {/* Active Service Contracts (Jobs) */}
-      <div className="mb-10">
+      {!showRequestsView && <div className="mb-10">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-bold text-gray-900">{showJobsView ? `My Jobs (${jobs.length})` : `Recent Service Contracts${jobs.length ? ` (${jobs.length})` : ''}`}</h2>
@@ -481,28 +503,38 @@ export const DashboardPage: React.FC = () => {
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Posted Requirements List (Customer View) */}
       {!isProfessional && (
         <div className="mb-10">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-bold text-gray-900">My Posted Requirements ({requirements.length})</h2>
-              <p className="text-xs text-gray-500">View incoming quotation proposals and hire verified professionals</p>
+              <h2 className="text-lg font-bold text-gray-900">{showRequestsView ? `My Posted Requests (${requirements.length})` : `Recent Requests${requirements.length ? ` (${requirements.length})` : ''}`}</h2>
+              <p className="text-xs text-gray-500">Open a request to review its proposals and next steps.</p>
             </div>
-            <Link to="/post-requirement" className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1">
-              <PlusCircle className="w-3.5 h-3.5" /> Post Another
-            </Link>
+            <div className="flex items-center gap-3">
+              {!showRequestsView && requirements.length > 0 && <Link to="/dashboard?tab=requests" className="inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-emerald-800 hover:underline">All requests <ArrowRight className="h-4 w-4" /></Link>}
+              <Link to="/post-requirement" className="inline-flex min-h-10 items-center gap-1 text-xs font-bold text-emerald-700 hover:underline">
+                <PlusCircle className="w-3.5 h-3.5" /> Post Another
+              </Link>
+            </div>
           </div>
 
-          {requirements.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center text-xs text-gray-400">
-              You haven't posted any requirements yet. Click "Post Requirement" to receive quotes.
+          {loading ? (
+            <div role="status" className="rounded-2xl border border-[#e7e8df] bg-white p-6 text-sm text-neutral-600">Loading your requests...</div>
+          ) : dashboardError ? (
+            <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-6 text-sm text-red-900">Your requests could not be loaded. Use Retry above to try again.</div>
+          ) : requirements.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-[#dce6df] bg-white p-8 text-center">
+              <FileText className="mx-auto h-8 w-8 text-[#718044]" />
+              <h3 className="mt-3 text-base font-semibold text-[#344137]">No requests posted yet</h3>
+              <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-[#737c73]">Create a request to start receiving proposals from professionals.</p>
+              <Link to="/post-requirement" className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#203c32] px-4 text-sm font-semibold text-white hover:bg-[#2d5144]">Post a request <ArrowRight className="h-4 w-4" /></Link>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {requirements.map((req) => (
+              {visibleRequirements.map((req) => (
                 <div key={req.id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between hover:border-gray-300 transition">
                   <div>
                     <div className="flex items-center justify-between mb-2">

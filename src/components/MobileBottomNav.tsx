@@ -146,15 +146,15 @@ export const MobileBottomNav: React.FC = () => {
             </Link>
 
             <Link
-              to="/dashboard"
-              aria-current={isActive('/dashboard') ? 'page' : undefined}
+              to="/dashboard?tab=requests"
+              aria-current={location.pathname === '/dashboard' && location.search.includes('tab=requests') ? 'page' : undefined}
               className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
-                isActive('/dashboard')
+                location.pathname === '/dashboard' && location.search.includes('tab=requests')
                   ? 'text-[#355e3e] font-semibold'
                   : 'text-[#737c73] hover:text-[#203c32] font-medium'
               }`}
             >
-              {isActive('/dashboard') && (
+              {location.pathname === '/dashboard' && location.search.includes('tab=requests') && (
                 <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
               )}
               <FileText className="w-5 h-5 mb-0.5" />

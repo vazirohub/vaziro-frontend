@@ -514,6 +514,7 @@ export const RequirementDetailPage: React.FC = () => {
               </p>
             </div>
             <div className="flex flex-col gap-2 self-start sm:flex-row sm:self-auto">
+              <Link to="/dashboard?tab=requests" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md border border-[#d8ddd3] bg-white px-4 text-sm font-semibold text-[#40583d] transition hover:bg-[#f7f7f1]">My requests</Link>
               {!isHired && quotations.length > 0 && <a href="#received-quotations" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-[#203c32] px-4 text-sm font-semibold text-white transition hover:bg-[#2d5144]">Review proposals <ArrowRight className="h-4 w-4" /></a>}
               {isHired && relatedJob && <Link to={`/jobs/${relatedJob.id}`} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-[#203c32] px-4 text-sm font-semibold text-white transition hover:bg-[#2d5144]">Open service tracker <ArrowRight className="h-4 w-4" /></Link>}
               <button type="button" onClick={() => fetchDetails(true)} disabled={refreshing || loading} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md border border-[#d8ddd3] bg-white px-4 text-sm font-semibold text-[#40583d] transition hover:bg-[#f7f7f1] disabled:cursor-wait disabled:opacity-60">
