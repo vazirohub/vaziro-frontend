@@ -80,7 +80,7 @@ export const Hero: React.FC = () => {
       <div className="w-full max-w-[1480px] mx-auto px-0 sm:px-6 lg:px-8">
         
         {/* ================= HERO VIDEO BANNER CARD ================= */}
-        <div className="relative rounded-b-[2rem] sm:rounded-[2.25rem] lg:rounded-[2.5rem] overflow-hidden bg-neutral-950 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5)] min-h-[540px] h-[calc(100svh-65px)] max-h-[720px] lg:h-auto lg:min-h-[540px] flex flex-col justify-end lg:justify-center">
+        <div className="relative rounded-none sm:rounded-[2.25rem] lg:rounded-[2.5rem] overflow-hidden bg-neutral-950 shadow-none sm:shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5)] min-h-[540px] h-[calc(100svh-65px)] max-h-[720px] lg:h-auto lg:min-h-[540px] flex flex-col justify-end lg:justify-center">
           
           {/* Autoplay Looping Background Video */}
           <video
