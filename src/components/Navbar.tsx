@@ -27,6 +27,7 @@ import {
   Baby,
   Activity,
   Search,
+  Home,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -928,9 +929,20 @@ export const Navbar: React.FC = () => {
                       onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-3 p-3 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold text-xs transition"
                     >
-                      <Briefcase className="w-4 h-4 text-neutral-500" />
-                      <span>Dashboard & Active Jobs</span>
+                      <Home className="w-4 h-4 text-neutral-500" />
+                      <span>{isProfessional ? 'Overview' : 'Dashboard & Active Jobs'}</span>
                     </Link>
+
+                    {isProfessional && (
+                      <Link
+                        to="/dashboard?tab=jobs"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 p-3 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold text-xs transition"
+                      >
+                        <Briefcase className="w-4 h-4 text-neutral-500" />
+                        <span>My Jobs</span>
+                      </Link>
+                    )}
 
                     <Link
                       to="/chat"

@@ -45,19 +45,19 @@ export const MobileBottomNav: React.FC = () => {
           // Professional Navigation
           <>
             <Link
-              to="/dashboard"
-              aria-current={isActive('/dashboard') && !location.search.includes('tab=jobs') ? 'page' : undefined}
+              to="/"
+              aria-current={isActive('/') ? 'page' : undefined}
               className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
-                isActive('/dashboard') && !location.search.includes('tab=jobs')
+                isActive('/')
                   ? 'text-[#355e3e] font-semibold'
                   : 'text-[#737c73] hover:text-[#203c32] font-medium'
               }`}
             >
-              {isActive('/dashboard') && !location.search.includes('tab=jobs') && (
+              {isActive('/') && (
                 <span className="absolute top-0 w-8 h-0.5 rounded-full bg-[#8bb647]" />
               )}
               <Home className="w-5 h-5 mb-0.5" />
-              <span>Overview</span>
+              <span>Home</span>
             </Link>
 
             <Link
