@@ -58,7 +58,7 @@ export const BrowseRequirementsPage: React.FC = () => {
     try {
       setLoading(true);
       setLoadError(null);
-      const params: any = {};
+      const params: any = { status: 'ALL' };
       if (selectedCategory) params.categoryId = selectedCategory;
 
       const [reqRes, catRes] = await Promise.all([
@@ -105,6 +105,23 @@ export const BrowseRequirementsPage: React.FC = () => {
   useEffect(() => {
     fetchRequirements();
   }, [selectedCategory]);
+
+  useEffect(() => {
+    const q = searchParams.get('q') || '';
+    const city = searchParams.get('city') || '';
+    const catSlug = searchParams.get('category');
+    if (q) setSearchText(q);
+    if (city) setSearchCity(city);
+    if (catSlug && categories.length > 0) {
+      const match = categories.find((c) => c.slug === catSlug);
+      if (match && match.id !== selectedCategory) {
+        setSelectedCategory(match.id);
+      }
+    } else if (!catSlug && selectedCategory) {
+      // If user navigated back to all requirements
+      setSelectedCategory('');
+    }
+  }, [searchParams, categories]);
 
   useEffect(() => {
     fetchWallet();
@@ -184,7 +201,8 @@ export const BrowseRequirementsPage: React.FC = () => {
     const upperBudget = budgetTo ? Number(budgetTo) : null;
     const matchesBudget = (lowerBudget === null || (req.budgetMax || req.budgetMin) >= lowerBudget) && (upperBudget === null || req.budgetMin <= upperBudget);
     const matchesSaved = activeTab !== 'SAVED' || savedRequirementIds.includes(req.id);
-    return (!normalizedSearch || searchableText.includes(normalizedSearch)) && (!normalizedCity || cityName.includes(normalizedCity)) && matchesBudget && matchesSaved;
+    const matchesCity = !normalizedCity || !cityName || cityName.includes(normalizedCity) || normalizedCity.includes(cityName);
+    return (!normalizedSearch || searchableText.includes(normalizedSearch)) && matchesCity && matchesBudget && matchesSaved;
   });
   const visibleRequirements = [...matchingRequirements].sort((a, b) => {
     if (sortBy === 'LOWEST_BUDGET') return a.budgetMin - b.budgetMin;
