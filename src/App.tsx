@@ -35,9 +35,9 @@ export const App: React.FC = () => {
     <AuthProvider>
       <Router>
         <ScrollToTop />
-        <div className="min-h-screen min-h-[100dvh] flex flex-col text-slate-900 selection:bg-emerald-500 selection:text-white">
+        <div className="min-h-screen min-h-[100dvh] flex flex-col overflow-x-clip text-[#1e2824] selection:bg-[#c9f27d] selection:text-[#183e33]">
           <Navbar />
-          <main className="flex-1 bg-slate-50 pb-16 md:pb-0">
+          <main className="min-w-0 flex-1 bg-[#fcfbf8] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/workflow-preview" element={<WorkflowPreviewPage />} />

@@ -6,7 +6,23 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Geist', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        display: ['Geist', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+      },
+      borderRadius: {
+        card: '0.625rem',
+      },
       colors: {
+        vaziro: {
+          paper: '#fcfbf8',
+          ink: '#1e2824',
+          muted: '#68716b',
+          line: '#e7e8df',
+          leaf: '#5e7b4c',
+          deep: '#183e33',
+          lime: '#c9f27d',
+        },
         brand: {
           50: '#f0f7ff',
           100: '#e0effe',

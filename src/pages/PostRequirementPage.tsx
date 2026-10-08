@@ -656,7 +656,7 @@ export const PostRequirementPage: React.FC = () => {
           {[
             { number: '01', label: 'Service' },
             { number: '02', label: 'Details' },
-            { number: '03', label: 'Budget & timing' },
+            { number: '03', label: 'Budget' },
           ].map((item, index) => {
             const stepNumber = index + 1;
             const active = step === stepNumber;
@@ -671,7 +671,7 @@ export const PostRequirementPage: React.FC = () => {
                   className={`flex min-h-12 w-full items-center gap-2 border-t-2 px-1 pt-2 text-left transition sm:gap-3 ${active ? 'border-[#719453] text-[#344b35]' : complete ? 'border-[#b7c79e] text-[#607653]' : 'border-[#e7e8df] text-[#9a9f98]'} disabled:cursor-not-allowed`}
                 >
                   <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${active ? 'bg-[#203c32] text-white' : complete ? 'bg-[#e9efdd] text-[#668044]' : 'bg-[#f1f2e9] text-[#899087]'}`}>{complete ? <CheckCircle2 className="h-4 w-4" /> : item.number}</span>
-                  <span className="text-[11px] font-semibold sm:text-xs">{item.label}</span>
+                  <span className="min-w-0 truncate text-[11px] font-semibold sm:text-xs">{item.label}</span>
                 </button>
               </li>
             );

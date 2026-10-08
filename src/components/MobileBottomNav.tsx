@@ -34,10 +34,10 @@ export const MobileBottomNav: React.FC = () => {
   return (
     <nav
       aria-label="Mobile Navigation"
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-neutral-200/80 md:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.05)]"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#e7e8df] bg-[#fffefa]/95 shadow-[0_-4px_20px_rgba(24,62,51,0.07)] backdrop-blur-xl md:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div className="grid grid-cols-5 h-16 max-w-lg mx-auto px-2">
+      <div className="mx-auto grid h-16 max-w-lg grid-cols-5 px-2">
         {isProfessional ? (
           // Professional Navigation
           <>
@@ -259,4 +259,3 @@ export const MobileBottomNav: React.FC = () => {
 };
 
 export default MobileBottomNav;
-
