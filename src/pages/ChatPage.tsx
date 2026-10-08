@@ -481,10 +481,10 @@ export const ChatPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
       {/* Container Card */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col md:flex-row h-[780px]">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col md:flex-row h-[min(780px,calc(100dvh-10rem))] min-h-[520px]">
         {/* ================= THREADS SIDEBAR ================= */}
         <div
-          className={`w-full md:w-84 lg:w-96 border-r border-gray-200 flex flex-col shrink-0 ${
+          className={`w-full md:w-[300px] lg:w-96 border-r border-gray-200 flex flex-col shrink-0 ${
             selectedThread ? 'hidden md:flex' : 'flex'
           }`}
         >

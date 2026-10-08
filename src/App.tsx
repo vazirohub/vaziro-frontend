@@ -37,7 +37,7 @@ export const App: React.FC = () => {
         <ScrollToTop />
         <div className="min-h-screen min-h-[100dvh] flex flex-col overflow-x-clip text-[#1e2824] selection:bg-[#c9f27d] selection:text-[#183e33]">
           <Navbar />
-          <main className="min-w-0 flex-1 bg-[#fcfbf8] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+          <main className="min-w-0 flex-1 bg-[#fcfbf8] pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/workflow-preview" element={<WorkflowPreviewPage />} />

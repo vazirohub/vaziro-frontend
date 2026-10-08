@@ -34,7 +34,7 @@ export const MobileBottomNav: React.FC = () => {
   return (
     <nav
       aria-label="Mobile Navigation"
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#e7e8df] bg-[#fffefa]/95 shadow-[0_-4px_20px_rgba(24,62,51,0.07)] backdrop-blur-xl md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#e7e8df] bg-[#fffefa]/95 shadow-[0_-4px_20px_rgba(24,62,51,0.07)] backdrop-blur-xl lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="mx-auto grid h-16 max-w-lg grid-cols-5 px-2">

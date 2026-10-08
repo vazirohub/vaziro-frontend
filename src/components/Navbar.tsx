@@ -235,7 +235,7 @@ export const Navbar: React.FC = () => {
             </div>
 
             {/* Center: Desktop Navigation Links */}
-            <nav aria-label="Main navigation" className="hidden md:flex h-full items-center gap-1 lg:gap-2 text-[13px] font-medium text-[#444d47]">
+            <nav aria-label="Main navigation" className="hidden lg:flex h-full items-center gap-1 lg:gap-2 text-[13px] font-medium text-[#444d47]">
               {/* Explore Categories Mega Dropdown */}
               <div className="relative" ref={categoriesRef}>
                 <button
@@ -379,13 +379,13 @@ export const Navbar: React.FC = () => {
               {(!isProfessional || isAdmin) ? (
                 <Link
                   to="/post-requirement"
-                  className="hidden min-h-10 md:inline-flex items-center gap-2 rounded-md bg-[#203c32] px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-[#2d5144]"
+                  className="hidden min-h-10 lg:inline-flex items-center gap-2 rounded-md bg-[#203c32] px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-[#2d5144]"
                 >
                   <PlusCircle className="w-3.5 h-3.5 text-[#c9f27d]" />
                   <span>Post a request</span>
                 </Link>
               ) : (
-                <Link to="/requirements" className="hidden min-h-10 md:inline-flex items-center gap-2 rounded-md bg-[#c9f27d] px-4 text-xs font-bold text-[#1c3227] transition hover:bg-[#d7f8a0]">
+                <Link to="/requirements" className="hidden min-h-10 lg:inline-flex items-center gap-2 rounded-md bg-[#c9f27d] px-4 text-xs font-bold text-[#1c3227] transition hover:bg-[#d7f8a0]">
                   <Search className="h-3.5 w-3.5" /> Find work
                 </Link>
               )}
@@ -510,7 +510,7 @@ export const Navbar: React.FC = () => {
                   )}
 
                   {/* Desktop Profile Dropdown Trigger */}
-                  <div className="relative hidden md:block" ref={dropdownRef}>
+                  <div className="relative hidden lg:block" ref={dropdownRef}>
                     <button
                       type="button"
                       onClick={() => {
@@ -647,7 +647,7 @@ export const Navbar: React.FC = () => {
                 </div>
               ) : (
                 /* Visitor / Guest Desktop Action Buttons */
-                <div className="hidden md:flex items-center gap-1">
+                <div className="hidden lg:flex items-center gap-1">
                   {/* Highlighted Become a Pro Button */}
                   <button
                     type="button"
@@ -662,7 +662,7 @@ export const Navbar: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => openAuthModal('CUSTOMER', undefined, 'LOGIN')}
-                    className="hidden min-h-10 md:inline-flex items-center gap-2 rounded-md border border-[#d8ddd3] bg-white px-4 text-xs font-semibold text-[#344137] transition hover:bg-[#f7f7f1] cursor-pointer"
+                    className="hidden min-h-10 lg:inline-flex items-center gap-2 rounded-md border border-[#d8ddd3] bg-white px-4 text-xs font-semibold text-[#344137] transition hover:bg-[#f7f7f1] cursor-pointer"
                   >
                     <span>Sign In</span>
                   </button>
@@ -673,7 +673,7 @@ export const Navbar: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden flex h-11 w-11 items-center justify-center rounded-md border border-[#e7e8df] bg-white text-[#344137] transition hover:bg-[#f1f2e9] cursor-pointer"
+                className="lg:hidden flex h-11 w-11 items-center justify-center rounded-md border border-[#e7e8df] bg-white text-[#344137] transition hover:bg-[#f1f2e9] cursor-pointer"
                 aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
                 aria-expanded={mobileMenuOpen}
               >
@@ -688,7 +688,7 @@ export const Navbar: React.FC = () => {
       {/* MOBILE FULL-SCREEN SLIDE-OVER DRAWER MENU                    */}
       {/* ============================================================ */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 lg:hidden animate-in fade-in duration-200">
           {/* Backdrop Overlay */}
           <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"

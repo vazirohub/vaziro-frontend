@@ -641,7 +641,7 @@ export const JobTrackerPage: React.FC = () => {
         </div>
 
         {/* Work Step Progression Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {WORK_STAGES.map((step, idx) => {
             const isCompleted = workStageIndex > idx || currentWorkStatus === 'WORK_COMPLETED';
             const isCurrent = currentWorkStatus === step.key;
@@ -767,7 +767,7 @@ export const JobTrackerPage: React.FC = () => {
         </div>
 
         {/* Payment Stage Progression */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
           {PAYMENT_STAGES.map((pStep, idx) => {
             const isCompleted = paymentStageIndex > idx || currentPaymentStatus === 'RELEASED';
             const isCurrent = currentPaymentStatus === pStep.key;
