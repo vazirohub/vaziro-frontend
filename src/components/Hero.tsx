@@ -33,16 +33,16 @@ export const Hero: React.FC = () => {
           <div className="lg:col-span-7 space-y-6 text-left">
             
             {/* Urban Company Style Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-[#10241e] tracking-tight leading-[1.08]">
-              Delhi NCR’s Verified{' '}
-              <span className="block text-emerald-800">
-                Home & Personal Care Experts.
+            <h1 className="text-4xl sm:text-5xl lg:text-[4.35rem] font-semibold text-[#24352b] tracking-[-0.065em] leading-[1.02]">
+              Find the right help.<br />
+              <span className="font-normal text-[#5e7b4c]" style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: 'italic', letterSpacing: '-0.04em' }}>
+                Feel good about it.
               </span>
             </h1>
 
             {/* Subtitle */}
             <p className="text-base sm:text-lg text-[#52665d] font-medium leading-relaxed max-w-xl">
-              Post your service requirement across Delhi NCR, name your budget in ₹ INR, and compare transparent quotes from background-checked physiotherapists, nurses, cooks, trainers, and tutors.
+              Find background-checked home and personal care professionals, compare transparent quotations and choose the right person for your family.
             </p>
 
             {/* Search Bar with Service Zone Dropdown inside the Get Quotes box */}
@@ -50,11 +50,11 @@ export const Hero: React.FC = () => {
               <div className="bg-white p-2 sm:p-2.5 rounded-2xl border border-[#cfdbd2] shadow-[0_20px_50px_-32px_rgba(16,36,30,0.55)] flex flex-col sm:flex-row items-center gap-2 max-w-xl">
                 
                 {/* Select Your NCR Service Zone Dropdown */}
-                <div className="flex items-center gap-2 px-3 py-1.5 border-b sm:border-b-0 sm:border-r border-neutral-200 w-full sm:w-auto text-xs font-bold text-neutral-800 shrink-0">
+                  <div className="flex items-center gap-2 px-3 py-1.5 border-b sm:border-b-0 sm:border-r border-neutral-200 w-full sm:w-auto text-xs font-bold text-neutral-800 shrink-0">
                   <MapPin className="w-4 h-4 text-black shrink-0" />
                   <div className="flex flex-col text-left">
                     <span className="text-[9px] uppercase tracking-wider text-neutral-400 font-bold leading-none mb-0.5">
-                      Select Your NCR Service Zone:
+                      Your city or service area
                     </span>
                     <select
                       value={selectedCity}
@@ -73,12 +73,12 @@ export const Hero: React.FC = () => {
 
                 {/* Search Input */}
                 <div className="flex-1 flex items-center gap-2 px-3 w-full">
-                  <Search className="w-4 h-4 text-neutral-400 shrink-0" />
+                    <Search className="w-4 h-4 text-neutral-400 shrink-0" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search Cook, Physiotherapist, Nurse, Tutor..."
+                    placeholder="What kind of help do you need?"
                     className="w-full text-xs font-semibold text-black placeholder:text-neutral-400 focus:outline-none py-1.5"
                   />
                 </div>
@@ -86,7 +86,7 @@ export const Hero: React.FC = () => {
                 {/* Get Quotes / Find Jobs Button */}
                 <button
                   type="submit"
-                  className="w-full sm:w-auto bg-[#10241e] hover:bg-emerald-900 text-white text-xs font-bold px-6 py-3 rounded-xl transition flex items-center justify-center gap-1.5 shrink-0 shadow-md cursor-pointer"
+                  className="w-full sm:w-auto bg-[#c9f27d] hover:bg-[#d7f8a0] text-[#1c3227] text-xs font-bold px-6 py-3 rounded-xl transition flex items-center justify-center gap-1.5 shrink-0 shadow-sm cursor-pointer"
                 >
                   <span>{isProfessional && !isAdmin ? 'Browse Jobs' : 'Get Quotes'}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -98,15 +98,15 @@ export const Hero: React.FC = () => {
             <div className="pt-2 flex flex-wrap items-center gap-y-2 gap-x-6 text-xs font-semibold text-neutral-600">
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-                <span>₹0 Commission to Pros</span>
+                <span>People-first, always</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-                <span>6% Escrow Protection</span>
+                <span>You choose who to hire</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-700" />
-                <span>Privacy-Masked Telephony</span>
+                <span>Free to post a requirement</span>
               </div>
             </div>
 
@@ -124,7 +124,7 @@ export const Hero: React.FC = () => {
             <div className="relative mx-auto max-w-md lg:max-w-none">
               
               {/* Main Real Indian Healthcare & Caregiver Photo */}
-              <div className="relative rounded-[2rem] overflow-hidden shadow-[0_36px_80px_-38px_rgba(16,36,30,0.65)] border-[7px] border-white aspect-[4/5] bg-neutral-100">
+              <div className="relative rounded-[2rem] overflow-hidden shadow-[0_36px_80px_-38px_rgba(16,36,30,0.45)] border-[7px] border-white aspect-[4/5] bg-neutral-100">
                 <img
                   src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=1000&q=80"
                   alt="Verified Indian Healthcare Specialist"
@@ -137,10 +137,10 @@ export const Hero: React.FC = () => {
                 <div className="absolute bottom-5 left-5 right-5 text-white">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                    <span className="text-[11px] font-black uppercase tracking-wider text-emerald-300">Live in Delhi NCR</span>
+                    <span className="text-[11px] font-black uppercase tracking-wider text-emerald-300">Good people. Good work.</span>
                   </div>
                   <div className="text-base font-black mt-0.5">Dr. Neeraj Sharma, BPT</div>
-                  <div className="text-xs text-neutral-300">Certified Senior Rehabilitation • 8 Yrs Exp • South Delhi</div>
+                    <div className="text-xs text-neutral-300">A better kind of local marketplace</div>
                 </div>
               </div>
 
@@ -151,10 +151,10 @@ export const Hero: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-xs font-black text-black flex items-center gap-1">
-                    <span>4.96 / 5.0</span>
-                    <span className="text-neutral-400 font-normal">NCR Rating</span>
+                    <span>Clear quotations</span>
+                    <span className="text-neutral-400 font-normal">Compare with confidence</span>
                   </div>
-                  <div className="text-[10px] text-neutral-500 font-medium">Over 12,500+ Verified NCR Jobs</div>
+                  <div className="text-[10px] text-neutral-500 font-medium">Choose the right fit for you</div>
                 </div>
               </div>
 
@@ -164,15 +164,15 @@ export const Hero: React.FC = () => {
                   <ShieldCheck className="w-5 h-5 text-emerald-400" />
                 </div>
                 <div>
-                  <div className="text-xs font-black text-black">DigiLocker Verified</div>
-                  <div className="text-[10px] text-neutral-500 font-medium">Aadhaar & Police KYC Checked</div>
+                  <div className="text-xs font-black text-black">People come first</div>
+                  <div className="text-[10px] text-neutral-500 font-medium">Every match starts with you</div>
                 </div>
               </div>
 
               {/* Floating Speed Badge */}
               <div className="hidden sm:flex absolute top-1/2 -right-6 transform -translate-y-1/2 bg-black text-white p-3 rounded-2xl shadow-xl border border-neutral-800 items-center gap-2.5">
                 <Clock className="w-4 h-4 text-emerald-400" />
-                <div className="text-[11px] font-bold">Quotes in &lt; 15 mins</div>
+                <div className="text-[11px] font-bold">Fairness for families</div>
               </div>
             </div>
           </div>

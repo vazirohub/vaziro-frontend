@@ -125,77 +125,63 @@ export const HomePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="relative grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="pointer-events-none absolute left-[12%] right-[12%] top-10 hidden h-px bg-[#cbd9ce] xl:block" />
+          <div className="relative grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="pointer-events-none absolute left-[16%] right-[16%] top-10 hidden h-px bg-[#cbd9ce] md:block" />
             {(workflowRole === 'CUSTOMER' ? [
               {
                 title: 'Tell us what you need',
-                body: 'Describe the service, preferred timing and Delhi NCR location. Set a budget that works for you.',
+                body: 'Share a few details, your location and budget. Posting a requirement is always free.',
                 action: 'Post a request',
                 href: '/post-requirement',
                 icon: ClipboardList,
               },
               {
-                title: 'Compare real proposals',
-                body: 'Review the professional, their verification, approach, quote and estimated timeline in one place.',
+                title: 'Compare your options',
+                body: 'Get quotations from relevant professionals. Review their experience, availability and approach.',
                 action: 'Go to dashboard',
                 href: '/dashboard',
                 icon: MessagesSquare,
               },
               {
-                title: 'Choose who to hire',
-                body: 'Shortlist the right fit. Add optional payment protection when you create the service contract.',
-                action: 'Review your requests',
-                href: '/dashboard',
+                title: 'Choose with confidence',
+                body: 'Talk through the details and hire the person who feels right for you.',
+                action: 'Explore professionals',
+                href: '/requirements',
                 icon: UserRoundCheck,
-              },
-              {
-                title: 'Track work to completion',
-                body: 'Follow service updates, inspect finished work and control protected payment release.',
-                action: 'Track your service',
-                href: '/dashboard',
-                icon: ShieldCheck,
               },
             ] : [
               {
-                title: 'Build your professional profile',
-                body: 'Show customers your services, experience and credentials. A verified profile helps customers evaluate your proposal.',
+                title: 'Tell your story',
+                body: 'Build a profile that shows families your services, experience and credentials.',
                 action: 'Edit your profile',
                 href: '/profile',
                 icon: UserRoundCheck,
               },
               {
-                title: 'Find work that fits',
-                body: 'Browse customer requests by service, review scope and budget, and choose opportunities that match your schedule.',
+                title: 'Choose requests that fit',
+                body: 'Browse customer requests, review scope and budget, and find opportunities that suit your services.',
                 action: 'Find work',
                 href: '/requirements',
                 icon: Search,
               },
               {
-                title: 'Send a clear proposal',
-                body: 'Set a price and timeline, explain your approach, and see the credit cost before you submit.',
+                title: 'Share your quotation',
+                body: 'Set a price, explain your approach and availability, and talk through the details with the customer.',
                 action: 'Browse requests',
                 href: '/requirements',
                 icon: MessagesSquare,
               },
-              {
-                title: 'Deliver and track the work',
-                body: 'Keep customers updated at each stage. With payment protection, customers approve completion and release escrow.',
-                action: 'View your dashboard',
-                href: '/dashboard',
-                icon: ShieldCheck,
-              },
             ]).map((step, index) => {
               const Icon = step.icon;
               return (
-                <article key={step.title} className="group relative rounded-[1.5rem] border border-[#dce6df] bg-white p-5 shadow-[0_16px_40px_-34px_rgba(16,36,30,0.6)] transition duration-200 hover:-translate-y-1 hover:border-emerald-300 hover:shadow-[0_22px_46px_-34px_rgba(16,36,30,0.55)] sm:p-6">
-                  <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#10241e] text-emerald-200 shadow-sm">
+                <article key={step.title} className="group relative rounded-[9px] border border-[#e7e8df] bg-[#fffefa] p-5 transition duration-200 hover:-translate-y-1 hover:border-[#c5d5a8] hover:shadow-[0_12px_25px_rgba(64,83,45,0.08)] sm:p-6">
+                  <div className="relative z-10 flex h-11 w-11 items-center justify-center rounded-xl bg-[#e9efdd] text-[#668044]">
                     <Icon className="h-5 w-5" aria-hidden="true" />
-                    <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-emerald-300 text-[10px] font-black text-[#10241e]">{index + 1}</span>
+                    <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-[#d5edaf] text-[10px] font-black text-[#344e2d]">{String(index + 1).padStart(2, '0')}</span>
                   </div>
-                  <h3 className="mt-5 text-lg font-extrabold tracking-tight text-[#10241e]">{step.title}</h3>
-                  <p className="mt-2 min-h-[4.5rem] text-sm leading-6 text-[#617168]">{step.body}</p>
-                  <Link to={step.href} className="mt-4 inline-flex min-h-10 items-center gap-1.5 text-sm font-extrabold text-emerald-800 transition hover:text-emerald-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2">
+                  <h3 className="mt-5 text-base font-semibold tracking-tight text-[#303b32]">{step.title}</h3>
+                  <p className="mt-2 min-h-[4.5rem] text-sm leading-6 text-[#737c73]">{step.body}</p>
+                  <Link to={step.href} className="mt-4 inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-[#506e40] transition hover:text-[#355e3e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2">
                     {step.action}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </article>

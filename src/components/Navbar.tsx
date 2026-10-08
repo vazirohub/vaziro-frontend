@@ -218,9 +218,9 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-neutral-200/80 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16 md:h-[72px]">
+      <header className="sticky top-0 z-40 border-b border-[#eeeee8] bg-[#fffefa]/95 shadow-[0_1px_3px_rgba(0,0,0,0.025)] backdrop-blur-xl transition-all">
+        <div className="mx-auto max-w-[1320px] px-4 sm:px-7 lg:px-12">
+          <div className="flex h-16 items-center justify-between md:h-[82px]">
             {/* Left: Brand Logo & Marketplace Badge */}
             <div className="flex items-center gap-5">
               <Link to="/" className="flex items-center gap-2.5 group shrink-0">
@@ -233,7 +233,7 @@ export const Navbar: React.FC = () => {
 
               <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-100/80 border border-neutral-200/60 text-[11px] font-semibold text-neutral-600">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>India's Verified Marketplace</span>
+                <span>Good people. Good work.</span>
               </div>
             </div>
 

@@ -2,18 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --paper: #fcfbf8;
+  --ink: #1e2824;
+  --muted: #68716b;
+  --line: #e7e8df;
+  --vaziro-green: #c9f27d;
+  --vaziro-deep: #183e33;
+  --vaziro-leaf: #5e7b4c;
+  --vaziro-serif: Georgia, 'Times New Roman', serif;
+}
+
 html {
   height: 100%;
-  background: linear-gradient(to bottom, #ffffff 0%, #ffffff 50%, #000000 50%, #000000 100%);
-  background-attachment: fixed;
+  scroll-behavior: smooth;
+  background: var(--paper);
 }
 
 body {
   min-height: 100%;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  color: #0f172a;
-  background-color: transparent;
+  font-family: 'Geist', 'Plus Jakarta Sans', system-ui, sans-serif;
+  color: var(--ink);
+  background-color: var(--paper);
+  -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
+}
+
+button, input, select, textarea { font: inherit; }
+
+::selection { color: #183e33; background: #c9f27d; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }
 
 #root {
