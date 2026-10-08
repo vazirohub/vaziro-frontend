@@ -10,10 +10,8 @@ import {
   Clock,
   Users,
   Briefcase,
-  Sparkles,
-  Award,
+  Play,
   ChevronRight,
-  BadgeCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -76,17 +74,17 @@ export const Hero: React.FC = () => {
 
   return (
     <section className="relative isolate overflow-hidden border-b border-[#dce6df] bg-[#fcfbf8] pt-8 pb-14 lg:pt-14 lg:pb-20">
-      {/* Subtle modern Upwork-style background ambient glows */}
+      {/* Subtle modern background ambient glows */}
       <div className="pointer-events-none absolute -top-40 right-0 -z-10 h-[38rem] w-[38rem] rounded-full bg-emerald-100/50 blur-3xl" />
       <div className="pointer-events-none absolute top-1/2 left-[-10rem] -z-10 h-[30rem] w-[30rem] rounded-full bg-[#f0f5e8]/80 blur-3xl" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
           
-          {/* ================= LEFT COLUMN: UPWORK STYLE HERO COPY & CONTROLS ================= */}
+          {/* ================= LEFT COLUMN: ORIGINAL EDITORIAL FONT STYLE + CONTROLS ================= */}
           <div className="lg:col-span-7 space-y-6 text-left">
             
-            {/* Upwork Pill Announcement Badge */}
+            {/* Pill Announcement Badge */}
             <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/90 px-3.5 py-1.5 shadow-[0_2px_8px_rgba(24,62,51,0.04)]">
               <span className="flex h-2 w-2 rounded-full bg-[#14a800] animate-pulse" />
               <span className="text-xs font-bold text-[#183e33] tracking-wide">
@@ -99,20 +97,25 @@ export const Hero: React.FC = () => {
               </span>
             </div>
 
-            {/* Upwork Bold Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-[4.15rem] font-black text-[#10241e] tracking-tight leading-[1.04]">
-              How home care &amp; personal help{' '}
-              <span className="relative inline-block text-[#183e33]">
-                should work.
-                <span className="absolute left-0 bottom-1.5 w-full h-3 bg-[#c9f27d]/50 -z-10 rounded-sm transform -rotate-1" />
+            {/* Beloved Editorial Headline with Serif Italic Accent */}
+            <h1 className="text-4xl sm:text-5xl lg:text-[4.35rem] font-semibold text-[#24352b] tracking-[-0.065em] leading-[1.02]">
+              Find the right help.<br />
+              <span
+                className="font-normal text-[#5e7b4c]"
+                style={{
+                  fontFamily: "Georgia, 'Times New Roman', serif",
+                  fontStyle: 'italic',
+                  letterSpacing: '-0.04em',
+                }}
+              >
+                Feel good about it.
               </span>
             </h1>
 
-            {/* Editorial Subheading */}
-            <p className="text-base sm:text-lg text-[#52665d] font-normal leading-relaxed max-w-xl">
-              Forget rigid agency commissions and endless calls. Connect directly with independent,
-              DigiLocker-verified caregivers, nurses, tutors, cooks, and trainers across Delhi NCR. Compare transparent
-              quotes and hire on your own terms.
+            {/* Subtitle */}
+            <p className="text-base sm:text-lg text-[#52665d] font-medium leading-relaxed max-w-xl">
+              Connect directly with independent, DigiLocker-verified caregivers, nurses, tutors, cooks, and trainers
+              across Delhi NCR. Compare transparent quotations, chat directly, and choose the right person for your family.
             </p>
 
             {/* Upwork Mode Switcher (Hire Talent vs Find Work) */}
@@ -149,7 +152,7 @@ export const Hero: React.FC = () => {
               </div>
             </div>
 
-            {/* Upwork Integrated Search Box with City Selector & Direct Action */}
+            {/* Integrated Search Box with City Selector & Direct Action */}
             <form onSubmit={handleSearchSubmit} className="pt-1">
               <div className="bg-white p-2 rounded-2xl border-2 border-[#d0ded0] focus-within:border-[#183e33] focus-within:ring-4 focus-within:ring-emerald-900/5 shadow-[0_16px_36px_-16px_rgba(16,36,30,0.18)] transition-all flex flex-col sm:flex-row items-center gap-2 max-w-2xl">
                 
@@ -191,7 +194,7 @@ export const Hero: React.FC = () => {
                   />
                 </div>
 
-                {/* Upwork High-Converting Green Action Button */}
+                {/* High-Converting Action Button */}
                 <button
                   type="submit"
                   className="w-full sm:w-auto bg-[#183e33] hover:bg-[#235345] text-white text-xs sm:text-sm font-bold px-6 py-3.5 rounded-xl transition-colors duration-150 flex items-center justify-center gap-2 shrink-0 shadow-sm cursor-pointer"
@@ -202,7 +205,7 @@ export const Hero: React.FC = () => {
               </div>
             </form>
 
-            {/* Upwork-style "Popular:" Search Tags */}
+            {/* Popular Search Tags */}
             <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-[#52665d]">
               <span className="font-bold text-[#10241e] shrink-0">Popular:</span>
               {popularTags.map((tag) => (
@@ -217,7 +220,7 @@ export const Hero: React.FC = () => {
               ))}
             </div>
 
-            {/* Dual Upwork-style Direct Buttons & Reassurances */}
+            {/* Direct CTA Buttons */}
             <div className="pt-3 flex flex-wrap items-center gap-3">
               <Link
                 to={`/post-requirement?city=${encodeURIComponent(selectedCity)}`}
@@ -252,145 +255,97 @@ export const Hero: React.FC = () => {
             </div>
           </div>
 
-          {/* ================= RIGHT COLUMN: UPWORK STYLE TALENT SHOWCASE ================= */}
-          <div className="lg:col-span-5 relative">
+          {/* ================= RIGHT COLUMN: OVERLAP STYLE MEDIA COMPOSITION ================= */}
+          <div className="lg:col-span-5 relative pt-4 pb-6 sm:pb-8">
             <div className="relative mx-auto max-w-md lg:max-w-none">
               
-              {/* Main Upwork Talent Profile Card */}
-              <div className="rounded-3xl border border-[#d6e3d5] bg-white p-5 sm:p-6 shadow-[0_24px_50px_-20px_rgba(24,62,51,0.18)] relative overflow-hidden">
-                
-                {/* Card Top Pill: Top Rated Badge */}
-                <div className="flex items-center justify-between pb-4 border-b border-neutral-100">
-                  <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[11px] font-black text-emerald-800">
-                    <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
-                    <span>Top Rated Pro</span>
-                    <span className="text-neutral-300">•</span>
-                    <span>100% Job Success</span>
-                  </div>
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#183e33] bg-[#c9f27d]/40 px-2.5 py-0.5 rounded-md">
-                    <Sparkles className="w-3 h-3 text-emerald-700" /> Available Now
-                  </span>
-                </div>
+              {/* 1. Primary Anchor Visual Card */}
+              <div className="relative rounded-[2.25rem] overflow-hidden shadow-[0_32px_70px_-28px_rgba(24,62,51,0.38)] border-[6px] border-white aspect-[4/4.7] bg-neutral-100">
+                <img
+                  src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=1000&q=80"
+                  alt="A professional caregiver assisting an elderly family member"
+                  className="w-full h-full object-cover object-center transform hover:scale-105 transition-transform duration-700"
+                  loading="eager"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
-                {/* Professional Photo & Identity Row */}
-                <div className="pt-4 flex items-center gap-4">
-                  <div className="relative shrink-0">
-                    <img
-                      src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=300&q=80"
-                      alt="Dr. Neeraj Sharma, BPT Physiotherapist"
-                      className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl object-cover border-2 border-white shadow-md"
-                    />
-                    <span
-                      className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white"
-                      title="Online Now"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <h3 className="text-base sm:text-lg font-black text-[#10241e]">Dr. Neeraj Sharma</h3>
-                      <span className="text-xs font-bold text-[#5e7b4c]">BPT, MPT</span>
-                      <span title="DigiLocker Verified" className="inline-flex items-center">
-                        <BadgeCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                      </span>
-                    </div>
-                    <p className="text-xs text-[#52665d] font-semibold">
-                      Senior Physiotherapist &amp; Neuro Rehab Specialist
-                    </p>
-                    <div className="flex items-center gap-2 mt-1 text-[11px] text-neutral-500 font-medium">
-                      <span className="flex items-center gap-0.5">
-                        <MapPin className="w-3 h-3 text-neutral-400" /> South Delhi &amp; Gurugram
-                      </span>
-                      <span>•</span>
-                      <span>8+ yrs exp</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* DigiLocker Official Verification Strip */}
-                <div className="mt-4 rounded-xl bg-[#f0f6ee] border border-[#d2e4ce] p-2.5 flex items-center justify-between">
+                {/* Primary Card Bottom Caption */}
+                <div className="absolute bottom-5 left-5 right-5 text-white">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-[#183e33] text-[#c9f27d] flex items-center justify-center shrink-0">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="text-left">
-                      <div className="text-[11px] font-bold text-[#183e33] leading-tight">
-                        DigiLocker Identity Verified
-                      </div>
-                      <div className="text-[10px] text-[#52665d]">Aadhaar &amp; Clinical Certification Checked</div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-black text-emerald-700 bg-white border border-emerald-200 px-2 py-0.5 rounded-full">
-                    ✓ VERIFIED
-                  </span>
-                </div>
-
-                {/* Upwork-style Key Metrics */}
-                <div className="mt-4 grid grid-cols-3 gap-2 text-center border-y border-neutral-100 py-3">
-                  <div>
-                    <div className="text-sm sm:text-base font-black text-[#10241e]">₹12,000</div>
-                    <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">Starting Rate</div>
-                  </div>
-                  <div className="border-x border-neutral-100">
-                    <div className="text-sm sm:text-base font-black text-[#10241e] flex items-center justify-center gap-0.5">
-                      <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" /> 4.95
-                    </div>
-                    <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">48 Reviews</div>
-                  </div>
-                  <div>
-                    <div className="text-sm sm:text-base font-black text-emerald-700">99%</div>
-                    <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">Satisfaction</div>
-                  </div>
-                </div>
-
-                {/* Professional Skills / Services Tags */}
-                <div className="mt-3.5 flex flex-wrap gap-1.5">
-                  {['Post-TKR Knee Rehab', 'Stroke Recovery', 'Sciatica Relief', 'Geriatric Mobility'].map((skill) => (
-                    <span
-                      key={skill}
-                      className="text-[10px] font-semibold bg-neutral-100 text-neutral-700 px-2 py-0.5 rounded-md"
-                    >
-                      {skill}
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#c9f27d] animate-ping" />
+                    <span className="text-[11px] font-black uppercase tracking-wider text-[#c9f27d]">
+                      Independent Marketplace
                     </span>
-                  ))}
+                  </div>
+                  <div className="text-base sm:text-lg font-black mt-0.5">
+                    Verified In-Home &amp; Care Services
+                  </div>
+                  <div className="text-xs text-neutral-300">
+                    Delhi • Noida • Gurugram • Ghaziabad • Greater Noida
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Secondary Overlapping Card: Video / Session Preview Card */}
+              <div className="absolute -bottom-6 -left-3 sm:-left-8 w-[72%] sm:w-[68%] rounded-2xl border-[5px] border-white bg-white shadow-[0_24px_50px_-14px_rgba(0,0,0,0.35)] overflow-hidden transition-transform duration-300 hover:-translate-y-1 group">
+                <div className="relative aspect-[16/10] bg-neutral-900 overflow-hidden">
+                  <img
+                    src="https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=600&q=80"
+                    alt="Home service session in progress"
+                    className="w-full h-full object-cover object-center opacity-85 group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors" />
+
+                  {/* Video Play Button Overlay */}
+                  <Link
+                    to="/workflow-preview"
+                    className="absolute inset-0 flex flex-col items-center justify-center text-white"
+                    aria-label="Watch how Vaziro works"
+                  >
+                    <div className="w-11 h-11 rounded-full bg-[#183e33]/90 text-[#c9f27d] border-2 border-white/40 flex items-center justify-center shadow-xl transform group-hover:scale-110 transition-transform">
+                      <Play className="w-5 h-5 fill-[#c9f27d] ml-0.5" />
+                    </div>
+                    <span className="mt-2 text-[10px] font-extrabold uppercase tracking-wide bg-black/70 px-2.5 py-0.5 rounded-full backdrop-blur-sm">
+                      Watch Workflow • 1 min
+                    </span>
+                  </Link>
                 </div>
 
-                {/* Live Activity Quotation Box (Upwork Marketplace Vibe) */}
-                <div className="mt-4 rounded-xl bg-[#fafbfa] border border-[#e4ebe2] p-3 text-left">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-[#10241e]">
-                    <span className="flex items-center gap-1.5 text-emerald-700">
-                      <Clock className="w-3.5 h-3.5" /> Recent Quotation Submitted
+                <div className="p-2.5 bg-white text-left">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black text-[#10241e]">How Vaziro Works</span>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
+                      Fast &amp; Direct
                     </span>
-                    <span className="text-neutral-400 font-normal">8 mins ago</span>
                   </div>
-                  <p className="mt-1 text-xs text-[#52665d] line-clamp-1 italic">
-                    &ldquo;Available for daily home visits in Saket &amp; Greater Kailash starting tomorrow morning.&rdquo;
+                  <p className="text-[10px] text-neutral-500 mt-0.5 line-clamp-1">
+                    Post request, compare quotes, hire safely
                   </p>
                 </div>
               </div>
 
-              {/* Floating Social Proof Card 1: Top Left */}
-              <div className="hidden sm:flex absolute -top-4 -left-6 bg-white p-3 rounded-2xl shadow-xl border border-neutral-200 items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#183e33] text-[#c9f27d] flex items-center justify-center font-black">
-                  <Star className="w-5 h-5 fill-[#c9f27d]" />
+              {/* 3. Floating Overlapping Badge: 4.95 Rating (Top-Right) */}
+              <div className="absolute -top-4 -right-3 sm:-right-6 bg-white p-3 rounded-2xl shadow-xl border border-neutral-200 flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#183e33] text-[#c9f27d] flex items-center justify-center font-black">
+                  <Star className="w-4 h-4 fill-[#c9f27d]" />
                 </div>
-                <div>
+                <div className="text-left">
                   <div className="text-xs font-black text-[#10241e] flex items-center gap-1">
-                    <span>4.9 / 5 Rating</span>
+                    <span>4.95 Rating</span>
                     <span className="text-emerald-700 font-bold">• Top Match</span>
                   </div>
-                  <div className="text-[10px] text-neutral-500 font-semibold">2,500+ satisfied families in NCR</div>
+                  <div className="text-[10px] text-neutral-500 font-semibold">2,500+ happy families in NCR</div>
                 </div>
               </div>
 
-              {/* Floating Social Proof Card 2: Bottom Right */}
-              <div className="hidden sm:flex absolute -bottom-5 -right-5 bg-[#10241e] text-white p-3 rounded-2xl shadow-xl border border-neutral-700 items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-white/10 text-[#c9f27d] flex items-center justify-center">
-                  <Award className="w-4 h-4 text-[#c9f27d]" />
+              {/* 4. Floating Overlapping Badge: DigiLocker Verified Shield (Middle-Right) */}
+              <div className="hidden sm:flex absolute top-1/2 -right-8 transform -translate-y-1/2 bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-xl border border-emerald-100 items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                  <ShieldCheck className="w-5 h-5" />
                 </div>
-                <div>
-                  <div className="text-xs font-black">Free to Post</div>
-                  <div className="text-[10px] text-neutral-300">Compare quotes before hiring</div>
+                <div className="text-left">
+                  <div className="text-xs font-black text-[#183e33]">DigiLocker Verified</div>
+                  <div className="text-[10px] text-[#5e7b4c] font-medium">Govt ID &amp; Aadhaar checked</div>
                 </div>
               </div>
 
