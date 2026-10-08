@@ -1,227 +1,103 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, MapPin, Mail, ArrowRight, Lock, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Mail, MapPin } from 'lucide-react';
 
-export const Footer: React.FC = () => {
-  return (
-    <footer className="bg-black text-neutral-400 pt-16 pb-28 md:pb-12 border-t border-neutral-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
-        {/* TOP ROW: Brand and NCR Availability Banner */}
-        <div className="pb-12 border-b border-neutral-850 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          <div className="lg:col-span-6 space-y-3">
-            <Link to="/" className="inline-block">
-              <img
-                src="/logo-white.png"
-                alt="Vaziro"
-                className="h-10 w-auto object-contain"
-              />
-            </Link>
-            <p className="text-xs text-neutral-400 max-w-md leading-relaxed font-medium">
-              Operated by <strong>Proanta Technologies Private Limited</strong>. India’s trusted marketplace for background-checked personal care, healthcare, and domestic professionals.
-            </p>
-          </div>
+const footerGroups = [
+  {
+    title: 'Explore services',
+    links: [
+      { label: 'Care & companionship', href: '/requirements' },
+      { label: 'Home nursing', href: '/requirements' },
+      { label: 'Physiotherapy', href: '/requirements' },
+      { label: 'Cooking & household', href: '/requirements' },
+      { label: 'Tutoring & fitness', href: '/requirements' },
+      { label: 'Browse all requests', href: '/requirements' },
+    ],
+  },
+  {
+    title: 'For customers',
+    links: [
+      { label: 'Post a service request', href: '/post-requirement' },
+      { label: 'Compare proposals', href: '/dashboard' },
+      { label: 'Track a service', href: '/dashboard' },
+      { label: 'How Vaziro works', href: '/workflow-preview' },
+    ],
+  },
+  {
+    title: 'For professionals',
+    links: [
+      { label: 'Find customer requests', href: '/requirements' },
+      { label: 'Join as a professional', href: '/signup?role=professional' },
+      { label: 'Manage your profile', href: '/profile' },
+      { label: 'Credit plans', href: '/credits' },
+    ],
+  },
+  {
+    title: 'Vaziro',
+    links: [
+      { label: 'About us', href: '/about' },
+      { label: 'Terms & conditions', href: '/terms' },
+      { label: 'Privacy policy', href: '/privacy' },
+      { label: 'Refund policy', href: '/refund-policy' },
+      { label: 'Disclaimer', href: '/disclaimer' },
+    ],
+  },
+];
 
-          <div className="lg:col-span-6 flex items-center justify-start lg:justify-end">
-            <Link
-              to="/post-requirement"
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-6 py-3 rounded-xl transition flex items-center gap-2 shrink-0 shadow-md"
-            >
-              <span>Post Requirement</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
+const serviceAreas = ['Delhi', 'Noida', 'Gurugram', 'Ghaziabad', 'Greater Noida'];
 
-        {/* MIDDLE ROW: 4 Structured Columns */}
-        <div className="py-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-          
-          {/* Col 1: Categories */}
-          <div>
-            <div className="text-xs font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span>Verified Categories</span>
-            </div>
-            <ul className="space-y-2.5 text-xs text-neutral-400">
-              <li>
-                <Link to="/post-requirement" className="hover:text-emerald-400 transition-colors">
-                  Elderly Caregiver
-                </Link>
-              </li>
-              <li>
-                <Link to="/post-requirement" className="hover:text-emerald-400 transition-colors">
-                  Fitness Trainer
-                </Link>
-              </li>
-              <li>
-                <Link to="/post-requirement" className="hover:text-emerald-400 transition-colors">
-                  Home Cook / Chef
-                </Link>
-              </li>
-              <li>
-                <Link to="/post-requirement" className="hover:text-emerald-400 transition-colors">
-                  Home Nurse (Clinical)
-                </Link>
-              </li>
-              <li>
-                <Link to="/post-requirement" className="hover:text-emerald-400 transition-colors">
-                  Home Tutor (CBSE / ICSE)
-                </Link>
-              </li>
-              <li>
-                <Link to="/post-requirement" className="hover:text-emerald-400 transition-colors">
-                  Nanny & Baby Care (Japa)
-                </Link>
-              </li>
-              <li>
-                <Link to="/post-requirement" className="hover:text-emerald-400 transition-colors">
-                  Physiotherapist (BPT / MPT)
-                </Link>
-              </li>
-              <li>
-                <Link to="/post-requirement" className="hover:text-emerald-400 transition-colors">
-                  Yoga Instructor
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Col 2: Service Locations (Delhi NCR) */}
-          <div>
-            <div className="text-xs font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span>Delhi NCR Coverage</span>
-            </div>
-            <ul className="space-y-2.5 text-xs text-neutral-400">
-              <li className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Delhi (South, Central, West, East)</span>
-              </li>
-              <li className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Noida (Sectors 18 to 150)</span>
-              </li>
-              <li className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Gurugram (DLF, Golf Course Rd)</span>
-              </li>
-              <li className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Ghaziabad (Indirapuram, Vaishali)</span>
-              </li>
-              <li className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Greater Noida (Pari Chowk, West)</span>
-              </li>
-            </ul>
-            <div className="mt-4 p-3 rounded-xl bg-neutral-900 border border-neutral-800 text-[11px] text-neutral-400">
-              <span className="text-emerald-400 font-bold block mb-0.5">Need service today?</span>
-              Quotes delivered to your phone in &lt; 15 mins.
-            </div>
-          </div>
-
-          {/* Col 3: Trust & Escrow Guarantee */}
-          <div>
-            <div className="text-xs font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span>Trust & Security</span>
-            </div>
-            <ul className="space-y-2.5 text-xs text-neutral-400">
-              <li className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>DigiLocker Aadhaar KYC</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>100% Escrow Protection</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>0% Commission on Worker Wages</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Privacy-Masked Telephony</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Official GST Invoices in ₹ INR</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* Col 4: REPLACED "Official Inquiries" with Company & Legal Pages */}
-          <div>
-            <div className="text-xs font-black text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span>Company & Legal</span>
-            </div>
-            <ul className="space-y-2.5 text-xs text-neutral-400">
-              <li>
-                <Link to="/about" className="hover:text-emerald-400 transition-colors font-medium">
-                  About Us
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms" className="hover:text-emerald-400 transition-colors font-medium">
-                  Terms & Conditions
-                </Link>
-              </li>
-              <li>
-                <Link to="/privacy" className="hover:text-emerald-400 transition-colors font-medium">
-                  Privacy Policy (DPDP Act)
-                </Link>
-              </li>
-              <li>
-                <Link to="/refund-policy" className="hover:text-emerald-400 transition-colors font-medium">
-                  Refund & Cancellation Policy
-                </Link>
-              </li>
-              <li>
-                <Link to="/disclaimer" className="hover:text-emerald-400 transition-colors font-medium">
-                  Disclaimer & Platform Notice
-                </Link>
-              </li>
-              <li className="pt-2 border-t border-neutral-800">
-                <Link to="/login" className="hover:text-white transition-colors font-medium">
-                  Customer / Pro Sign In
-                </Link>
-              </li>
-              <li>
-                <Link to="/signup" className="text-emerald-400 hover:text-emerald-300 transition-colors font-bold">
-                  Sign Up & Register Free
-                </Link>
-              </li>
-              <li className="pt-2 flex items-center gap-1.5 text-neutral-300">
-                <Mail className="w-3.5 h-3.5 text-emerald-400" />
-                <a href="mailto:support@vaziro.in" className="hover:underline text-emerald-400 font-bold">
-                  support@vaziro.in
-                </a>
-              </li>
-            </ul>
-          </div>
-
-        </div>
-
-        {/* BOTTOM ROW: Corporate Copyright & Compliance */}
-        <div className="pt-8 border-t border-neutral-900 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-neutral-500">
-          <div>
-            © {new Date().getFullYear()} <strong className="text-neutral-300">Proanta Technologies Private Limited</strong>. All rights reserved.
-          </div>
-          <div className="flex flex-wrap items-center gap-4 text-neutral-400">
-            <Link to="/terms" className="hover:text-white transition">Terms</Link>
-            <span>•</span>
-            <Link to="/privacy" className="hover:text-white transition">Privacy</Link>
-            <span>•</span>
-            <Link to="/refund-policy" className="hover:text-white transition">Refunds</Link>
-            <span>•</span>
-            <Link to="/disclaimer" className="hover:text-white transition">Disclaimer</Link>
-            <span>•</span>
-            <span className="text-emerald-400 font-bold">vaziro.in</span>
+export const Footer: React.FC = () => (
+  <footer className="border-t border-white/10 bg-[#183e33] pb-[calc(5rem+env(safe-area-inset-bottom))] text-[#dce5da] lg:pb-10">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="grid gap-8 border-b border-white/15 py-10 sm:py-12 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center lg:gap-12 lg:py-14">
+        <div className="max-w-xl">
+          <Link to="/" className="inline-flex rounded-sm focus-visible:outline-white">
+            <img src="/logo-white.png" alt="Vaziro" className="h-9 w-auto object-contain" />
+          </Link>
+          <p className="mt-4 max-w-lg text-sm leading-6 text-[#c0d0c2]">
+            A local marketplace helping families and independent professionals find the right fit for home and personal care.
+          </p>
+          <div className="mt-5 flex flex-wrap items-center gap-2" aria-label="Current service areas">
+            <span className="mr-1 inline-flex items-center gap-1.5 text-xs font-semibold text-[#c0d0c2]"><MapPin className="h-3.5 w-3.5 text-[#c9f27d]" /> Delhi NCR</span>
+            {serviceAreas.map((area) => <span key={area} className="rounded-full border border-white/15 px-2.5 py-1 text-[11px] text-[#dce5da]">{area}</span>)}
           </div>
         </div>
 
+        <div className="flex flex-col gap-2 sm:flex-row lg:min-w-[340px] lg:justify-end">
+          <Link to="/post-requirement" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[#c9f27d] px-5 text-sm font-semibold text-[#203c32] transition hover:bg-[#d7f8a0] focus-visible:outline-white">
+            Post a request <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link to="/workflow-preview" className="inline-flex min-h-12 items-center justify-center rounded-md border border-white/25 px-5 text-sm font-semibold text-white transition hover:bg-white/10 focus-visible:outline-white">
+            How it works
+          </Link>
+        </div>
       </div>
-    </footer>
-  );
-};
+
+      <nav aria-label="Footer navigation" className="grid grid-cols-1 gap-x-8 gap-y-9 border-b border-white/15 py-9 sm:grid-cols-2 sm:py-10 lg:grid-cols-4">
+        {footerGroups.map((group) => (
+          <section key={group.title}>
+            <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-[#c9f27d]">{group.title}</h2>
+            <ul className="mt-3 space-y-1">
+              {group.links.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.href} className="inline-flex min-h-9 items-center text-sm text-[#c0d0c2] transition hover:text-white focus-visible:outline-white">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </nav>
+
+      <div className="flex flex-col gap-4 py-6 text-xs text-[#b4c5b6] sm:flex-row sm:items-center sm:justify-between">
+        <p className="leading-5">© {new Date().getFullYear()} Proanta Technologies Private Limited. All rights reserved.</p>
+        <a href="mailto:support@vaziro.in" className="inline-flex min-h-10 items-center gap-2 self-start font-semibold text-[#dce5da] transition hover:text-[#c9f27d] sm:self-auto">
+          <Mail className="h-4 w-4 text-[#c9f27d]" /> support@vaziro.in
+        </a>
+      </div>
+    </div>
+  </footer>
+);
+
+export default Footer;
