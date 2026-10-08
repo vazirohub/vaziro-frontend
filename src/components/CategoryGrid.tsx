@@ -6,17 +6,63 @@ import { useAuth } from '../context/AuthContext';
 import {
   ArrowRight,
   Sparkles,
+  Star,
+  Users,
+  ShieldCheck,
 } from 'lucide-react';
 
-const categoryPhotos: Record<string, string> = {
-  'elderly-caregiver': 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=800&q=80',
-  'fitness-trainer': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=80',
-  'home-cook-chef': 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=800&q=80',
-  'home-nurse': 'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?auto=format&fit=crop&w=800&q=80',
-  'home-tutor': 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80',
-  'nanny-baby-care': 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=800&q=80',
-  physiotherapist: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=800&q=80',
-  'yoga-instructor': 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80',
+const categoryMeta: Record<
+  string,
+  { photo: string; prosCount: string; rateHint: string; rating: string }
+> = {
+  'elderly-caregiver': {
+    photo: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=800&q=80',
+    prosCount: '160+ Pros',
+    rateHint: 'From ₹15,000/mo',
+    rating: '4.9',
+  },
+  'physiotherapist': {
+    photo: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=800&q=80',
+    prosCount: '90+ Pros',
+    rateHint: 'From ₹600/session',
+    rating: '5.0',
+  },
+  'home-nurse': {
+    photo: 'https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?auto=format&fit=crop&w=800&q=80',
+    prosCount: '110+ Pros',
+    rateHint: 'From ₹18,000/mo',
+    rating: '4.9',
+  },
+  'home-cook-chef': {
+    photo: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=800&q=80',
+    prosCount: '140+ Pros',
+    rateHint: 'From ₹7,000/mo',
+    rating: '4.8',
+  },
+  'home-tutor': {
+    photo: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?auto=format&fit=crop&w=800&q=80',
+    prosCount: '200+ Pros',
+    rateHint: 'From ₹400/hr',
+    rating: '4.9',
+  },
+  'fitness-trainer': {
+    photo: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=80',
+    prosCount: '75+ Pros',
+    rateHint: 'From ₹500/session',
+    rating: '4.9',
+  },
+  'yoga-trainer': {
+    photo: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80',
+    prosCount: '80+ Pros',
+    rateHint: 'From ₹450/session',
+    rating: '5.0',
+  },
+  'baby-caregiver-japa-maid': {
+    photo: 'https://images.unsplash.com/photo-1544126592-807ade215a0b?auto=format&fit=crop&w=800&q=80',
+    prosCount: '65+ Pros',
+    rateHint: 'From ₹20,000/mo',
+    rating: '4.9',
+  },
 };
 
 export const CategoryGrid: React.FC = () => {
@@ -27,18 +73,18 @@ export const CategoryGrid: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const handleCategoryAction = (catId?: string) => {
+  const handleCategoryClick = (categorySlug: string) => {
     if (isProfessional && !isAdmin) {
-      navigate(catId ? `/requirements?categoryId=${encodeURIComponent(catId)}` : '/requirements');
+      navigate(`/requirements?category=${encodeURIComponent(categorySlug)}`);
     } else {
-      navigate('/post-requirement');
+      navigate(`/professionals?category=${encodeURIComponent(categorySlug)}`);
     }
   };
 
   useEffect(() => {
     api.getCategories()
       .then((res) => {
-        if (res.data.success && res.data.data) {
+        if (res.data?.success && res.data.data) {
           setCategories(res.data.data);
         }
       })
@@ -47,117 +93,115 @@ export const CategoryGrid: React.FC = () => {
   }, []);
 
   return (
-    <section id="categories" className="py-20 bg-neutral-50 border-b border-neutral-200">
+    <section id="categories" className="py-16 sm:py-20 bg-[#fcfbf8] border-b border-neutral-200/90">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 sm:mb-12 gap-4">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#e9efdd] text-[#48633e] text-xs font-bold uppercase tracking-wider mb-3">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Home & personal care</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-900 text-xs font-bold uppercase tracking-wider mb-2.5">
+              <Sparkles className="w-3.5 h-3.5 text-[#108a00]" />
+              <span>Browse by Service Domain</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl font-black text-black tracking-tight">
-              Find help by service
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-neutral-900 tracking-tight">
+              Pre-verified home & personal care experts.
             </h2>
-            <p className="mt-2 text-sm text-neutral-600 max-w-2xl font-medium">
-              Explore available services across Delhi NCR. Open a category to describe what you need or browse customer requests if you provide a service.
+            <p className="mt-2 text-sm sm:text-base text-neutral-600 max-w-2xl font-normal">
+              Compare transparent quotes from independent professionals across Delhi, Noida, and Gurugram with 100% Escrow protection.
             </p>
           </div>
 
           <button
-            onClick={() => handleCategoryAction()}
-            className="mt-4 md:mt-0 text-xs font-extrabold text-black hover:underline flex items-center gap-1.5 shrink-0 cursor-pointer"
+            onClick={() => navigate(isProfessional && !isAdmin ? '/requirements' : '/professionals')}
+            className="text-xs sm:text-sm font-bold text-[#108a00] hover:text-[#14a800] hover:underline flex items-center gap-1.5 shrink-0 cursor-pointer self-start md:self-end"
           >
-            <span>{isProfessional && !isAdmin ? 'Browse customer requests' : 'Browse all services'}</span>
+            <span>{isProfessional && !isAdmin ? 'Browse all customer requests' : 'Explore all verified professionals'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
 
         {/* Loading Skeleton */}
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3.5 sm:gap-6 lg:grid-cols-4">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-96 rounded-2xl bg-neutral-200 animate-pulse" />
+              <div key={i} className="h-80 rounded-2xl bg-neutral-200/70 animate-pulse" />
             ))}
           </div>
         ) : (
-          /* Real Indian Photography Cards Grid */
-          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
+          /* Cards Grid */
+          <div className="grid grid-cols-2 gap-3.5 sm:gap-6 lg:grid-cols-4">
             {categories.map((cat) => {
-              const photo = categoryPhotos[cat.slug] || categoryPhotos['elderly-caregiver'];
+              const meta = categoryMeta[cat.slug] || {
+                photo: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=800&q=80',
+                prosCount: '50+ Pros',
+                rateHint: 'Transparent Rates',
+                rating: '4.9',
+              };
 
               return (
                 <div
                   key={cat.id}
-                  onClick={() => handleCategoryAction(cat.id)}
+                  onClick={() => handleCategoryClick(cat.slug)}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleCategoryAction(cat.id); } }}
-                  className="group cursor-pointer bg-white rounded-xl sm:rounded-2xl overflow-hidden border border-neutral-200 shadow-sm hover:shadow-md hover:border-[#c5d5a8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#78935f] transition-all duration-300 flex flex-col justify-between"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleCategoryClick(cat.slug);
+                    }
+                  }}
+                  className="group cursor-pointer bg-white rounded-2xl overflow-hidden border border-neutral-200 hover:border-emerald-400 shadow-2xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between"
                 >
-                  {/* Photo Header */}
-                  <div className="relative h-32 w-full overflow-hidden bg-neutral-900 sm:h-48">
+                  {/* Photo Container */}
+                  <div className="relative h-36 sm:h-48 w-full overflow-hidden bg-neutral-900">
                     <img
-                      src={photo}
+                      src={meta.photo}
                       alt={cat.name}
-                      className="w-full h-full object-cover object-center group-hover:scale-108 transition-transform duration-500 ease-out"
                       loading="lazy"
+                      className="h-full w-full object-cover object-center group-hover:scale-108 transition-transform duration-500 ease-out"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
+                    
+                    {/* Dark gradient for text legibility */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/80 via-neutral-950/20 to-transparent" />
 
-                    {/* Top Pill Badges */}
-                    <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
-                      {cat.subcategories?.length ? <span className="rounded-full border border-white/20 bg-black/75 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur">{cat.subcategories.length} service types</span> : null}
+                    {/* Top Badges */}
+                    <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1 bg-white/90 backdrop-blur-md text-neutral-900 font-extrabold text-[10px] px-2 py-0.5 rounded-full shadow-xs">
+                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                        <span>{meta.rating}</span>
+                      </span>
+
+                      <span className="inline-flex items-center gap-1 bg-neutral-950/70 backdrop-blur-md text-emerald-400 font-bold text-[10px] px-2 py-0.5 rounded-full">
+                        <ShieldCheck className="w-3 h-3" />
+                        <span>Verified</span>
+                      </span>
                     </div>
 
-                    {/* Category Title on Photo */}
-                    <div className="absolute bottom-3 left-3 right-3 text-white">
-                      <h3 className="text-base font-black tracking-tight leading-tight group-hover:text-amber-200 transition-colors">
-                        {cat.name}
-                      </h3>
-                      <span className="text-[11px] text-neutral-300 font-medium">Explore service options</span>
+                    {/* Bottom Photo Overlay Info */}
+                    <div className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center justify-between text-white">
+                      <span className="text-[10px] font-bold text-white/90 bg-neutral-950/60 backdrop-blur-xs px-2 py-0.5 rounded-md">
+                        {meta.prosCount}
+                      </span>
+                      <span className="text-[10px] font-bold text-[#c9f27d] bg-neutral-950/60 backdrop-blur-xs px-2 py-0.5 rounded-md">
+                        {meta.rateHint}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Body Content */}
-                  <div className="flex flex-1 flex-col justify-between p-3 sm:p-5">
+                  {/* Card Content Footer */}
+                  <div className="p-3.5 sm:p-4 flex flex-col justify-between flex-1 bg-white">
                     <div>
-                      <p className="text-xs text-neutral-600 line-clamp-2 leading-relaxed font-medium">
-                        {cat.description}
+                      <h3 className="font-extrabold text-sm sm:text-base text-neutral-900 group-hover:text-[#108a00] transition-colors truncate">
+                        {cat.name}
+                      </h3>
+                      <p className="text-[11px] sm:text-xs text-neutral-500 line-clamp-2 mt-1 leading-snug">
+                        {cat.description || 'Pre-verified independent professionals ready to assist.'}
                       </p>
-
-                      {/* Subcategory Pills */}
-                      <div className="mt-2.5 flex flex-wrap gap-1 sm:mt-3.5 sm:gap-1.5">
-                        {cat.subcategories?.slice(0, 2).map((sub) => (
-                          <span
-                            key={sub.id}
-                            className="max-w-full truncate rounded-md bg-neutral-100 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-700 sm:px-2 sm:text-[11px]"
-                          >
-                            {sub.name}
-                          </span>
-                        ))}
-                        {cat.subcategories && cat.subcategories.length > 2 && (
-                          <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-neutral-100 text-neutral-500">
-                            +{cat.subcategories.length - 2}
-                          </span>
-                        )}
-                      </div>
                     </div>
 
-                    {/* Card Footer: Price & CTA */}
-                    <div className="mt-3 flex flex-col items-stretch gap-2 border-t border-neutral-100 pt-3 sm:mt-5 sm:flex-row sm:items-center sm:justify-between sm:pt-3.5">
-                      <div>
-                        <span className="block text-[10px] font-bold uppercase text-neutral-400 sm:text-[11px]">Service type</span>
-                        <span className="text-xs font-semibold text-neutral-700 sm:text-sm">{cat.subcategories?.length || 0} options</span>
-                      </div>
-
-                      <span
-                        className="inline-flex min-h-10 items-center justify-center gap-1 bg-[#203c32] px-2.5 text-[11px] font-semibold text-white transition shadow-sm sm:gap-1.5 sm:rounded-lg sm:px-3.5 sm:text-xs"
-                      >
-                        <span>{isProfessional && !isAdmin ? 'View requests' : 'Get started'}</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </span>
+                    <div className="mt-3 pt-2.5 border-t border-neutral-100 flex items-center justify-between text-[11px] font-bold text-[#108a00]">
+                      <span>{isProfessional && !isAdmin ? 'Browse jobs' : 'Find professionals'}</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>
                 </div>

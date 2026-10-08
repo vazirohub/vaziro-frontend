@@ -1,0 +1,36 @@
+# Vaziro™ (https://vaziro.com)
+> India's Premier Marketplace for Verified Independent Personal & Home Care Professionals
+
+## Overview
+Vaziro is a verified two-sided online marketplace in India (operating across Delhi NCR: Delhi, Noida, Gurugram, Ghaziabad, Greater Noida) that connects families and individuals directly with pre-verified independent service professionals.
+
+## Key Service Domains
+1. **Elderly Caregiver**: Compassionate senior companions, dementia assistance, mobility support, 12h/24h live-in home care.
+2. **Home Nurse**: Clinical home nursing, post-operative care, IV/injections, catheterization, vitals monitoring, palliative nursing.
+3. **Physiotherapist**: Home physiotherapy, neuro-rehab, stroke rehabilitation, geriatric mobility, ortho pain relief.
+4. **Home Cook / Chef**: Hygienic home cooks, diet-specific daily meals, vegetarian/non-vegetarian, family meal prep.
+5. **Home Tutor**: Qualified one-on-one academic tutors for CBSE/ICSE, STEM, mathematics, language, and competitive exam prep.
+6. **Fitness Trainer**: Certified home personal fitness instructors, functional strength, weight loss, mobility trainers.
+7. **Yoga Trainer**: Mindful yoga teachers, Pranayama, Ashtanga, corporate wellness, stress relief, therapeutic yoga.
+8. **Baby Caregiver / Japa**: Postpartum newborn care, infant feeding assistance, mother care, trained Japa maids.
+
+## Trust, Safety & Escrow Guarantees
+- **DigiLocker Verification**: Independent professionals undergo Aadhaar, government ID, and background checks.
+- **100% Escrow Milestone Protection**: Clients deposit funds into an escrow milestone holding account. Payments are only released to the professional after the client inspects and approves the service.
+- **Zero Commission for Direct Hiring**: Unlike unorganized agencies charging 30-50% markups, Vaziro empowers independent professionals to keep 100% of their earnings with complete quote transparency.
+- **Contact Privacy Safeguards**: Contact details (phone number, email address) are strictly protected. They are only revealed to a hiring client after a formal hire contract is created and funded in escrow.
+- **24/7 Isha AI & Support**: AI-powered conversational mediation, requirement drafting, and customer assistance.
+
+## Coverage Areas
+- Delhi (South Delhi, Central Delhi, West Delhi, East Delhi, North Delhi)
+- Noida & Greater Noida (Gautam Buddha Nagar, UP)
+- Gurugram (Gurgaon, Haryana, including DLF, Cyber City, Golf Course Road)
+- Ghaziabad (Indirapuram, Vaishali, Raj Nagar Extension)
+
+## Core Website URLs
+- Home: https://vaziro.com/
+- Browse Professionals: https://vaziro.com/professionals
+- Post a Requirement (Free): https://vaziro.com/post-requirement
+- Browse Service Requests: https://vaziro.com/requirements
+- How It Works (Workflow): https://vaziro.com/workflow-preview
+- About Vaziro: https://vaziro.com/about

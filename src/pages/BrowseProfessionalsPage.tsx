@@ -26,6 +26,7 @@ import {
 import { api } from '../services/api';
 import { PublicProfessionalProfile } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { SEOHead } from '../components/SEOHead';
 
 // Curated Fallback Verified Professionals in Delhi NCR
 const FALLBACK_PROFESSIONALS: PublicProfessionalProfile[] = [
@@ -536,6 +537,18 @@ export const BrowseProfessionalsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#fcfbf8]">
+      <SEOHead
+        title={
+          selectedCategory
+            ? `${CATEGORIES.find((c) => c.slug === selectedCategory)?.label || 'Verified Service'} in Delhi NCR — Verified Professionals | Vaziro`
+            : searchQuery
+            ? `Search "${searchQuery}" — Verified Professionals | Vaziro`
+            : 'Find Verified Home Care, Nurses, Physio, Tutors & Cooks — Delhi NCR | Vaziro'
+        }
+        description="Browse pre-verified independent home care attendants, nurses, physiotherapists, home tutors, and cooks in Delhi, Noida, and Gurugram. Compare ratings, rates, and hire with 100% Escrow protection."
+        canonical="https://vaziro.com/professionals"
+        keywords="verified professionals Delhi NCR, hire caregiver, home nurse, physiotherapist, home tutor, home cook, Vaziro"
+      />
       {/* ================= TOP UPWORK-STYLE HERO SEARCH HEADER ================= */}
       <section className="bg-white border-b border-neutral-200/80 pt-6 pb-5 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">

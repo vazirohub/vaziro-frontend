@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { Hero } from '../components/Hero';
-import { TrustBadges } from '../components/TrustBadges';
-import { CategoryGrid } from '../components/CategoryGrid';
+import { Link } from 'react-router-dom';
 import {
   ArrowRight,
   ClipboardList,
@@ -9,118 +7,236 @@ import {
   UserRoundCheck,
   Route,
   Search,
-  CircleHelp,
-  ChevronDown,
   BadgeCheck,
   WalletCards,
   BriefcaseBusiness,
   CheckCircle2,
+  Sparkles,
+  ShieldCheck,
+  Lock,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Hero } from '../components/Hero';
+import { TrustBadges } from '../components/TrustBadges';
+import { CategoryGrid } from '../components/CategoryGrid';
+import { FeaturedProfessionals } from '../components/FeaturedProfessionals';
+import { WhyChooseVaziro } from '../components/WhyChooseVaziro';
+import { HomeTestimonials } from '../components/HomeTestimonials';
+import { HomeFaq } from '../components/HomeFaq';
+import { SEOHead } from '../components/SEOHead';
 
 export const HomePage: React.FC = () => {
   const { openAuthModal } = useAuth();
   const [workflowRole, setWorkflowRole] = useState<'CUSTOMER' | 'PROFESSIONAL'>('CUSTOMER');
 
+  // Structured Schema for Home Page (WebSite + Organization + FAQ + LocalService)
+  const homeSchema = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebSite',
+        '@id': 'https://vaziro.com/#website',
+        'url': 'https://vaziro.com/',
+        'name': 'Vaziro',
+        'description': 'India’s premier marketplace for verified personal care, nurses, tutors, and home professionals.',
+        'potentialAction': {
+          '@type': 'SearchAction',
+          'target': 'https://vaziro.com/professionals?q={search_term_string}',
+          'query-input': 'required name=search_term_string',
+        },
+      },
+      {
+        '@type': 'Organization',
+        '@id': 'https://vaziro.com/#organization',
+        'name': 'Vaziro',
+        'url': 'https://vaziro.com/',
+        'logo': 'https://vaziro.com/logo.png',
+        'sameAs': [
+          'https://www.linkedin.com/company/vaziro',
+          'https://twitter.com/vazirohub',
+        ],
+      },
+      {
+        '@type': 'ProfessionalService',
+        '@id': 'https://vaziro.com/#localbusiness',
+        'name': 'Vaziro Verified Home Services',
+        'url': 'https://vaziro.com/',
+        'image': 'https://vaziro.com/logo.png',
+        'priceRange': '₹₹',
+        'areaServed': [
+          'Delhi',
+          'Noida',
+          'Gurugram',
+          'Ghaziabad',
+          'Greater Noida',
+        ],
+      },
+    ],
+  };
+
   return (
-    <div className="bg-[#fcfbf8]">
-      {/* Hero Section with Live Indian Photography & Delhi NCR City Selector */}
+    <div className="bg-[#fcfbf8] text-[#1e2824]">
+      {/* 1. Dynamic SEO & AEO Head Directives */}
+      <SEOHead
+        title="Vaziro™ — Verified Home Care, Nurses, Physio, Tutors & Cooks in Delhi NCR"
+        description="Hire pre-verified independent home caregivers, nurses, physiotherapists, home tutors, and cooks in Delhi, Noida, Gurugram. 100% Escrow milestone protection and DigiLocker ID checks."
+        keywords="home care Delhi, elderly caregiver Noida, home nurse Gurugram, physiotherapist at home Delhi NCR, home tutor Delhi, home cook, fitness trainer, yoga instructor, verified professionals India, Vaziro"
+        canonical="https://vaziro.com/"
+        schema={homeSchema}
+      />
+
+      {/* 2. Hero Section (Video Banner, Editorial Typography, City Selector) */}
       <Hero />
 
-      {/* Trust & Guarantee Badges */}
+      {/* 3. Trust & Escrow Guarantee Badges with Live Stats */}
       <TrustBadges />
 
-      {/* 8-Category Grid with Real Indian Photography Cards */}
+      {/* 4. Category Grid (8 Photography Cards with Active Counters & Rate Hints) */}
       <CategoryGrid />
 
-      {/* HOW IT WORKS: a complete service journey */}
+      {/* 5. Featured Verified Professionals Showcase in Delhi NCR */}
+      <FeaturedProfessionals />
+
+      {/* 6. Why Choose Vaziro vs Unorganized Placement Agencies (Comparison Table) */}
+      <WhyChooseVaziro />
+
+      {/* 7. HOW IT WORKS: The Vaziro Service Journey */}
       <section id="how-it-works" className="relative overflow-hidden border-b border-[#dce6df] bg-[#f0f5f0] py-16 sm:py-20">
         <div className="pointer-events-none absolute -left-32 top-20 h-72 w-72 rounded-full border-[42px] border-emerald-900/[0.035]" />
+        
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative mb-10 flex flex-col gap-5 md:mb-12 md:flex-row md:items-end md:justify-between">
             <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.13em] text-emerald-900">
-                <Route className="h-3.5 w-3.5" /> The Vaziro service journey
+              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/90 px-3.5 py-1.5 text-xs font-extrabold uppercase tracking-wider text-emerald-900">
+                <Route className="h-3.5 w-3.5 text-[#108a00]" />
+                <span>The Vaziro Milestone Journey</span>
               </span>
-              <h2 className="mt-4 text-3xl font-black leading-tight tracking-tight text-[#10241e] sm:text-4xl">
-                {workflowRole === 'CUSTOMER' ? 'From first request to finished work.' : 'From your profile to paid work.'}
+              <h2 className="mt-3.5 text-2xl sm:text-3xl lg:text-4xl font-extrabold leading-tight tracking-tight text-[#10241e]">
+                {workflowRole === 'CUSTOMER' ? 'From first request to inspected finish.' : 'From your verified profile to paid work.'}
               </h2>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-[#52665d] sm:text-base">
+              <p className="mt-2.5 max-w-xl text-sm leading-relaxed text-[#52665d] sm:text-base">
                 {workflowRole === 'CUSTOMER'
-                  ? 'Post a service need, compare independent pros, choose your fit, and stay in control through completion.'
-                  : 'Build a trusted profile, find service work, send a clear proposal, and manage delivery from one place.'}
+                  ? 'Post your need for free, compare transparent quotations from verified independent professionals, and release payments only after satisfaction.'
+                  : 'Build your DigiLocker verified profile, browse real client requests across Delhi NCR, submit direct quotes, and get paid with zero commissions.'}
               </p>
             </div>
+
+            {/* Switcher & Guide Link */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <div className="inline-flex rounded-xl border border-[#cad9ce] bg-white p-1" role="group" aria-label="Choose a marketplace workflow">
-                <button type="button" onClick={() => setWorkflowRole('CUSTOMER')} aria-pressed={workflowRole === 'CUSTOMER'} className={`min-h-10 rounded-lg px-3 text-xs font-extrabold transition ${workflowRole === 'CUSTOMER' ? 'bg-[#10241e] text-white' : 'text-[#52665d] hover:bg-[#f0f5f0]'}`}>I&apos;m hiring</button>
-                <button type="button" onClick={() => setWorkflowRole('PROFESSIONAL')} aria-pressed={workflowRole === 'PROFESSIONAL'} className={`min-h-10 rounded-lg px-3 text-xs font-extrabold transition ${workflowRole === 'PROFESSIONAL' ? 'bg-[#10241e] text-white' : 'text-[#52665d] hover:bg-[#f0f5f0]'}`}>I&apos;m finding work</button>
+                <button
+                  type="button"
+                  onClick={() => setWorkflowRole('CUSTOMER')}
+                  aria-pressed={workflowRole === 'CUSTOMER'}
+                  className={`min-h-10 rounded-lg px-4 text-xs font-extrabold transition cursor-pointer ${
+                    workflowRole === 'CUSTOMER' ? 'bg-[#10241e] text-white shadow-xs' : 'text-[#52665d] hover:bg-[#f0f5f0]'
+                  }`}
+                >
+                  I'm hiring help
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWorkflowRole('PROFESSIONAL')}
+                  aria-pressed={workflowRole === 'PROFESSIONAL'}
+                  className={`min-h-10 rounded-lg px-4 text-xs font-extrabold transition cursor-pointer ${
+                    workflowRole === 'PROFESSIONAL' ? 'bg-[#10241e] text-white shadow-xs' : 'text-[#52665d] hover:bg-[#f0f5f0]'
+                  }`}
+                >
+                  I'm a professional
+                </button>
               </div>
-              <Link to="/workflow-preview" className="inline-flex min-h-11 items-center gap-2 self-start rounded-xl border border-[#cad9ce] bg-white px-4 text-sm font-bold text-[#29463a] transition hover:border-emerald-700 hover:text-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2 sm:self-auto">
-                Full workflow <ArrowRight className="h-4 w-4" />
+
+              <Link
+                to="/workflow-preview"
+                className="inline-flex min-h-10 items-center gap-2 self-start rounded-xl border border-[#cad9ce] bg-white px-4 text-xs sm:text-sm font-bold text-[#29463a] transition hover:border-emerald-700 hover:text-emerald-900 shadow-2xs"
+              >
+                <span>Full Guide</span>
+                <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </div>
 
-          <div className="relative grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="pointer-events-none absolute left-[16%] right-[16%] top-10 hidden h-px bg-[#cbd9ce] md:block" />
-            {(workflowRole === 'CUSTOMER' ? [
-              {
-                title: 'Tell us what you need',
-                body: 'Share a few details, your location and budget. Posting a requirement is always free.',
-                action: 'Post a request',
-                href: '/post-requirement',
-                icon: ClipboardList,
-              },
-              {
-                title: 'Compare your options',
-                body: 'Get quotations from relevant professionals. Review their experience, availability and approach.',
-                action: 'Go to dashboard',
-                href: '/dashboard',
-                icon: MessagesSquare,
-              },
-              {
-                title: 'Choose with confidence',
-                body: 'Talk through the details and hire the person who feels right for you.',
-                action: 'Explore professionals',
-                href: '/professionals',
-                icon: UserRoundCheck,
-              },
-            ] : [
-              {
-                title: 'Tell your story',
-                body: 'Build a profile that shows families your services, experience and credentials.',
-                action: 'Edit your profile',
-                href: '/profile',
-                icon: UserRoundCheck,
-              },
-              {
-                title: 'Choose requests that fit',
-                body: 'Browse customer requests, review scope and budget, and find opportunities that suit your services.',
-                action: 'Find work',
-                href: '/requirements',
-                icon: Search,
-              },
-              {
-                title: 'Share your quotation',
-                body: 'Set a price, explain your approach and availability, and talk through the details with the customer.',
-                action: 'Browse requests',
-                href: '/requirements',
-                icon: MessagesSquare,
-              },
-            ]).map((step, index) => {
+          {/* 3 Step Cards */}
+          <div className="relative grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
+            <div className="pointer-events-none absolute left-[16%] right-[16%] top-12 hidden h-0.5 bg-[#cbd9ce] md:block" />
+            
+            {(workflowRole === 'CUSTOMER'
+              ? [
+                  {
+                    title: '1. Tell us what you need',
+                    body: 'Share a few details: category, service schedule, location in Delhi NCR, and budget. Posting a request is 100% free with no obligation.',
+                    action: 'Post a request for free',
+                    href: '/post-requirement',
+                    icon: ClipboardList,
+                  },
+                  {
+                    title: '2. Compare verified quotations',
+                    body: 'Receive direct proposals from relevant independent professionals. Review their DigiLocker verification, past ratings, and rates.',
+                    action: 'Browse professionals directory',
+                    href: '/professionals',
+                    icon: MessagesSquare,
+                  },
+                  {
+                    title: '3. Hire with 100% Escrow Protection',
+                    body: 'Fund the milestone safely in escrow. Discuss details directly, and release the payment only after you confirm satisfactory service.',
+                    action: 'Learn about escrow protection',
+                    href: '/workflow-preview',
+                    icon: UserRoundCheck,
+                  },
+                ]
+              : [
+                  {
+                    title: '1. Build your verified profile',
+                    body: 'Showcase your skills, service radius in Delhi NCR, and credentials. Complete DigiLocker verification to earn the top trust badge.',
+                    action: 'Complete professional profile',
+                    href: '/profile',
+                    icon: UserRoundCheck,
+                  },
+                  {
+                    title: '2. Pick requests that suit you',
+                    body: 'Browse client service requests across Delhi, Noida, and Gurugram. Filter by your specialty, budget, and daily or monthly schedules.',
+                    action: 'Find client jobs',
+                    href: '/requirements',
+                    icon: Search,
+                  },
+                  {
+                    title: '3. Quote directly & keep 100%',
+                    body: 'Send custom quotations with your price and terms. Manage delivery, complete milestones, and receive payouts with zero commissions.',
+                    action: 'Browse active requests',
+                    href: '/requirements',
+                    icon: MessagesSquare,
+                  },
+                ]
+            ).map((step, index) => {
               const Icon = step.icon;
               return (
-                <article key={step.title} className="group relative rounded-[9px] border border-[#e7e8df] bg-[#fffefa] p-5 transition duration-200 hover:-translate-y-1 hover:border-[#c5d5a8] hover:shadow-[0_12px_25px_rgba(64,83,45,0.08)] sm:p-6">
-                  <div className="relative z-10 flex h-11 w-11 items-center justify-center rounded-xl bg-[#e9efdd] text-[#668044]">
-                    <Icon className="h-5 w-5" aria-hidden="true" />
-                    <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-[#d5edaf] text-[10px] font-black text-[#344e2d]">{String(index + 1).padStart(2, '0')}</span>
+                <article
+                  key={step.title}
+                  className="group relative rounded-2xl border border-[#e7e8df] bg-[#fffefa] p-6 transition-all duration-200 hover:-translate-y-1 hover:border-[#c5d5a8] hover:shadow-xl flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-xl bg-[#e9efdd] text-[#668044]">
+                      <Icon className="h-6 w-6" aria-hidden="true" />
+                      <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-[#d5edaf] text-[10px] font-black text-[#344e2d]">
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                    </div>
+
+                    <h3 className="mt-5 text-base sm:text-lg font-bold tracking-tight text-[#303b32]">
+                      {step.title}
+                    </h3>
+
+                    <p className="mt-2 text-xs sm:text-sm leading-relaxed text-[#737c73]">
+                      {step.body}
+                    </p>
                   </div>
-                  <h3 className="mt-5 text-base font-semibold tracking-tight text-[#303b32]">{step.title}</h3>
-                  <p className="mt-2 min-h-[4.5rem] text-sm leading-6 text-[#737c73]">{step.body}</p>
-                  <Link to={step.href} className="mt-4 inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-[#506e40] transition hover:text-[#355e3e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 focus-visible:ring-offset-2">
-                    {step.action}<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+
+                  <Link
+                    to={step.href}
+                    className="mt-5 inline-flex items-center gap-1.5 text-xs font-bold text-[#506e40] transition hover:text-[#355e3e]"
+                  >
+                    <span>{step.action}</span>
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </article>
               );
@@ -129,91 +245,77 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      <section className="border-y border-[#e7e8df] bg-white py-16 sm:py-20" aria-labelledby="marketplace-tools-title">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto mb-10 max-w-2xl text-center sm:mb-12">
-            <p className="text-[10px] font-bold uppercase tracking-[1.6px] text-[#718044]">One marketplace, two perspectives</p>
-            <h2 id="marketplace-tools-title" className="mt-3 text-3xl font-semibold tracking-tight text-[#24352b] sm:text-4xl">Clear choices for both sides.</h2>
-            <p className="mt-3 text-sm leading-6 text-[#68716b]">Vaziro helps customers describe the work and helps professionals decide which requests to answer.</p>
+      {/* 8. Verified Delhi NCR Client Testimonials */}
+      <HomeTestimonials />
+
+      {/* 9. AEO-Optimized FAQ Section */}
+      <HomeFaq />
+
+      {/* 10. High-Conversion Final CTA Banner */}
+      <section className="bg-gradient-to-br from-[#123128] to-[#183e33] px-4 py-14 text-white sm:px-6 sm:py-20 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="mx-auto max-w-4xl text-center relative z-10">
+          <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-[#c9f27d] backdrop-blur-xs">
+            <BadgeCheck className="h-4 w-4" />
+            <span>Ready to get started?</span>
+          </span>
+
+          <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-5xl leading-tight">
+            The right care. The right help.<br />
+            <span className="text-[#c9f27d]">100% Escrow Protected.</span>
+          </h2>
+
+          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base leading-relaxed text-[#c0d0c2]">
+            Connect with pre-verified independent caregivers, nurses, physiotherapists, tutors, and cooks across Delhi NCR today.
+          </p>
+
+          <div className="mt-8 flex flex-col justify-center gap-3.5 sm:flex-row">
+            <Link
+              to="/post-requirement"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#108a00] hover:bg-[#14a800] px-7 text-sm font-bold text-white transition shadow-lg hover:shadow-emerald-900/40 cursor-pointer"
+            >
+              <span>Post a Requirement (Free)</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+
+            <Link
+              to="/professionals"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/30 bg-white/10 hover:bg-white/20 px-7 text-sm font-bold text-white transition cursor-pointer backdrop-blur-xs"
+            >
+              <UserRoundCheck className="h-4 w-4" />
+              <span>Browse All Professionals</span>
+            </Link>
+
+            {!openAuthModal ? null : (
+              <button
+                type="button"
+                onClick={() => openAuthModal('PROFESSIONAL', undefined, 'SIGNUP')}
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-[#c9f27d]/40 bg-emerald-950/40 hover:bg-emerald-900/60 px-6 text-sm font-bold text-[#c9f27d] transition cursor-pointer"
+              >
+                <Sparkles className="h-4 w-4 text-[#c9f27d]" />
+                <span>Join as a Pro (+10 Free Credits)</span>
+              </button>
+            )}
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
-            <article className="rounded-xl border border-[#e3e8dc] bg-[#f7f8f3] p-5 sm:p-7">
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e5ecd9] text-[#5e7b4c]"><UserRoundCheck className="h-5 w-5" /></span>
-              <h3 className="mt-4 text-lg font-semibold text-[#29382e]">For customers</h3>
-              <p className="mt-1 text-sm leading-6 text-[#68716b]">Get the details in one place before you decide who to hire.</p>
-              <ul className="mt-4 space-y-3 text-sm text-[#465248]">
-                <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#668044]" />Set your service area, description, timing and budget.</li>
-                <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#668044]" />Compare professional profiles and submitted quotations.</li>
-                <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#668044]" />Shortlist, ask questions and hire when you are ready.</li>
-              </ul>
-              <Link to="/post-requirement" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md bg-[#203c32] px-4 text-sm font-semibold text-white transition hover:bg-[#2d5144]">Post a request <ArrowRight className="h-4 w-4" /></Link>
-            </article>
-
-            <article className="rounded-xl border border-[#e3e8dc] bg-[#183e33] p-5 text-white sm:p-7">
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-[#c9f27d]"><BriefcaseBusiness className="h-5 w-5" /></span>
-              <h3 className="mt-4 text-lg font-semibold text-white">For professionals</h3>
-              <p className="mt-1 text-sm leading-6 text-[#c0d0c2]">Choose the requests that suit your services and availability.</p>
-              <ul className="mt-4 space-y-3 text-sm text-[#e2e9e1]">
-                <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#c9f27d]" />Build a profile with your experience and service details.</li>
-                <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#c9f27d]" />Browse customer requests by category and location.</li>
-                <li className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#c9f27d]" />Send a quotation with your price and proposed timeline.</li>
-              </ul>
-              <button type="button" onClick={() => openAuthModal('PROFESSIONAL', undefined, 'SIGNUP')} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-md bg-[#c9f27d] px-4 text-sm font-semibold text-[#203c32] transition hover:bg-[#d7f8a0]">Join as a professional <ArrowRight className="h-4 w-4" /></button>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-[#f5f6f1] py-16 sm:py-20" aria-labelledby="home-faq-title">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.7fr_1.3fr] lg:gap-16 lg:px-8">
-          <div>
-            <p className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[1.6px] text-[#718044]"><CircleHelp className="h-4 w-4" /> Helpful details</p>
-            <h2 id="home-faq-title" className="mt-3 text-3xl font-semibold tracking-tight text-[#24352b] sm:text-4xl">A few things to know.</h2>
-            <p className="mt-3 text-sm leading-6 text-[#68716b]">Understand how posting, verification and payment protection work before you get started.</p>
-            <Link to="/workflow-preview" className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#506e40] hover:text-[#355e3e]">See the full workflow <ArrowRight className="h-4 w-4" /></Link>
-          </div>
-
-          <div className="divide-y divide-[#e7e8df] border-y border-[#dce0d3]">
-            <details className="group py-4">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-[#344137] marker:content-none">
-                Is it free to post a service request?<ChevronDown className="h-4 w-4 shrink-0 text-[#718044] transition group-open:rotate-180" />
-              </summary>
-              <p className="pb-2 pr-8 text-sm leading-6 text-[#68716b]">Yes. You can describe your request and review responses without an obligation to hire.</p>
-            </details>
-            <details className="group py-4">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-[#344137] marker:content-none">
-                Are all professionals verified?<ChevronDown className="h-4 w-4 shrink-0 text-[#718044] transition group-open:rotate-180" />
-              </summary>
-              <p className="pb-2 pr-8 text-sm leading-6 text-[#68716b]">Verification status is shown on profiles and proposals when available. Check each profile and discuss the work before hiring.</p>
-            </details>
-            <details className="group py-4">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-[#344137] marker:content-none">
-                Do I have to use payment protection?<ChevronDown className="h-4 w-4 shrink-0 text-[#718044] transition group-open:rotate-180" />
-              </summary>
-              <p className="pb-2 pr-8 text-sm leading-6 text-[#68716b]">No. Payment protection is optional during hiring. If enabled, the current service fee is shown before you confirm.</p>
-            </details>
-            <details className="group py-4">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-[#344137] marker:content-none">
-                Where is Vaziro currently available?<ChevronDown className="h-4 w-4 shrink-0 text-[#718044] transition group-open:rotate-180" />
-              </summary>
-              <p className="pb-2 pr-8 text-sm leading-6 text-[#68716b]">Vaziro currently serves Delhi, Noida, Gurugram, Ghaziabad and Greater Noida.</p>
-            </details>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-semibold text-neutral-300">
+            <div className="flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4 text-[#c9f27d]" />
+              <span>DigiLocker Identity Verified</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Lock className="w-4 h-4 text-[#c9f27d]" />
+              <span>Escrow Milestone Holding</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-[#c9f27d]" />
+              <span>Zero Placement Commission</span>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="bg-[#183e33] px-4 py-12 text-center text-white sm:px-6 sm:py-16">
-        <div className="mx-auto max-w-3xl">
-          <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[1.6px] text-[#c9f27d]"><BadgeCheck className="h-4 w-4" /> Start on your terms</span>
-          <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-4xl">A better fit starts with a clear conversation.</h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[#c0d0c2]">Share what you need or find a request that matches the work you do.</p>
-          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link to="/post-requirement" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[#c9f27d] px-5 text-sm font-semibold text-[#203c32] transition hover:bg-[#d7f8a0]">Post a request <ArrowRight className="h-4 w-4" /></Link>
-            <Link to="/requirements" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-white/25 px-5 text-sm font-semibold text-white transition hover:bg-white/10"><WalletCards className="h-4 w-4" /> Browse requests</Link>
-          </div>
-        </div>
-      </section>
     </div>
   );
 };

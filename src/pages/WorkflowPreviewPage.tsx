@@ -11,6 +11,7 @@ import {
   Search,
   UserRoundCheck,
 } from 'lucide-react';
+import { SEOHead } from '../components/SEOHead';
 
 type Audience = 'CUSTOMER' | 'PROFESSIONAL';
 
@@ -85,6 +86,12 @@ export const WorkflowPreviewPage: React.FC = () => {
 
   return (
     <div className="min-h-full bg-[#fcfbf8] px-4 py-8 sm:px-6 sm:py-12">
+      <SEOHead
+        title="How Vaziro Works — Transparent Milestones & 100% Escrow Protection"
+        description="Learn how the Vaziro verified workflow connects customers and independent service professionals across Delhi NCR with escrow milestone protection and zero commission."
+        canonical="https://vaziro.com/workflow-preview"
+        keywords="how vaziro works, escrow milestone protection, verified service workflow, Delhi NCR"
+      />
       <div className="mx-auto max-w-5xl">
         <Link to="/" className="mb-6 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-neutral-600 transition hover:text-emerald-900">
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
