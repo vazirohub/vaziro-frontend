@@ -558,6 +558,17 @@ export const PostRequirementPage: React.FC = () => {
       return;
     }
 
+    if (!/^\d{6}$/.test(pincode)) {
+      setStep(2);
+      setError('Enter a valid 6-digit PIN code so professionals can confirm they serve your area.');
+      return;
+    }
+
+    if (budgetMin < 500 || (budgetType === 'RANGE' && budgetMax < budgetMin)) {
+      setError(budgetType === 'RANGE' ? 'Your maximum budget must be at least your minimum budget.' : 'Enter a budget of at least ₹500.');
+      return;
+    }
+
     if (!isAuthenticated) {
       // Save draft with pendingPublish = true and open auth modal
       const draftKey = 'req_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
@@ -628,49 +639,44 @@ export const PostRequirementPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto py-10 px-4 sm:px-6">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-11">
       {/* Header */}
-      <div className="text-center mb-8">
-        <span className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-black bg-neutral-100 px-3.5 py-1.5 rounded-full mb-3 border border-neutral-300">
-          <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span>Direct Quotes • Zero Middleman Fee</span>
+      <div className="mb-7 max-w-3xl">
+        <span className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[1.6px] text-[#718044]">
+          <span className="h-2 w-2 rounded-full bg-[#8bb647]" /> Free to post · No obligation to hire
         </span>
-        <h1 className="text-3xl sm:text-4xl font-black text-black tracking-tight">
-          Post Your Service Requirement
+        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.05em] text-[#24352b] sm:text-4xl">
+          Tell us what you need.
         </h1>
-        <p className="mt-2 text-sm text-neutral-600 font-medium">
-          State your scope, set your budget in ₹ INR, and receive competitive quotes from verified independent professionals.
+        <p className="mt-2 text-sm leading-6 text-[#68716b] sm:text-base">
+          Share the details once. Compare quotations from relevant local professionals and choose the right fit for you.
         </p>
 
-        {/* Step Indicator (Urban Company Minimalist) */}
-        <div className="mt-8 flex items-center justify-center gap-2">
-          <button
-            onClick={() => setStep(1)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              step === 1 ? 'bg-black text-white shadow-md' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-            }`}
-          >
-            1. Select Category
-          </button>
-          <ChevronRight className="w-4 h-4 text-neutral-400" />
-          <button
-            onClick={() => setStep(2)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              step === 2 ? 'bg-black text-white shadow-md' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-            }`}
-          >
-            2. Scope & Location
-          </button>
-          <ChevronRight className="w-4 h-4 text-neutral-400" />
-          <button
-            onClick={() => setStep(3)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-              step === 3 ? 'bg-black text-white shadow-md' : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-            }`}
-          >
-            3. Budget & Schedule
-          </button>
-        </div>
+        <ol className="mt-6 grid grid-cols-3 gap-2" aria-label="Request progress">
+          {[
+            { number: '01', label: 'Service' },
+            { number: '02', label: 'Details' },
+            { number: '03', label: 'Budget & timing' },
+          ].map((item, index) => {
+            const stepNumber = index + 1;
+            const active = step === stepNumber;
+            const complete = step > stepNumber;
+            return (
+              <li key={item.number}>
+                <button
+                  type="button"
+                  onClick={() => stepNumber <= step && setStep(stepNumber)}
+                  disabled={stepNumber > step}
+                  aria-current={active ? 'step' : undefined}
+                  className={`flex min-h-12 w-full items-center gap-2 border-t-2 px-1 pt-2 text-left transition sm:gap-3 ${active ? 'border-[#719453] text-[#344b35]' : complete ? 'border-[#b7c79e] text-[#607653]' : 'border-[#e7e8df] text-[#9a9f98]'} disabled:cursor-not-allowed`}
+                >
+                  <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${active ? 'bg-[#203c32] text-white' : complete ? 'bg-[#e9efdd] text-[#668044]' : 'bg-[#f1f2e9] text-[#899087]'}`}>{complete ? <CheckCircle2 className="h-4 w-4" /> : item.number}</span>
+                  <span className="text-[11px] font-semibold sm:text-xs">{item.label}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
       </div>
 
       {autoPublishing && (
@@ -686,7 +692,7 @@ export const PostRequirementPage: React.FC = () => {
       )}
 
       {draftRestored && !autoPublishing && (
-        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+        <div role="status" className="mb-6 flex flex-col items-start justify-between gap-3 rounded-md border border-[#dce8ce] bg-[#f5f8ef] p-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2.5 text-blue-900 text-xs font-semibold">
             <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
             <span>We restored your unsaved requirement draft. You can continue editing or publish.</span>
@@ -711,7 +717,7 @@ export const PostRequirementPage: React.FC = () => {
       )}
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+        <div role="alert" className="mb-6 flex flex-col items-start justify-between gap-3 rounded-md border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-2 text-red-800 text-xs font-bold">
             <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
             <span>{error}</span>
@@ -763,18 +769,20 @@ export const PostRequirementPage: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-sm border border-neutral-200 p-6 sm:p-8">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_270px]">
+      <form onSubmit={handleSubmit} className="min-w-0 rounded-[9px] border border-[#e7e8df] bg-[#fffefa] p-5 shadow-[0_10px_32px_-26px_rgba(48,67,45,0.3)] sm:p-7">
         
         {/* STEP 1: CATEGORY SELECTION */}
         {step === 1 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-black text-black">Choose a Service Category</h2>
-              <p className="text-xs text-neutral-500 mt-1">Select from our 8 verified home and healthcare disciplines.</p>
+              <p className="text-[10px] font-bold uppercase tracking-[1.4px] text-[#718044]">Step 1 of 3</p>
+              <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#29382e]">What kind of help are you looking for?</h2>
+              <p className="mt-1 text-sm text-[#778078]">Choose a service, then select the type of support you need.</p>
             </div>
 
             {/* 8 Photo / Icon Category Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {categories.map((cat) => {
                 const isSelected = selectedCategory?.id === cat.id;
                 const photo = categoryThumbnails[cat.slug] || 'https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=400&q=80';
@@ -784,14 +792,15 @@ export const PostRequirementPage: React.FC = () => {
                     key={cat.id}
                     type="button"
                     onClick={() => handleCategorySelect(cat)}
-                    className={`rounded-2xl overflow-hidden border-2 text-left flex flex-col justify-between transition-all group ${
+                    aria-pressed={isSelected}
+                    className={`min-h-[158px] rounded-lg overflow-hidden border text-left flex flex-col justify-between transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#719453] focus-visible:ring-offset-2 ${
                       isSelected
-                        ? 'border-black bg-neutral-50 shadow-lg ring-2 ring-black/10'
-                        : 'border-neutral-200 hover:border-neutral-400 bg-white'
+                        ? 'border-[#78935f] bg-[#f5f8ef] shadow-sm ring-2 ring-[#78935f]/15'
+                        : 'border-[#e7e8df] hover:border-[#c5d5a8] bg-white'
                     }`}
                   >
                     {/* Thumbnail Image */}
-                    <div className="relative h-28 w-full overflow-hidden bg-neutral-100">
+                    <div className="relative h-24 w-full overflow-hidden bg-[#f1f2e9]">
                       <img
                         src={photo}
                         alt={cat.name}
@@ -805,8 +814,8 @@ export const PostRequirementPage: React.FC = () => {
                           <CategoryIcon icon={cat.icon} className="w-4 h-4 text-black" />
                         </div>
                         {isSelected && (
-                          <span className="w-5 h-5 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-black">
-                            ✓
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#c9f27d] text-[#1c3227]">
+                            <CheckCircle2 className="h-4 w-4" />
                           </span>
                         )}
                       </div>
@@ -814,7 +823,7 @@ export const PostRequirementPage: React.FC = () => {
 
                     {/* Text Details */}
                     <div className="p-3">
-                      <div className="font-black text-black text-xs group-hover:text-neutral-900 leading-tight">
+                      <div className="font-semibold text-[#303b32] text-xs group-hover:text-[#355e3e] leading-tight">
                         {cat.name}
                       </div>
                       <div className="text-[10px] text-neutral-400 mt-1 font-semibold">
@@ -829,8 +838,8 @@ export const PostRequirementPage: React.FC = () => {
             {/* Subcategories */}
             {selectedCategory && selectedCategory.subcategories && (
               <div className="mt-8 pt-6 border-t border-neutral-100">
-                <h3 className="text-sm font-black text-black mb-3">
-                  Specific Subdiscipline for {selectedCategory.name} *
+                <h3 className="text-sm font-semibold text-[#344137] mb-3">
+                  Choose a specific service <span className="text-[#8b9289]">(required)</span>
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                   {selectedCategory.subcategories.map((sub) => {
@@ -840,10 +849,11 @@ export const PostRequirementPage: React.FC = () => {
                         key={sub.id}
                         type="button"
                         onClick={() => setSelectedSubcategory(sub)}
-                        className={`p-3 rounded-xl border text-left text-xs font-bold transition flex items-center justify-between ${
+                        aria-pressed={isSubSelected}
+                        className={`min-h-12 p-3 rounded-md border text-left text-xs font-semibold transition flex items-center justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#719453] focus-visible:ring-offset-1 ${
                           isSubSelected
-                            ? 'border-black bg-black text-white shadow-sm'
-                            : 'border-neutral-200 text-neutral-800 hover:bg-neutral-50'
+                            ? 'border-[#78935f] bg-[#edf2e8] text-[#344b35] shadow-sm'
+                            : 'border-[#e7e8df] text-[#505c52] hover:bg-[#f7f8f3]'
                         }`}
                       >
                         <span>{sub.name}</span>
@@ -863,7 +873,7 @@ export const PostRequirementPage: React.FC = () => {
                 onClick={() => setStep(2)}
                 className="inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white font-bold text-xs px-6 py-3 rounded-xl transition shadow-sm"
               >
-                <span>Continue to Scope & Location</span>
+                <span>Continue to details</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -872,49 +882,58 @@ export const PostRequirementPage: React.FC = () => {
 
         {/* STEP 2: SCOPE & LOCATION */}
         {step === 2 && (
-          <div className="space-y-6">
+        <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-black text-black">Requirement Details & Location</h2>
-              <p className="text-xs text-neutral-500 mt-1">Provide clear expectations so professionals can quote accurately.</p>
+              <p className="text-[10px] font-bold uppercase tracking-[1.4px] text-[#718044]">Step 2 of 3</p>
+              <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#29382e]">Describe the service and where you need it</h2>
+              <p className="mt-1 text-sm text-[#778078]">Specific details help professionals send more relevant quotations.</p>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                Requirement Title *
+              <label htmlFor="requirement-title" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                Give your request a short title <span className="text-[#788078]">*</span>
               </label>
               <input
+                id="requirement-title"
                 type="text"
+                minLength={8}
+                maxLength={120}
+                autoComplete="off"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Experienced Home Physiotherapist needed for post-knee surgery rehabilitation"
-                className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-xs font-semibold text-black placeholder:text-neutral-400 transition"
+                placeholder="For example: Home physiotherapist for post-surgery recovery"
+                className="w-full min-h-12 rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                 required
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                Detailed Scope & Instructions *
+              <label htmlFor="requirement-description" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                What should the professional know? <span className="text-[#788078]">*</span>
               </label>
               <textarea
+                id="requirement-description"
                 value={description}
+                minLength={20}
+                maxLength={3000}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
-                placeholder="Describe daily responsibilities, patient/household condition, timing flexibility, and any specific preferences..."
-                className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-xs font-semibold text-black placeholder:text-neutral-400 transition"
+                placeholder="Describe the work, any important requirements, and what a good result would look like..."
+                className="w-full rounded-md border border-[#dfe2d9] bg-white px-3 py-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                 required
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div>
-                <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                  City *
+                <label htmlFor="requirement-city" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                  City <span className="text-[#788078]">*</span>
                 </label>
                 <select
+                  id="requirement-city"
                   value={selectedCityId}
                   onChange={(e) => setSelectedCityId(e.target.value)}
-                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-xs font-bold text-black bg-white"
+                  className="w-full min-h-12 rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                   required
                 >
                   {cities.map((city) => (
@@ -926,16 +945,20 @@ export const PostRequirementPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                  6-Digit Pincode *
+                <label htmlFor="requirement-pincode" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                  PIN code <span className="text-[#788078]">*</span>
                 </label>
                 <input
+                  id="requirement-pincode"
                   type="text"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  pattern="[0-9]{6}"
                   maxLength={6}
                   value={pincode}
                   onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
                   placeholder="560038"
-                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-xs font-bold text-black"
+                  className="w-full min-h-12 rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                   required
                 />
               </div>
@@ -952,16 +975,20 @@ export const PostRequirementPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  if (!title.trim() || !description.trim()) {
-                    setError('Please fill in title and detailed description.');
+                  if (title.trim().length < 8 || description.trim().length < 20) {
+                    setError('Add a title with at least 8 characters and a description with at least 20 characters.');
+                    return;
+                  }
+                  if (!/^\d{6}$/.test(pincode)) {
+                    setError('Enter a valid 6-digit PIN code so professionals can confirm they serve your area.');
                     return;
                   }
                   setError(null);
                   setStep(3);
                 }}
-                className="inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white font-bold text-xs px-6 py-3 rounded-xl transition shadow-sm"
+                className="inline-flex min-h-12 items-center gap-2 rounded-md bg-[#203c32] px-6 text-sm font-semibold text-white transition hover:bg-[#2d5144]"
               >
-                <span>Continue to Budget & Schedule</span>
+                <span>Continue to budget</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -972,8 +999,9 @@ export const PostRequirementPage: React.FC = () => {
         {step === 3 && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-black text-black">Budget & Service Schedule</h2>
-              <p className="text-xs text-neutral-500 mt-1">Set your transparent price expectation in Indian Rupees (₹).</p>
+              <p className="text-[10px] font-bold uppercase tracking-[1.4px] text-[#718044]">Step 3 of 3</p>
+              <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#29382e]">Set your budget and timing</h2>
+              <p className="mt-1 text-sm text-[#778078]">A clear budget helps professionals send useful, comparable quotations.</p>
             </div>
 
             {/* Budget Type Toggle */}
@@ -981,8 +1009,9 @@ export const PostRequirementPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setBudgetType('FIXED')}
-                className={`py-2 text-xs font-bold rounded-lg transition ${
-                  budgetType === 'FIXED' ? 'bg-black text-white shadow-sm' : 'text-neutral-600 hover:text-black'
+                aria-pressed={budgetType === 'FIXED'}
+                className={`min-h-11 rounded-md text-sm font-semibold transition ${
+                  budgetType === 'FIXED' ? 'bg-[#203c32] text-white shadow-sm' : 'text-neutral-600 hover:text-black'
                 }`}
               >
                 Fixed Budget (₹)
@@ -990,8 +1019,9 @@ export const PostRequirementPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setBudgetType('RANGE')}
-                className={`py-2 text-xs font-bold rounded-lg transition ${
-                  budgetType === 'RANGE' ? 'bg-black text-white shadow-sm' : 'text-neutral-600 hover:text-black'
+                aria-pressed={budgetType === 'RANGE'}
+                className={`min-h-11 rounded-md text-sm font-semibold transition ${
+                  budgetType === 'RANGE' ? 'bg-[#203c32] text-white shadow-sm' : 'text-neutral-600 hover:text-black'
                 }`}
               >
                 Budget Range (Min - Max)
@@ -1012,7 +1042,7 @@ export const PostRequirementPage: React.FC = () => {
                     step={100}
                     value={budgetMin}
                     onChange={(e) => setBudgetMin(Number(e.target.value))}
-                    className="w-full pl-8 pr-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-sm font-black text-black"
+                    className="w-full min-h-12 rounded-md border border-[#dfe2d9] bg-white pl-8 pr-4 text-base font-semibold text-[#2e3930] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                     required
                   />
                 </div>
@@ -1031,7 +1061,7 @@ export const PostRequirementPage: React.FC = () => {
                       step={100}
                       value={budgetMin}
                       onChange={(e) => setBudgetMin(Number(e.target.value))}
-                      className="w-full pl-8 pr-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-sm font-black text-black"
+                      className="w-full min-h-12 rounded-md border border-[#dfe2d9] bg-white pl-8 pr-4 text-base font-semibold text-[#2e3930] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                       required
                     />
                   </div>
@@ -1049,7 +1079,7 @@ export const PostRequirementPage: React.FC = () => {
                       step={100}
                       value={budgetMax}
                       onChange={(e) => setBudgetMax(Number(e.target.value))}
-                      className="w-full pl-8 pr-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-sm font-black text-black"
+                      className="w-full min-h-12 rounded-md border border-[#dfe2d9] bg-white pl-8 pr-4 text-base font-semibold text-[#2e3930] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                       required
                     />
                   </div>
@@ -1067,7 +1097,7 @@ export const PostRequirementPage: React.FC = () => {
                   type="date"
                   value={preferredDate}
                   onChange={(e) => setPreferredDate(e.target.value)}
-                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-xs font-bold text-black"
+                  className="w-full min-h-12 rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                 />
               </div>
 
@@ -1078,7 +1108,7 @@ export const PostRequirementPage: React.FC = () => {
                 <select
                   value={preferredTime}
                   onChange={(e) => setPreferredTime(e.target.value)}
-                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl focus:ring-2 focus:ring-black focus:border-black text-xs font-bold text-black bg-white"
+                  className="w-full min-h-12 rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                 >
                   <option value="Morning (8 AM - 12 PM)">Morning (8 AM - 12 PM)</option>
                   <option value="Afternoon (12 PM - 4 PM)">Afternoon (12 PM - 4 PM)</option>
@@ -1103,10 +1133,11 @@ export const PostRequirementPage: React.FC = () => {
                     key={item.key}
                     type="button"
                     onClick={() => setFrequency(item.key)}
-                    className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition ${
+                    aria-pressed={frequency === item.key}
+                    className={`min-h-12 rounded-md border px-2 text-xs font-semibold transition ${
                       frequency === item.key
-                        ? 'border-black bg-black text-white shadow-sm'
-                        : 'border-neutral-200 text-neutral-700 hover:bg-neutral-50'
+                        ? 'border-[#78935f] bg-[#edf2e8] text-[#344b35] shadow-sm'
+                        : 'border-[#e7e8df] text-neutral-700 hover:bg-[#f7f7f1]'
                     }`}
                   >
                     {item.label}
@@ -1116,11 +1147,11 @@ export const PostRequirementPage: React.FC = () => {
             </div>
 
             {/* Submit Bar */}
-            <div className="flex justify-between pt-6 border-t border-neutral-100">
+            <div className="sticky bottom-0 -mx-5 flex justify-between gap-3 border-t border-[#e8e9e2] bg-[#fffefa]/95 px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] backdrop-blur sm:-mx-7 sm:px-7 lg:static lg:mx-0 lg:bg-transparent lg:px-0 lg:pb-4">
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                className="text-xs font-bold text-neutral-600 hover:text-black py-2.5 px-4"
+                className="min-h-12 rounded-md px-4 text-sm font-semibold text-[#59645b] hover:bg-[#f1f2e9] hover:text-[#203c32]"
               >
                 ← Back
               </button>
@@ -1128,16 +1159,51 @@ export const PostRequirementPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white font-bold text-sm px-8 py-3.5 rounded-xl transition shadow-md disabled:opacity-50"
+                className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-md bg-[#203c32] px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2d5144] disabled:cursor-wait disabled:opacity-60 sm:flex-none sm:px-7"
               >
-                {submitting ? 'Publishing...' : 'Publish Requirement & Receive Quotes'}
-                <ArrowRight className="w-4 h-4" />
+                {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> Publishing...</> : <>Post my request <ArrowRight className="w-4 h-4" /></>}
               </button>
             </div>
           </div>
         )}
 
       </form>
+      <aside className="space-y-4 lg:sticky lg:top-28">
+        <section className="rounded-[9px] border border-[#e7e8df] bg-[#fffefa] p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[1.4px] text-[#718044]">Your request so far</p>
+          <h2 className="mt-2 text-base font-semibold text-[#344137]">{selectedCategory?.name || 'Choose a service'}</h2>
+          {selectedSubcategory?.name && <p className="mt-1 text-sm text-[#778078]">{selectedSubcategory.name}</p>}
+          <div className="my-4 border-t border-[#e8e9e2]" />
+          <dl className="space-y-3 text-sm">
+            <div>
+              <dt className="text-xs text-[#858c84]">Request</dt>
+              <dd className="mt-0.5 break-words font-medium text-[#354137]">{title.trim() || 'Add a short title'}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-[#858c84]">Service area</dt>
+              <dd className="mt-0.5 font-medium text-[#354137]">{cities.find((city) => city.id === selectedCityId)?.name || 'Choose a city'}{pincode ? ` · ${pincode}` : ''}</dd>
+            </div>
+            {step === 3 && <div>
+              <dt className="text-xs text-[#858c84]">Budget</dt>
+              <dd className="mt-0.5 font-semibold text-[#354137]">{budgetType === 'RANGE' ? `₹${Number(budgetMin || 0).toLocaleString('en-IN')}–₹${Number(budgetMax || 0).toLocaleString('en-IN')}` : `₹${Number(budgetMin || 0).toLocaleString('en-IN')}`}</dd>
+            </div>}
+            {preferredDate && <div>
+              <dt className="text-xs text-[#858c84]">Preferred start</dt>
+              <dd className="mt-0.5 font-medium text-[#354137]">{new Date(`${preferredDate}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</dd>
+            </div>}
+          </dl>
+        </section>
+        <section className="rounded-[9px] border border-[#e4e8dc] bg-[#f1f4e9] p-5">
+          <div className="flex items-start gap-2.5">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#668044]" />
+            <div>
+              <h3 className="text-sm font-semibold text-[#3d4e3c]">You stay in control</h3>
+              <p className="mt-1 text-xs leading-5 text-[#6e786f]">Posting is free. Review quotations and choose whether to hire. Your draft is saved in this browser as you go.</p>
+            </div>
+          </div>
+        </section>
+      </aside>
+      </div>
     </div>
   );
 };
