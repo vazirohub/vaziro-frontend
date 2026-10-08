@@ -67,11 +67,13 @@ export const Hero: React.FC = () => {
   };
 
   return (
-    <section className="relative bg-[#fcfbf8] pt-4 sm:pt-6 pb-12 sm:pb-16 border-b border-[#dce6df]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="relative bg-[#fcfbf8] py-2 sm:py-3 lg:py-4 border-b border-[#dce6df]">
+      {/* Widescreen Container (Increased width matching Upwork reference) */}
+      <div className="w-full max-w-[1480px] mx-auto px-3 sm:px-6 lg:px-8">
         
-        {/* ================= HERO VIDEO BANNER CARD (UPWORK STYLE) ================= */}
-        <div className="relative rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden bg-neutral-950 shadow-[0_24px_60px_-15px_rgba(0,0,0,0.5)] min-h-[520px] sm:min-h-[580px] lg:min-h-[620px] flex items-center">
+        {/* ================= HERO VIDEO BANNER CARD ================= */}
+        {/* Desktop Height fits in one screen (lg:max-h-[560px] / lg:h-[calc(100vh-125px)]) */}
+        <div className="relative rounded-[1.75rem] sm:rounded-[2.25rem] lg:rounded-[2.5rem] overflow-hidden bg-neutral-950 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.5)] min-h-[460px] sm:min-h-[500px] lg:h-[calc(100vh-125px)] lg:max-h-[560px] flex items-center">
           
           {/* Autoplay Looping Background Video (Home Care & Health Assistance) */}
           <video
@@ -90,8 +92,8 @@ export const Hero: React.FC = () => {
           <div className="absolute inset-0 bg-gradient-to-r from-neutral-950 via-neutral-950/85 sm:via-neutral-950/75 to-transparent pointer-events-none" />
           <div className="absolute inset-0 bg-gradient-to-t from-neutral-950/70 via-transparent to-neutral-950/30 pointer-events-none" />
 
-          {/* Left-Aligned Hero Content */}
-          <div className="relative z-10 w-full max-w-2xl px-6 py-10 sm:px-12 sm:py-16 lg:px-16 text-left space-y-6">
+          {/* Left-Aligned Hero Content - Compact Vertical Spacing to Fit One Screen */}
+          <div className="relative z-10 w-full max-w-2xl px-5 py-6 sm:px-10 sm:py-8 lg:px-14 lg:py-8 text-left space-y-3 sm:space-y-3.5 lg:space-y-4">
             
             {/* Hire / Work Capsule Pill Switcher (Exact Upwork Reference Style) */}
             <div>
@@ -103,7 +105,7 @@ export const Hero: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSearchMode('HIRE')}
-                  className={`px-5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  className={`px-4 sm:px-5 py-1 sm:py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
                     searchMode === 'HIRE'
                       ? 'bg-neutral-900 text-white shadow-md'
                       : 'text-white/80 hover:text-white'
@@ -114,7 +116,7 @@ export const Hero: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setSearchMode('WORK')}
-                  className={`px-5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+                  className={`px-4 sm:px-5 py-1 sm:py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
                     searchMode === 'WORK'
                       ? 'bg-neutral-900 text-white shadow-md'
                       : 'text-white/80 hover:text-white'
@@ -126,7 +128,7 @@ export const Hero: React.FC = () => {
             </div>
 
             {/* Editorial Headline with Italic Serif Accent */}
-            <h1 className="text-3xl sm:text-5xl lg:text-[4.25rem] font-bold text-white tracking-[-0.04em] leading-[1.06]">
+            <h1 className="text-3xl sm:text-4xl lg:text-[3.25rem] xl:text-[3.6rem] font-bold text-white tracking-[-0.04em] leading-[1.05]">
               Find the right help.<br />
               <span
                 className="font-normal text-[#c9f27d]"
@@ -141,19 +143,19 @@ export const Hero: React.FC = () => {
             </h1>
 
             {/* Subtitle */}
-            <p className="text-sm sm:text-base lg:text-lg text-neutral-200 font-normal leading-relaxed max-w-xl">
+            <p className="text-xs sm:text-sm lg:text-[15px] text-neutral-200 font-normal leading-relaxed max-w-xl">
               {searchMode === 'HIRE'
                 ? 'Connect directly with independent, DigiLocker-verified caregivers, nurses, tutors, cooks, and trainers across Delhi NCR. Compare transparent quotes and hire on your terms.'
                 : 'Find verified client requirements across Delhi NCR, send quotations directly with zero commission cuts, and get hired on your own schedule.'}
             </p>
 
             {/* Integrated Search Box with City Selector & Direct Action */}
-            <form onSubmit={handleSearchSubmit} className="pt-1">
-              <div className="bg-white/95 backdrop-blur-md p-1.5 sm:p-2 rounded-2xl border border-white/40 shadow-2xl flex flex-col sm:flex-row items-center gap-2 max-w-xl">
+            <form onSubmit={handleSearchSubmit} className="pt-0.5">
+              <div className="bg-white/95 backdrop-blur-md p-1.5 rounded-xl sm:rounded-2xl border border-white/40 shadow-2xl flex flex-col sm:flex-row items-center gap-2 max-w-xl">
                 
                 {/* Service Zone Selector */}
-                <div className="flex items-center gap-2 px-3 py-1.5 border-b sm:border-b-0 sm:border-r border-neutral-200 w-full sm:w-auto text-xs font-bold text-neutral-800 shrink-0">
-                  <MapPin className="w-4 h-4 text-emerald-700 shrink-0" />
+                <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1 border-b sm:border-b-0 sm:border-r border-neutral-200 w-full sm:w-auto text-xs font-bold text-neutral-800 shrink-0">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
                   <div className="flex flex-col text-left">
                     <span className="text-[9px] uppercase tracking-wider text-neutral-400 font-bold leading-none mb-0.5">
                       Service Zone
@@ -174,25 +176,25 @@ export const Hero: React.FC = () => {
                 </div>
 
                 {/* Search Text Input */}
-                <div className="flex-1 flex items-center gap-2 px-2.5 w-full">
-                  <Search className="w-4 h-4 text-neutral-400 shrink-0" />
+                <div className="flex-1 flex items-center gap-2 px-2 w-full">
+                  <Search className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={
                       searchMode === 'HIRE'
-                        ? 'Try "Elderly Care", "Physio", "Maths Tutor"...'
+                        ? 'Try "Elderly Care", "Physio", "Tutor"...'
                         : 'Search active job requirements...'
                     }
-                    className="w-full text-xs sm:text-sm font-semibold text-[#10241e] placeholder:text-neutral-400 focus:outline-none py-1.5"
+                    className="w-full text-xs sm:text-sm font-semibold text-[#10241e] placeholder:text-neutral-400 focus:outline-none py-1"
                   />
                 </div>
 
                 {/* Upwork Iconic Green Action Button (Matches Screenshot: Get started →) */}
                 <button
                   type="submit"
-                  className="w-full sm:w-auto bg-[#108a00] hover:bg-[#14a800] text-white text-xs sm:text-sm font-bold px-6 py-3 rounded-xl transition flex items-center justify-center gap-2 shrink-0 shadow-md cursor-pointer"
+                  className="w-full sm:w-auto bg-[#108a00] hover:bg-[#14a800] text-white text-xs sm:text-sm font-bold px-5 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl transition flex items-center justify-center gap-2 shrink-0 shadow-md cursor-pointer"
                 >
                   <span>{searchMode === 'HIRE' ? 'Get started' : 'Browse jobs'}</span>
                   <ArrowRight className="w-4 h-4" />
@@ -201,14 +203,14 @@ export const Hero: React.FC = () => {
             </form>
 
             {/* Popular Search Tags */}
-            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-neutral-300">
-              <span className="font-bold text-white shrink-0">Popular:</span>
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-0.5 text-xs text-neutral-300">
+              <span className="font-bold text-white text-[11px] sm:text-xs shrink-0">Popular:</span>
               {popularTags.map((tag) => (
                 <button
                   key={tag.label}
                   type="button"
                   onClick={() => handleTagClick(tag.query)}
-                  className="rounded-full border border-white/20 bg-white/10 hover:bg-white/20 px-2.5 py-0.5 text-[11px] font-medium text-neutral-200 hover:text-white transition cursor-pointer backdrop-blur-sm"
+                  className="rounded-full border border-white/20 bg-white/10 hover:bg-white/20 px-2.5 py-0.5 text-[10px] sm:text-[11px] font-medium text-neutral-200 hover:text-white transition cursor-pointer backdrop-blur-sm"
                 >
                   {tag.label}
                 </button>
@@ -216,57 +218,21 @@ export const Hero: React.FC = () => {
             </div>
 
             {/* Value Checkmarks */}
-            <div className="pt-2 flex flex-wrap items-center gap-y-2 gap-x-5 text-xs font-semibold text-neutral-300">
+            <div className="pt-1 flex flex-wrap items-center gap-y-1.5 gap-x-5 text-[11px] sm:text-xs font-semibold text-neutral-300">
               <div className="flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-[#c9f27d]" />
+                <ShieldCheck className="w-3.5 h-3.5 text-[#c9f27d]" />
                 <span>DigiLocker Verified Pros</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-[#c9f27d]" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#c9f27d]" />
                 <span>Zero platform fee to post</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-[#c9f27d]" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-[#c9f27d]" />
                 <span>Direct chat &amp; calls</span>
               </div>
             </div>
 
-          </div>
-        </div>
-
-        {/* ================= BOTTOM UPWORK-STYLE TRUST & STATS STRIP ================= */}
-        <div className="mt-10 pt-8 border-t border-[#dce6df]">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="text-left max-w-xs">
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
-                The Vaziro Advantage
-              </span>
-              <h4 className="text-base font-extrabold text-[#10241e]">
-                Transparent. Independent. Safe.
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-8 flex-1">
-              <div className="text-left">
-                <div className="text-2xl font-black text-[#10241e]">4.95 ★</div>
-                <div className="text-xs font-semibold text-[#52665d] mt-0.5">Average Pro Rating</div>
-              </div>
-
-              <div className="text-left">
-                <div className="text-2xl font-black text-[#183e33]">100%</div>
-                <div className="text-xs font-semibold text-[#52665d] mt-0.5">DigiLocker Verified Pros</div>
-              </div>
-
-              <div className="text-left">
-                <div className="text-2xl font-black text-[#10241e]">45+</div>
-                <div className="text-xs font-semibold text-[#52665d] mt-0.5">Active Jobs in Delhi NCR</div>
-              </div>
-
-              <div className="text-left">
-                <div className="text-2xl font-black text-emerald-700">₹0 Fee</div>
-                <div className="text-xs font-semibold text-[#52665d] mt-0.5">To Post &amp; Compare Quotes</div>
-              </div>
-            </div>
           </div>
         </div>
 
