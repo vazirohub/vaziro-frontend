@@ -13,6 +13,7 @@ import {
   Phone,
   User,
   Sparkles,
+  RotateCw,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -54,6 +55,14 @@ export const PhoneOtpModal: React.FC = () => {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+
+  // Signup OTP Verification State
+  const [signupStep, setSignupStep] = useState<'DETAILS' | 'VERIFY_OTP'>('DETAILS');
+  const [signupVerifyChannel, setSignupVerifyChannel] = useState<'EMAIL' | 'MOBILE'>('EMAIL');
+  const [signupOtpDigits, setSignupOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const signupOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [signupCountdown, setSignupCountdown] = useState(0);
+  const [signupDevOtp, setSignupDevOtp] = useState<string | null>(null);
 
   // Forgot Password State
   const [forgotStep, setForgotStep] = useState<'REQUEST' | 'RESET'>('REQUEST');
@@ -97,6 +106,12 @@ export const PhoneOtpModal: React.FC = () => {
       setCountdown(0);
       setOtpDigits(['', '', '', '', '', '']);
 
+      setSignupStep('DETAILS');
+      setSignupVerifyChannel('EMAIL');
+      setSignupOtpDigits(['', '', '', '', '', '']);
+      setSignupCountdown(0);
+      setSignupDevOtp(null);
+
       const remembered = initialIdentifier || (typeof window !== 'undefined' ? localStorage.getItem('vaziro_last_login_id') || '' : '');
       setLoginIdentifier(remembered);
       setForgotIdentifier(remembered);
@@ -116,6 +131,17 @@ export const PhoneOtpModal: React.FC = () => {
     }
     return () => clearInterval(timer);
   }, [countdown]);
+
+  // Countdown timer for Signup OTP
+  useEffect(() => {
+    let timer: any;
+    if (signupCountdown > 0) {
+      timer = setInterval(() => {
+        setSignupCountdown((prev) => Math.max(0, prev - 1));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [signupCountdown]);
 
   if (!isAuthModalOpen) return null;
 
@@ -189,6 +215,44 @@ export const PhoneOtpModal: React.FC = () => {
   // ============================================================================
   // 2. SIGNUP: Full Name, Email, Mobile, Password, Confirm Password, Role, Terms
   // ============================================================================
+  const sendSignupOtp = async (channel: 'EMAIL' | 'MOBILE') => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setSignupDevOtp(null);
+    setIsLoading(true);
+
+    try {
+      if (channel === 'EMAIL') {
+        const canonicalEmail = signupEmail.trim().toLowerCase();
+        const res = await api.sendEmailOtp(canonicalEmail, 'signup', signupName.trim());
+        setSuccessMessage(`A 6-digit verification code has been dispatched to ${canonicalEmail}.`);
+        setSignupCountdown(res.data?.data?.cooldownSeconds || 30);
+        if (res.data?.data?.devOtp) {
+          setSignupDevOtp(res.data.data.devOtp);
+        }
+      } else {
+        const cleanMobile = signupMobile.replace(/\D/g, '').slice(-10);
+        const res = await api.sendOtp(`+91${cleanMobile}`, 'signup');
+        setSuccessMessage(`A 6-digit verification code has been dispatched to +91 ${cleanMobile}.`);
+        setSignupCountdown(res.data?.data?.cooldownSeconds || 30);
+        if (res.data?.data?.devOtp) {
+          setSignupDevOtp(res.data.data.devOtp);
+        }
+      }
+    } catch (err: any) {
+      setErrorMessage(err.response?.data?.error?.message || err.message || 'Failed to dispatch verification code.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSwitchSignupChannel = (newChannel: 'EMAIL' | 'MOBILE') => {
+    if (newChannel === signupVerifyChannel) return;
+    setSignupVerifyChannel(newChannel);
+    setSignupOtpDigits(['', '', '', '', '', '']);
+    sendSignupOtp(newChannel);
+  };
+
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -228,19 +292,88 @@ export const PhoneOtpModal: React.FC = () => {
 
     try {
       setIsLoading(true);
+      const checkRes = await api.checkMobile(cleanMobile);
+      if (checkRes.data?.data?.exists) {
+        setErrorMessage('An account with this mobile number already exists. Please sign in.');
+        setIsLoading(false);
+        return;
+      }
+
+      setSignupStep('VERIFY_OTP');
+      setSignupVerifyChannel('EMAIL');
+      setSignupOtpDigits(['', '', '', '', '', '']);
+      await sendSignupOtp('EMAIL');
+    } catch (err: any) {
+      setErrorMessage(err.response?.data?.error?.message || err.message || 'Could not verify account availability.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignupOtpVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const fullCode = signupOtpDigits.join('').trim();
+    if (fullCode.length < 6) {
+      setErrorMessage('Please enter the complete 6-digit verification code.');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const cleanMobile = signupMobile.replace(/\D/g, '').slice(-10);
+
       await register({
         name: signupName.trim(),
         email: signupEmail.trim().toLowerCase(),
         phone: cleanMobile,
         password: signupPassword,
         role: selectedRole,
+        verificationChannel: signupVerifyChannel,
+        otpCode: fullCode,
       });
 
       navigateAfterAuth(selectedRole);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Registration failed. Please check your information.');
+      setErrorMessage(err.message || 'Verification failed. Please check the code and try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSignupDigitChange = (index: number, val: string) => {
+    const clean = val.replace(/\D/g, '');
+    if (!clean) {
+      const copy = [...signupOtpDigits];
+      copy[index] = '';
+      setSignupOtpDigits(copy);
+      return;
+    }
+
+    if (clean.length === 1) {
+      const copy = [...signupOtpDigits];
+      copy[index] = clean;
+      setSignupOtpDigits(copy);
+      if (index < 5) {
+        signupOtpRefs.current[index + 1]?.focus();
+      }
+    } else {
+      const digitsArr = clean.slice(0, 6).split('');
+      const copy = [...signupOtpDigits];
+      digitsArr.forEach((d, i) => {
+        if (i < 6) copy[i] = d;
+      });
+      setSignupOtpDigits(copy);
+      const nextIndex = Math.min(digitsArr.length, 5);
+      signupOtpRefs.current[nextIndex]?.focus();
+    }
+  };
+
+  const handleSignupDigitKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !signupOtpDigits[index] && index > 0) {
+      signupOtpRefs.current[index - 1]?.focus();
     }
   };
 
@@ -571,188 +704,322 @@ export const PhoneOtpModal: React.FC = () => {
         {/* VIEW 2: SIGNUP FORM (FULL NAME, EMAIL, MOBILE, PASSWORD, ROLE)   */}
         {/* ================================================================= */}
         {viewMode === 'SIGNUP' && (
-          <form onSubmit={handleSignupSubmit} className="space-y-4">
-            {/* Role Selection */}
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-[#374239]">
-                I&apos;m here to
-              </label>
-              <div className="grid grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setSelectedRole('CUSTOMER')}
-                  aria-pressed={selectedRole === 'CUSTOMER'}
-                  className={`min-h-[76px] rounded-md border p-3 text-left transition cursor-pointer ${
-                    selectedRole === 'CUSTOMER'
-                      ? 'border-[#78935f] bg-[#f1f4e9] ring-1 ring-[#78935f]/20'
-                      : 'border-[#e7e8df] hover:border-[#c5d5a8]'
-                  }`}
-                >
-                  <div className="text-sm font-semibold text-[#344137]">Hire a professional</div>
-                  <div className="mt-1 text-xs leading-4 text-[#737c73]">Post a request and compare quotations</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedRole('PROFESSIONAL')}
-                  aria-pressed={selectedRole === 'PROFESSIONAL'}
-                  className={`min-h-[76px] rounded-md border p-3 text-left transition cursor-pointer ${
-                    selectedRole === 'PROFESSIONAL'
-                      ? 'border-[#78935f] bg-[#f1f4e9] ring-1 ring-[#78935f]/20'
-                      : 'border-[#e7e8df] hover:border-[#c5d5a8]'
-                  }`}
-                >
-                  <div className="text-sm font-semibold text-[#344137]">Find professional work</div>
-                  <div className="mt-1 text-xs leading-4 text-[#737c73]">Build a profile and respond to requests</div>
-                </button>
+          signupStep === 'DETAILS' ? (
+            <form onSubmit={handleSignupSubmit} className="space-y-4">
+              {/* Role Selection */}
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-[#374239]">
+                  I&apos;m here to
+                </label>
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole('CUSTOMER')}
+                    aria-pressed={selectedRole === 'CUSTOMER'}
+                    className={`min-h-[76px] rounded-md border p-3 text-left transition cursor-pointer ${
+                      selectedRole === 'CUSTOMER'
+                        ? 'border-[#78935f] bg-[#f1f4e9] ring-1 ring-[#78935f]/20'
+                        : 'border-[#e7e8df] hover:border-[#c5d5a8]'
+                    }`}
+                  >
+                    <div className="text-sm font-semibold text-[#344137]">Hire a professional</div>
+                    <div className="mt-1 text-xs leading-4 text-[#737c73]">Post a request and compare quotations</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole('PROFESSIONAL')}
+                    aria-pressed={selectedRole === 'PROFESSIONAL'}
+                    className={`min-h-[76px] rounded-md border p-3 text-left transition cursor-pointer ${
+                      selectedRole === 'PROFESSIONAL'
+                        ? 'border-[#78935f] bg-[#f1f4e9] ring-1 ring-[#78935f]/20'
+                        : 'border-[#e7e8df] hover:border-[#c5d5a8]'
+                    }`}
+                  >
+                    <div className="text-sm font-semibold text-[#344137]">Find professional work</div>
+                    <div className="mt-1 text-xs leading-4 text-[#737c73]">Build a profile and respond to requests</div>
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Full Name */}
-            <div>
-              <label htmlFor="auth-signup-name" className="mb-1.5 block text-sm font-semibold text-[#374239]">
-                Full name
-              </label>
-              <input
-                id="auth-signup-name"
-                type="text"
-                autoComplete="name"
-                placeholder="Your name"
-                value={signupName}
-                onChange={(e) => setSignupName(e.target.value)}
-                className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
-                required
-              />
-            </div>
-
-            {/* Email Address */}
-            <div>
-              <label htmlFor="auth-signup-email" className="mb-1.5 block text-sm font-semibold text-[#374239]">
-                Email address
-              </label>
-              <input
-                id="auth-signup-email"
-                type="email"
-                autoComplete="email"
-                inputMode="email"
-                placeholder="you@example.com"
-                value={signupEmail}
-                onChange={(e) => setSignupEmail(e.target.value)}
-                className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
-                required
-              />
-            </div>
-
-            {/* Mobile Number */}
-            <div>
-              <label htmlFor="auth-signup-mobile" className="mb-1.5 block text-sm font-semibold text-[#374239]">
-                Mobile number
-              </label>
-              <div className="flex min-h-12 overflow-hidden rounded-md border border-[#dfe2d9] bg-white transition focus-within:border-[#78935f] focus-within:ring-2 focus-within:ring-[#7a945f]/20">
-                <span className="inline-flex items-center border-r border-[#e7e8df] bg-[#f7f7f1] px-3 text-sm font-medium text-[#59645b] select-none">
-                  +91
-                </span>
+              {/* Full Name */}
+              <div>
+                <label htmlFor="auth-signup-name" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                  Full name
+                </label>
                 <input
-                  id="auth-signup-mobile"
-                  type="tel"
-                  autoComplete="tel-national"
-                  inputMode="numeric"
-                  maxLength={10}
-                  placeholder="10-digit number"
-                  value={signupMobile}
-                  onChange={(e) => setSignupMobile(e.target.value.replace(/\D/g, ''))}
-                  className="w-full px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none"
+                  id="auth-signup-name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Your name"
+                  value={signupName}
+                  onChange={(e) => setSignupName(e.target.value)}
+                  className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                   required
                 />
               </div>
-            </div>
 
-            {/* Password & Confirm Password */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* Email Address */}
               <div>
-                <label htmlFor="auth-signup-password" className="mb-1.5 block text-sm font-semibold text-[#374239]">
-                  Password
+                <label htmlFor="auth-signup-email" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                  Email address
                 </label>
-                <div className="relative">
+                <input
+                  id="auth-signup-email"
+                  type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  placeholder="you@example.com"
+                  value={signupEmail}
+                  onChange={(e) => setSignupEmail(e.target.value)}
+                  className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
+                  required
+                />
+              </div>
+
+              {/* Mobile Number */}
+              <div>
+                <label htmlFor="auth-signup-mobile" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                  Mobile number
+                </label>
+                <div className="flex min-h-12 overflow-hidden rounded-md border border-[#dfe2d9] bg-white transition focus-within:border-[#78935f] focus-within:ring-2 focus-within:ring-[#7a945f]/20">
+                  <span className="inline-flex items-center border-r border-[#e7e8df] bg-[#f7f7f1] px-3 text-sm font-medium text-[#59645b] select-none">
+                    +91
+                  </span>
                   <input
-                    id="auth-signup-password"
-                    type={showSignupPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    minLength={6}
-                    placeholder="Min 6 chars"
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 pr-11 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
+                    id="auth-signup-mobile"
+                    type="tel"
+                    autoComplete="tel-national"
+                    inputMode="numeric"
+                    maxLength={10}
+                    placeholder="10-digit number"
+                    value={signupMobile}
+                    onChange={(e) => setSignupMobile(e.target.value.replace(/\D/g, ''))}
+                    className="w-full px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none"
                     required
                   />
+                </div>
+              </div>
+
+              {/* Password & Confirm Password */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label htmlFor="auth-signup-password" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="auth-signup-password"
+                      type={showSignupPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      minLength={6}
+                      placeholder="Min 6 chars"
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 pr-11 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupPassword(!showSignupPassword)}
+                      className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-neutral-500 hover:bg-[#f1f2e9] hover:text-[#203c32] cursor-pointer"
+                      aria-label={showSignupPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showSignupPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="auth-signup-confirm" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                    Confirm password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="auth-signup-confirm"
+                      type={showSignupConfirmPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      placeholder="Repeat password"
+                      value={signupConfirmPassword}
+                      onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                      className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 pr-11 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignupConfirmPassword(!showSignupConfirmPassword)}
+                      className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-neutral-500 hover:bg-[#f1f2e9] hover:text-[#203c32] cursor-pointer"
+                      aria-label={showSignupConfirmPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showSignupConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Terms Checkbox */}
+              <div className="flex items-start gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="termsConsent"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-[#dfe2d9] accent-[#527346] focus:ring-[#78935f] cursor-pointer"
+                  required
+                />
+                <label htmlFor="termsConsent" className="text-xs leading-5 text-[#68716b] cursor-pointer">
+                  I agree to the <Link to="/terms" className="font-semibold text-[#40583d] underline">Terms of Service</Link> and{' '}
+                  <Link to="/privacy" className="font-semibold text-[#40583d] underline">Privacy Policy</Link>.
+                </label>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="mt-1 flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#203c32] py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2d5144] disabled:cursor-wait disabled:opacity-60 cursor-pointer"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Verifying info...</span>
+                  </>
+                ) : (
+                  <span>Verify & Create Account</span>
+                )}
+              </button>
+            </form>
+          ) : (
+            /* OTP VERIFICATION VIEW FOR SIGNUP */
+            <form onSubmit={handleSignupOtpVerify} className="space-y-4 animate-in fade-in">
+              {/* Channel Selector */}
+              <div>
+                <label className="block text-xs font-bold text-[#374239] uppercase tracking-wider mb-2">
+                  Choose Verification Method:
+                </label>
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setShowSignupPassword(!showSignupPassword)}
-                    className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-neutral-500 hover:bg-[#f1f2e9] hover:text-[#203c32] cursor-pointer"
-                    aria-label={showSignupPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => handleSwitchSignupChannel('EMAIL')}
+                    disabled={isLoading}
+                    className={`flex items-center justify-center gap-1.5 p-2.5 rounded-md border text-xs font-bold transition cursor-pointer ${
+                      signupVerifyChannel === 'EMAIL'
+                        ? 'border-[#78935f] bg-[#f1f4e9] text-[#203c32] ring-1 ring-[#78935f]/20'
+                        : 'border-[#dfe2d9] bg-white text-[#68716b] hover:bg-neutral-50'
+                    }`}
                   >
-                    {showSignupPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>Email OTP</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchSignupChannel('MOBILE')}
+                    disabled={isLoading}
+                    className={`flex items-center justify-center gap-1.5 p-2.5 rounded-md border text-xs font-bold transition cursor-pointer ${
+                      signupVerifyChannel === 'MOBILE'
+                        ? 'border-[#78935f] bg-[#f1f4e9] text-[#203c32] ring-1 ring-[#78935f]/20'
+                        : 'border-[#dfe2d9] bg-white text-[#68716b] hover:bg-neutral-50'
+                    }`}
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Mobile SMS</span>
                   </button>
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="auth-signup-confirm" className="mb-1.5 block text-sm font-semibold text-[#374239]">
-                  Confirm password
-                </label>
-                <div className="relative">
-                  <input
-                    id="auth-signup-confirm"
-                    type={showSignupConfirmPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    placeholder="Repeat password"
-                    value={signupConfirmPassword}
-                    onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                    className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 pr-11 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowSignupConfirmPassword(!showSignupConfirmPassword)}
-                    className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-neutral-500 hover:bg-[#f1f2e9] hover:text-[#203c32] cursor-pointer"
-                    aria-label={showSignupConfirmPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showSignupConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
+              {/* Target info card */}
+              <div className="rounded-md border border-[#e7e8df] bg-[#f7f7f1] p-3 text-xs text-[#59645b] flex items-center justify-between">
+                <span>
+                  Code sent to: <strong className="text-[#203c32]">{signupVerifyChannel === 'EMAIL' ? signupEmail : `+91 ${signupMobile}`}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSignupStep('DETAILS')}
+                  className="text-[#40583d] font-bold underline hover:text-[#203c32] cursor-pointer"
+                >
+                  Edit
+                </button>
               </div>
-            </div>
 
-            {/* Terms Checkbox */}
-            <div className="flex items-start gap-2 pt-1">
-              <input
-                type="checkbox"
-                id="termsConsent"
-                checked={termsAccepted}
-                onChange={(e) => setTermsAccepted(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-[#dfe2d9] accent-[#527346] focus:ring-[#78935f] cursor-pointer"
-                required
-              />
-              <label htmlFor="termsConsent" className="text-xs leading-5 text-[#68716b] cursor-pointer">
-                I agree to the <Link to="/terms" className="font-semibold text-[#40583d] underline">Terms of Service</Link> and{' '}
-                <Link to="/privacy" className="font-semibold text-[#40583d] underline">Privacy Policy</Link>.
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="mt-1 flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#203c32] py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2d5144] disabled:cursor-wait disabled:opacity-60"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Creating account...</span>
-                </>
-              ) : (
-                <span>Create Account</span>
+              {/* Dev hint */}
+              {signupDevOtp && (
+                <div className="rounded-md bg-amber-50 border border-amber-200 p-2 text-xs text-amber-900 font-mono text-center">
+                  QA helper code: <strong>{signupDevOtp}</strong>
+                </div>
               )}
-            </button>
-          </form>
+
+              {/* 6 Digit Input Boxes */}
+              <div className="space-y-1.5">
+                <label className="block text-center text-xs font-bold text-[#374239] uppercase tracking-wider">
+                  Enter 6-digit verification code
+                </label>
+                <div className="flex items-center justify-center gap-2">
+                  {signupOtpDigits.map((digit, idx) => (
+                    <input
+                      key={idx}
+                      ref={(el) => (signupOtpRefs.current[idx] = el)}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleSignupDigitChange(idx, e.target.value)}
+                      onKeyDown={(e) => handleSignupDigitKeyDown(idx, e)}
+                      className="w-10 h-11 text-center text-lg font-bold rounded-md border border-[#dfe2d9] bg-white text-[#203c32] focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20 outline-none transition"
+                      autoComplete="one-time-code"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Resend actions */}
+              <div className="flex items-center justify-between text-xs pt-1">
+                <button
+                  type="button"
+                  onClick={() => sendSignupOtp(signupVerifyChannel)}
+                  disabled={signupCountdown > 0 || isLoading}
+                  className="font-bold text-[#40583d] hover:text-[#203c32] disabled:text-neutral-400 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                >
+                  <RotateCw className="w-3 h-3" />
+                  <span>{signupCountdown > 0 ? `Resend in ${signupCountdown}s` : 'Resend Code'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSwitchSignupChannel(signupVerifyChannel === 'EMAIL' ? 'MOBILE' : 'EMAIL')}
+                  className="text-[#68716b] hover:text-[#203c32] underline cursor-pointer"
+                >
+                  {signupVerifyChannel === 'EMAIL' ? 'Switch to SMS' : 'Switch to Email'}
+                </button>
+              </div>
+
+              {/* Complete Registration Button */}
+              <button
+                type="submit"
+                disabled={isLoading || signupOtpDigits.join('').length < 6}
+                className="mt-2 flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#203c32] py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2d5144] disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Verifying code...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Verify & Complete Signup</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSignupStep('DETAILS')}
+                disabled={isLoading}
+                className="w-full text-center text-xs font-semibold text-[#68716b] hover:text-[#203c32] flex items-center justify-center gap-1 cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Back to Edit Registration Details</span>
+              </button>
+            </form>
+          )
         )}
 
         {/* ================================================================= */}

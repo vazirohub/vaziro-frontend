@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import {
@@ -24,6 +24,10 @@ import {
   Sliders,
   Eye,
   BookOpen,
+  X,
+  RotateCw,
+  Mail,
+  Phone,
 } from 'lucide-react';
 import { ProfileVerificationCard } from '../components/ProfileVerificationCard';
 import { ProfileStrengthCard } from '../components/ProfileStrengthCard';
@@ -89,6 +93,29 @@ export const ProfilePage: React.FC = () => {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  // Contact (Email / Mobile) OTP Verification Modal States
+  const [contactModalTarget, setContactModalTarget] = useState<'EMAIL' | 'MOBILE' | null>(null);
+  const [contactOtpDigits, setContactOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
+  const [contactCountdown, setContactCountdown] = useState(0);
+  const [isSendingContactOtp, setIsSendingContactOtp] = useState(false);
+  const [isVerifyingContactOtp, setIsVerifyingContactOtp] = useState(false);
+  const [contactModalError, setContactModalError] = useState<string | null>(null);
+  const [contactModalSuccess, setContactModalSuccess] = useState<string | null>(null);
+  const [contactDevOtpHint, setContactDevOtpHint] = useState<string | null>(null);
+  const contactOtpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    let timer: any = null;
+    if (contactCountdown > 0) {
+      timer = setInterval(() => {
+        setContactCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [contactCountdown]);
 
   // Preset Avatars
   const presetAvatars = [
@@ -281,6 +308,150 @@ export const ProfilePage: React.FC = () => {
       alert('Failed to upload image: ' + err.message);
     } finally {
       setIsUploadingPhoto(false);
+    }
+  };
+
+  // Contact (Email / Mobile) OTP Verification Handlers
+  const handleOpenEmailVerify = async () => {
+    const targetEmail = (email || user?.email || '').trim().toLowerCase();
+    if (!targetEmail) {
+      setErrorMessage('Please enter an email address first.');
+      return;
+    }
+    setContactModalTarget('EMAIL');
+    setContactOtpDigits(['', '', '', '', '', '']);
+    setContactModalError(null);
+    setContactModalSuccess(null);
+    setContactDevOtpHint(null);
+    setIsSendingContactOtp(true);
+
+    try {
+      const res = await api.profileSendEmailOtp(targetEmail);
+      setContactModalSuccess(`A 6-digit verification code has been dispatched to ${targetEmail}.`);
+      setContactCountdown(res.data?.data?.cooldownSeconds || 30);
+      if (res.data?.data?.devOtp) {
+        setContactDevOtpHint(res.data.data.devOtp);
+      }
+    } catch (err: any) {
+      setContactModalError(err.response?.data?.error?.message || err.message || 'Failed to dispatch verification code.');
+    } finally {
+      setIsSendingContactOtp(false);
+    }
+  };
+
+  const handleOpenMobileVerify = async () => {
+    const rawMobile = (phone || user?.phone || '').trim();
+    const cleanDigits = rawMobile.replace(/\D/g, '').slice(-10);
+    if (cleanDigits.length < 10) {
+      setErrorMessage('Please enter a valid 10-digit Indian mobile number first.');
+      return;
+    }
+    setContactModalTarget('MOBILE');
+    setContactOtpDigits(['', '', '', '', '', '']);
+    setContactModalError(null);
+    setContactModalSuccess(null);
+    setContactDevOtpHint(null);
+    setIsSendingContactOtp(true);
+
+    try {
+      const res = await api.profileSendMobileOtp(`+91${cleanDigits}`);
+      setContactModalSuccess(`A 6-digit verification code has been dispatched to +91 ${cleanDigits}.`);
+      setContactCountdown(res.data?.data?.cooldownSeconds || 30);
+      if (res.data?.data?.devOtp) {
+        setContactDevOtpHint(res.data.data.devOtp);
+      }
+    } catch (err: any) {
+      setContactModalError(err.response?.data?.error?.message || err.message || 'Failed to dispatch verification code.');
+    } finally {
+      setIsSendingContactOtp(false);
+    }
+  };
+
+  const handleResendContactOtp = async () => {
+    if (contactCountdown > 0 || isSendingContactOtp) return;
+    if (contactModalTarget === 'EMAIL') {
+      await handleOpenEmailVerify();
+    } else if (contactModalTarget === 'MOBILE') {
+      await handleOpenMobileVerify();
+    }
+  };
+
+  const handleVerifyContactOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setContactModalError(null);
+    setContactModalSuccess(null);
+
+    const fullCode = contactOtpDigits.join('').trim();
+    if (fullCode.length < 6) {
+      setContactModalError('Please enter the complete 6-digit verification code.');
+      return;
+    }
+
+    try {
+      setIsVerifyingContactOtp(true);
+      if (contactModalTarget === 'EMAIL') {
+        const targetEmail = (email || user?.email || '').trim().toLowerCase();
+        const res = await api.profileVerifyEmailOtp(fullCode, targetEmail);
+        if (res.data?.data?.user) {
+          updateUser(res.data.data.user);
+          setEmail(res.data.data.user.email || targetEmail);
+        }
+        setContactModalSuccess('Email address verified successfully!');
+        setSuccessMessage('Your email address has been verified successfully!');
+        setTimeout(() => {
+          setContactModalTarget(null);
+        }, 1500);
+      } else if (contactModalTarget === 'MOBILE') {
+        const cleanDigits = (phone || user?.phone || '').replace(/\D/g, '').slice(-10);
+        const res = await api.profileVerifyMobileOtp(fullCode, `+91${cleanDigits}`);
+        if (res.data?.data?.user) {
+          updateUser(res.data.data.user);
+          setPhone(res.data.data.user.phone || `+91${cleanDigits}`);
+        }
+        setContactModalSuccess('Mobile number verified successfully!');
+        setSuccessMessage('Your mobile number has been verified successfully!');
+        setTimeout(() => {
+          setContactModalTarget(null);
+        }, 1500);
+      }
+    } catch (err: any) {
+      setContactModalError(err.response?.data?.error?.message || err.message || 'Verification failed. Please check the code.');
+    } finally {
+      setIsVerifyingContactOtp(false);
+    }
+  };
+
+  const handleContactDigitChange = (index: number, val: string) => {
+    const clean = val.replace(/\D/g, '');
+    if (!clean) {
+      const copy = [...contactOtpDigits];
+      copy[index] = '';
+      setContactOtpDigits(copy);
+      return;
+    }
+
+    if (clean.length === 1) {
+      const copy = [...contactOtpDigits];
+      copy[index] = clean;
+      setContactOtpDigits(copy);
+      if (index < 5) {
+        contactOtpRefs.current[index + 1]?.focus();
+      }
+    } else {
+      const digitsArr = clean.slice(0, 6).split('');
+      const copy = [...contactOtpDigits];
+      digitsArr.forEach((d, i) => {
+        if (i < 6) copy[i] = d;
+      });
+      setContactOtpDigits(copy);
+      const nextIndex = Math.min(digitsArr.length, 5);
+      contactOtpRefs.current[nextIndex]?.focus();
+    }
+  };
+
+  const handleContactDigitKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !contactOtpDigits[index] && index > 0) {
+      contactOtpRefs.current[index - 1]?.focus();
     }
   };
 
@@ -524,18 +695,40 @@ export const ProfilePage: React.FC = () => {
               </button>
             ) : null}
 
-            {phone && (
-              <div className="flex items-center gap-1 font-medium text-sky-700 bg-sky-50 px-2.5 py-1 rounded-xl border border-sky-200">
-                <CheckCircle2 className="w-3.5 h-3.5 text-sky-600" />
-                <span>Mobile Verified</span>
+            {/* Mobile Verification Status Badge */}
+            {user?.isPhoneVerified || user?.phoneVerifiedAt ? (
+              <div className="flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>✓ Mobile Verified</span>
               </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleOpenMobileVerify}
+                className="flex items-center gap-1.5 font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-200 transition cursor-pointer"
+                title="Verify your mobile number with OTP"
+              >
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                <span>Mobile Unverified (Verify with OTP)</span>
+              </button>
             )}
 
-            {email && (
-              <div className="flex items-center gap-1 font-medium text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-xl border border-indigo-200">
-                <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Email Verified</span>
+            {/* Email Verification Status Badge */}
+            {user?.isEmailVerified || user?.emailVerifiedAt ? (
+              <div className="flex items-center gap-1 font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-xl border border-emerald-200">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>✓ Email Verified</span>
               </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleOpenEmailVerify}
+                className="flex items-center gap-1.5 font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-xl border border-amber-200 transition cursor-pointer"
+                title="Verify your email address with OTP"
+              >
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
+                <span>Email Unverified (Verify with OTP)</span>
+              </button>
             )}
           </div>
         </div>
@@ -784,30 +977,90 @@ export const ProfilePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Email & Phone */}
+              {/* Email & Phone with OTP Verification actions */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider mb-1.5">
-                    Email Address
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider">
+                      Email Address
+                    </label>
+                    {user?.isEmailVerified || user?.emailVerifiedAt ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        Verified
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleOpenEmailVerify}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200 transition cursor-pointer"
+                        title="Verify this email with OTP"
+                      >
+                        <Mail className="w-3 h-3 text-amber-600" />
+                        <span>Verify with OTP</span>
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-black"
                   />
+                  {!(user?.isEmailVerified || user?.emailVerifiedAt) && (
+                    <p className="mt-1 text-[11px] font-medium text-amber-700 flex items-center justify-between">
+                      <span>Email is unverified.</span>
+                      <button
+                        type="button"
+                        onClick={handleOpenEmailVerify}
+                        className="font-bold underline hover:text-amber-900 cursor-pointer"
+                      >
+                        Send Verification Code
+                      </button>
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider mb-1.5">
-                    Mobile Number (India +91)
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-neutral-800 uppercase tracking-wider">
+                      Mobile Number (India +91)
+                    </label>
+                    {user?.isPhoneVerified || user?.phoneVerifiedAt ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        Verified
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleOpenMobileVerify}
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200 transition cursor-pointer"
+                        title="Verify this mobile number with OTP"
+                      >
+                        <Phone className="w-3 h-3 text-amber-600" />
+                        <span>Verify with OTP</span>
+                      </button>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-neutral-300 text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-2 focus:ring-black"
                   />
+                  {!(user?.isPhoneVerified || user?.phoneVerifiedAt) && (
+                    <p className="mt-1 text-[11px] font-medium text-amber-700 flex items-center justify-between">
+                      <span>Mobile is unverified.</span>
+                      <button
+                        type="button"
+                        onClick={handleOpenMobileVerify}
+                        className="font-bold underline hover:text-amber-900 cursor-pointer"
+                      >
+                        Send Verification Code
+                      </button>
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1388,6 +1641,139 @@ export const ProfilePage: React.FC = () => {
           )}
 
         </form>
+
+        {/* Contact Verification Modal (Email or Mobile OTP) */}
+        {contactModalTarget && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in"
+            onMouseDown={(e) => {
+              if (e.target === e.currentTarget && !isVerifyingContactOtp) {
+                setContactModalTarget(null);
+              }
+            }}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="relative w-full max-w-md rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-neutral-200 animate-in zoom-in-95 space-y-5"
+            >
+              {/* Close Button */}
+              <button
+                type="button"
+                onClick={() => setContactModalTarget(null)}
+                disabled={isVerifyingContactOtp}
+                className="absolute right-4 top-4 p-2 rounded-xl text-neutral-400 hover:text-black hover:bg-neutral-100 transition cursor-pointer"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Modal Header */}
+              <div className="text-center pr-6 sm:pr-0">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto mb-3 border border-emerald-100">
+                  {contactModalTarget === 'EMAIL' ? <Mail className="w-6 h-6" /> : <Phone className="w-6 h-6" />}
+                </div>
+                <h3 className="text-xl font-black text-neutral-900 tracking-tight">
+                  {contactModalTarget === 'EMAIL' ? 'Verify Email Address' : 'Verify Mobile Number'}
+                </h3>
+                <p className="mt-1 text-xs text-neutral-500 font-medium">
+                  {contactModalTarget === 'EMAIL'
+                    ? `Enter the 6-digit code sent to ${email || user?.email}`
+                    : `Enter the 6-digit code sent to ${phone || user?.phone}`}
+                </p>
+              </div>
+
+              {/* Feedback banners */}
+              {contactModalError && (
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                  <span>{contactModalError}</span>
+                </div>
+              )}
+
+              {contactModalSuccess && (
+                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <span>{contactModalSuccess}</span>
+                </div>
+              )}
+
+              {contactDevOtpHint && (
+                <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-mono text-center">
+                  QA helper code: <strong>{contactDevOtpHint}</strong>
+                </div>
+              )}
+
+              {/* Form */}
+              <form onSubmit={handleVerifyContactOtp} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="block text-center text-xs font-bold text-neutral-700 uppercase tracking-wider">
+                    Enter 6-digit verification code
+                  </label>
+                  <div className="flex items-center justify-center gap-2">
+                    {contactOtpDigits.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        ref={(el) => (contactOtpRefs.current[idx] = el)}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleContactDigitChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleContactDigitKeyDown(idx, e)}
+                        className="w-11 h-12 text-center text-xl font-bold rounded-xl border border-neutral-300 bg-white text-neutral-900 focus:border-black focus:ring-2 focus:ring-black/10 outline-none transition"
+                        autoComplete="one-time-code"
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Resend button */}
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <button
+                    type="button"
+                    onClick={handleResendContactOtp}
+                    disabled={contactCountdown > 0 || isSendingContactOtp}
+                    className="font-bold text-emerald-700 hover:text-emerald-800 disabled:text-neutral-400 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
+                  >
+                    <RotateCw className={`w-3.5 h-3.5 ${isSendingContactOtp ? 'animate-spin' : ''}`} />
+                    <span>{contactCountdown > 0 ? `Resend in ${contactCountdown}s` : 'Resend Code'}</span>
+                  </button>
+
+                  <span className="text-[11px] text-neutral-400">Code expires in 15 mins</span>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setContactModalTarget(null)}
+                    disabled={isVerifyingContactOtp}
+                    className="flex-1 py-3 rounded-2xl border border-neutral-300 bg-white text-neutral-700 font-bold text-xs hover:bg-neutral-50 transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isVerifyingContactOtp || contactOtpDigits.join('').length < 6}
+                    className="flex-1 py-3 rounded-2xl bg-black text-white font-bold text-xs hover:bg-neutral-800 transition disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+                  >
+                    {isVerifyingContactOtp ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Verify Contact</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

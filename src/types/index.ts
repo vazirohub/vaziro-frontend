@@ -5,6 +5,10 @@ export interface User {
   firstName: string;
   lastName: string;
   roles: string[];
+  emailVerifiedAt?: string | null;
+  phoneVerifiedAt?: string | null;
+  isEmailVerified?: boolean;
+  isPhoneVerified?: boolean;
   customerProfile?: {
     id: string;
     trustScore: number;

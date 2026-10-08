@@ -78,23 +78,50 @@ export const api = {
   login: (identifier: string, password: string) =>
     apiClient.post<ApiResponse<{ accessToken: string; user: User }>>('/auth/login', { identifier, password }),
 
-  register: (payload: { name: string; phone: string; email?: string; password: string; role: 'CUSTOMER' | 'PROFESSIONAL' }) =>
-    apiClient.post<ApiResponse<{ accessToken: string; user: User }>>('/auth/register', payload),
+  register: (payload: {
+    name: string;
+    phone: string;
+    email: string;
+    password: string;
+    role: 'CUSTOMER' | 'PROFESSIONAL';
+    verificationChannel?: 'EMAIL' | 'MOBILE' | 'PHONE';
+    otpCode?: string;
+    signupToken?: string;
+  }) =>
+    apiClient.post<ApiResponse<{ accessToken: string; refreshToken?: string; user: User }>>('/auth/register', payload),
+
+  sendEmailOtp: (email: string, purpose: string = 'verification', name?: string) =>
+    apiClient.post<ApiResponse<{ email: string; cooldownSeconds: number; devOtp?: string }>>('/auth/send-email-otp', { email, purpose, name }),
+
+  verifyEmailOtp: (email: string, otp: string, purpose: string = 'verification') =>
+    apiClient.post<ApiResponse<{ verified: boolean; email: string }>>('/auth/verify-email-otp', { email, otp, purpose }),
+
+  profileSendEmailOtp: (email?: string) =>
+    apiClient.post<ApiResponse<{ email: string; cooldownSeconds: number; devOtp?: string }>>('/auth/profile/send-email-otp', { email }),
+
+  profileVerifyEmailOtp: (otp: string, email?: string) =>
+    apiClient.post<ApiResponse<{ user: User }>>('/auth/profile/verify-email-otp', { otp, email }),
+
+  profileSendMobileOtp: (mobile?: string) =>
+    apiClient.post<ApiResponse<{ mobile: string; cooldownSeconds: number; devOtp?: string }>>('/auth/profile/send-mobile-otp', { mobile }),
+
+  profileVerifyMobileOtp: (otp: string, mobile?: string) =>
+    apiClient.post<ApiResponse<{ user: User }>>('/auth/profile/verify-mobile-otp', { otp, mobile }),
 
   loginWithPassword: (identifier: string, password: string) =>
     apiClient.post<ApiResponse<{ accessToken: string; user: User }>>('/auth/login', { identifier, password }),
 
   checkMobile: (mobile: string) =>
-    apiClient.post<ApiResponse<{ exists: boolean; mobile: string; message: string }>>('/auth/check-mobile', { mobile }),
+    apiClient.post<ApiResponse<{ exists: boolean; mobile: string; isPhoneVerified?: boolean; isEmailVerified?: boolean; message: string }>>('/auth/check-mobile', { mobile }),
 
   sendOtp: (mobile: string, purpose: string = 'login', widgetDispatched?: boolean) =>
-    apiClient.post<ApiResponse<{ mobile: string; cooldownSeconds: number }>>('/auth/send-otp', { mobile, purpose, widgetDispatched }),
+    apiClient.post<ApiResponse<{ mobile: string; cooldownSeconds: number; devOtp?: string }>>('/auth/send-otp', { mobile, purpose, widgetDispatched }),
 
   resendOtp: (mobile: string, purpose: string = 'resend', widgetDispatched?: boolean) =>
-    apiClient.post<ApiResponse<{ mobile: string; cooldownSeconds: number }>>('/auth/resend-otp', { mobile, purpose, widgetDispatched }),
+    apiClient.post<ApiResponse<{ mobile: string; cooldownSeconds: number; devOtp?: string }>>('/auth/resend-otp', { mobile, purpose, widgetDispatched }),
 
   requestOtp: (phone: string) =>
-    apiClient.post<ApiResponse<{ phone: string; cooldownSeconds: number }>>('/auth/otp/request', { phone }),
+    apiClient.post<ApiResponse<{ phone: string; cooldownSeconds: number; devOtp?: string }>>('/auth/otp/request', { phone }),
 
   verifyOtp: (payload: {
     phone?: string;

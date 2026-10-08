@@ -7,7 +7,16 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (identifier: string, password: string) => Promise<void>;
-  register: (payload: { name: string; phone: string; email?: string; password: string; role: 'CUSTOMER' | 'PROFESSIONAL' }) => Promise<void>;
+  register: (payload: {
+    name: string;
+    phone: string;
+    email: string;
+    password: string;
+    role: 'CUSTOMER' | 'PROFESSIONAL';
+    verificationChannel?: 'EMAIL' | 'MOBILE' | 'PHONE';
+    otpCode?: string;
+    signupToken?: string;
+  }) => Promise<void>;
   loginWithPassword: (identifier: string, password: string) => Promise<void>;
   loginWithOtp: (payload: any) => Promise<any>;
   completeSignup: (payload: any) => Promise<any>;
@@ -98,7 +107,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (payload: { name: string; phone: string; email?: string; password: string; role: 'CUSTOMER' | 'PROFESSIONAL' }) => {
+  const register = async (payload: {
+    name: string;
+    phone: string;
+    email: string;
+    password: string;
+    role: 'CUSTOMER' | 'PROFESSIONAL';
+    verificationChannel?: 'EMAIL' | 'MOBILE' | 'PHONE';
+    otpCode?: string;
+    signupToken?: string;
+  }) => {
     try {
       const res = await api.register(payload);
       if (res.data.success && res.data.data) {
