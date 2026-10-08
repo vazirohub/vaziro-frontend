@@ -33,6 +33,10 @@ import {
   Mail,
   ShieldAlert,
   FileText,
+  Home,
+  Activity,
+  ArrowRight,
+  Loader2,
 } from 'lucide-react';
 
 const defaultAdminLocations = [
@@ -86,7 +90,11 @@ export const AdminDashboardPage: React.FC = () => {
   const [paymentFilterStatus, setPaymentFilterStatus] = useState<string>('ALL');
   const [paymentSearch, setPaymentSearch] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'metrics' | 'users' | 'marketplace' | 'verifications' | 'locations' | 'settings' | 'payments'>('users');
+  const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [savingActionKey, setSavingActionKey] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'metrics' | 'users' | 'marketplace' | 'verifications' | 'locations' | 'settings' | 'payments'>('metrics');
   const [marketplaceSubTab, setMarketplaceSubTab] = useState<'requirements' | 'jobs'>('requirements');
 
   // Filter & Search states
@@ -132,9 +140,11 @@ export const AdminDashboardPage: React.FC = () => {
   const [submittingReview, setSubmittingReview] = useState<boolean>(false);
   const [viewDetailsModalCase, setViewDetailsModalCase] = useState<any | null>(null);
 
-  const fetchAdminData = async () => {
+  const fetchAdminData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      else setLoading(true);
+      setLoadError(null);
       const [mRes, uRes, reqRes, jobsRes, vRes, sRes, statesRes, payRes] = await Promise.all([
         api.getAdminMetrics().catch(() => null),
         api.getAdminUsers().catch(() => null),
@@ -145,6 +155,9 @@ export const AdminDashboardPage: React.FC = () => {
         api.getAdminLocations().catch(() => null),
         api.getPaymentTransactions().catch(() => null),
       ]);
+
+      const hasPartialFailure = [mRes, uRes, reqRes, jobsRes, vRes, sRes, statesRes, payRes].some((result) => result === null);
+      if (hasPartialFailure) setLoadError('Some admin data could not be refreshed. Retry to load the latest platform information.');
 
       if (mRes?.data?.data) setMetrics(mRes.data.data);
       if (uRes?.data?.data) setUsers(uRes.data.data);
@@ -166,11 +179,18 @@ export const AdminDashboardPage: React.FC = () => {
         setStates(defaultAdminLocations);
       }
     } catch (err) {
-      console.error(err);
+      setLoadError('Admin data could not be loaded. Check your connection and retry.');
     } finally {
-      setLoading(false);
+      if (silent) setRefreshing(false);
+      else setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!feedback) return;
+    const timeout = window.setTimeout(() => setFeedback(null), 6500);
+    return () => window.clearTimeout(timeout);
+  }, [feedback]);
 
   useEffect(() => {
     if (!isAuthLoading) {
@@ -203,12 +223,12 @@ export const AdminDashboardPage: React.FC = () => {
       });
 
       if (res.data?.success) {
-        alert(res.data.message || 'Credits adjusted successfully!');
+        setFeedback({ type: 'success', message: res.data.message || 'Credits adjusted successfully.' });
         setCreditModalUser(null);
-        await fetchAdminData();
+        await fetchAdminData(true);
       }
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || err.message || 'Failed to adjust credits');
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Could not adjust credits.' });
     } finally {
       setSubmittingCredit(false);
     }
@@ -244,12 +264,12 @@ export const AdminDashboardPage: React.FC = () => {
       });
 
       if (res.data?.success) {
-        alert('User details updated successfully!');
+        setFeedback({ type: 'success', message: 'User details updated successfully.' });
         setEditModalUser(null);
-        await fetchAdminData();
+        await fetchAdminData(true);
       }
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || err.message || 'Failed to update user');
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Could not update the user.' });
     } finally {
       setSubmittingEdit(false);
     }
@@ -272,11 +292,11 @@ export const AdminDashboardPage: React.FC = () => {
       });
 
       if (res.data?.success) {
-        alert(res.data.message || 'Password reset successfully!');
+        setFeedback({ type: 'success', message: res.data.message || 'Password reset successfully.' });
         setPasswordModalUser(null);
       }
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || err.message || 'Failed to reset password');
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Could not reset the password.' });
     } finally {
       setSubmittingPassword(false);
     }
@@ -292,30 +312,33 @@ export const AdminDashboardPage: React.FC = () => {
     try {
       const res = await api.deleteAdminUser(u.id);
       if (res.data?.success) {
-        alert(res.data.message || 'User deleted successfully.');
-        await fetchAdminData();
+        setFeedback({ type: 'success', message: res.data.message || 'User deleted successfully.' });
+        await fetchAdminData(true);
       }
     } catch (err: any) {
-      alert(err.response?.data?.error?.message || err.message || 'Failed to delete user');
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Could not delete the user.' });
     }
   };
 
   const handleToggleUserStatus = async (userId: string, currentStatus: string) => {
+    const nextStatus = currentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+    if (nextStatus === 'SUSPENDED' && !window.confirm('Suspend this account? The user will lose access until an administrator reactivates it.')) return;
     try {
-      const nextStatus = currentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
       await api.updateUserStatus(userId, nextStatus);
-      await fetchAdminData();
+      setFeedback({ type: 'success', message: `User ${nextStatus === 'ACTIVE' ? 'activated' : 'suspended'}.` });
+      await fetchAdminData(true);
     } catch (err: any) {
-      alert('Failed to update user status: ' + err.message);
+      setFeedback({ type: 'error', message: 'Failed to update user status: ' + err.message });
     }
   };
 
   const handleReviewVerification = async (id: string, status: 'VERIFIED' | 'FAILED') => {
     try {
       await api.reviewVerification(id, status);
-      await fetchAdminData();
+      setFeedback({ type: 'success', message: `Verification marked ${status.toLowerCase()}.` });
+      await fetchAdminData(true);
     } catch (err: any) {
-      alert('Failed to update verification: ' + err.message);
+      setFeedback({ type: 'error', message: 'Failed to update verification: ' + err.message });
     }
   };
 
@@ -325,11 +348,12 @@ export const AdminDashboardPage: React.FC = () => {
     try {
       setSubmittingReview(true);
       await api.markAdminVerificationReview(reviewModalCase.id, reviewReasonInput || 'Flagged for compliance review');
+      setFeedback({ type: 'success', message: 'Verification case marked for review.' });
       setReviewModalCase(null);
       setReviewReasonInput('');
-      await fetchAdminData();
+       await fetchAdminData(true);
     } catch (err: any) {
-      alert('Failed to mark for review: ' + (err.response?.data?.error?.message || err.message));
+      setFeedback({ type: 'error', message: 'Failed to mark for review: ' + (err.response?.data?.error?.message || err.message) });
     } finally {
       setSubmittingReview(false);
     }
@@ -339,17 +363,18 @@ export const AdminDashboardPage: React.FC = () => {
     e.preventDefault();
     if (!overrideModalCase) return;
     if (!overrideReason.trim()) {
-      alert('An audit justification reason is strictly required for administrative overrides.');
+      setFeedback({ type: 'error', message: 'Enter an audit reason before submitting an override.' });
       return;
     }
     try {
       setSubmittingOverride(true);
       await api.adminVerificationOverride(overrideModalCase.id, overrideAction, overrideReason.trim());
+      setFeedback({ type: 'success', message: `Verification override ${overrideAction === 'APPROVE' ? 'approved' : 'rejected'}.` });
       setOverrideModalCase(null);
       setOverrideReason('');
-      await fetchAdminData();
+       await fetchAdminData(true);
     } catch (err: any) {
-      alert('Failed to process override: ' + (err.response?.data?.error?.message || err.message));
+      setFeedback({ type: 'error', message: 'Failed to process override: ' + (err.response?.data?.error?.message || err.message) });
     } finally {
       setSubmittingOverride(false);
     }
@@ -360,16 +385,18 @@ export const AdminDashboardPage: React.FC = () => {
       setSavingKey(key);
       const val = editingSettings[key];
       await api.updateAdminSetting(key, val);
-      alert(`Setting ${key} updated successfully to ${val}`);
-      await fetchAdminData();
+      setFeedback({ type: 'success', message: `Updated ${key}.` });
+      await fetchAdminData(true);
     } catch (err: any) {
-      alert('Failed to update setting: ' + err.message);
+      setFeedback({ type: 'error', message: 'Failed to update setting: ' + err.message });
     } finally {
       setSavingKey(null);
     }
   };
 
   const handleToggleLocation = async (type: string, id: string, currentActive: boolean) => {
+    const key = `${type}:${id}`;
+    setSavingActionKey(key);
     setStates((prev) =>
       prev.map((st) => {
         if (type === 'state' && st.id === id) {
@@ -389,26 +416,47 @@ export const AdminDashboardPage: React.FC = () => {
 
     try {
       await api.toggleAdminLocation(type, id, !currentActive);
+      setFeedback({ type: 'success', message: `${type === 'state' ? 'State' : 'City'} ${!currentActive ? 'activated' : 'paused'}.` });
     } catch (err: any) {
-      console.warn('Backend toggle notification warning:', err.message);
+      setStates((prev) => prev.map((state) => {
+        if (type === 'state' && state.id === id) return { ...state, isActive: currentActive };
+        if (type === 'city' && state.cities) return { ...state, cities: state.cities.map((city: any) => city.id === id ? { ...city, isActive: currentActive } : city) };
+        return state;
+      }));
+      setFeedback({ type: 'error', message: `Could not update this ${type}. The previous status was restored.` });
+    } finally {
+      setSavingActionKey(null);
     }
   };
 
   const handleUpdateRequirementStatus = async (id: string, newStatus: string) => {
+    if (newStatus === 'CLOSED' && !window.confirm('Close this customer request? Professionals will no longer be able to submit proposals.')) return;
     try {
+      setSavingActionKey(`requirement:${id}`);
       await api.updateAdminRequirementStatus(id, newStatus);
-      await fetchAdminData();
+      setFeedback({ type: 'success', message: `Request ${newStatus.toLowerCase()}.` });
+      await fetchAdminData(true);
     } catch (err: any) {
-      alert('Failed to update requirement: ' + err.message);
+      setFeedback({ type: 'error', message: 'Failed to update request: ' + err.message });
+    } finally {
+      setSavingActionKey(null);
     }
   };
 
   const handleUpdateJobStatus = async (id: string, newStatus: string) => {
+    const confirmMessage = newStatus === 'PAYMENT_RELEASED'
+      ? 'Release payment for this job? This payout action may be irreversible.'
+      : 'Force close this job? The service workflow will be stopped.';
+    if (!window.confirm(confirmMessage)) return;
     try {
+      setSavingActionKey(`job:${id}`);
       await api.updateAdminJobStatus(id, newStatus, 'Admin manual override');
-      await fetchAdminData();
+      setFeedback({ type: 'success', message: `Job status changed to ${newStatus.toLowerCase()}.` });
+      await fetchAdminData(true);
     } catch (err: any) {
-      alert('Failed to update job status: ' + err.message);
+      setFeedback({ type: 'error', message: 'Failed to update job status: ' + err.message });
+    } finally {
+      setSavingActionKey(null);
     }
   };
 
@@ -428,6 +476,38 @@ export const AdminDashboardPage: React.FC = () => {
     const userRoleNames = u.roles?.map((r: any) => r.role?.name || r.name) || [];
     return userRoleNames.includes(roleFilter);
   });
+
+  const pendingVerificationCount = verifications.filter((item) => ['PENDING', 'REVIEW_REQUIRED'].includes((item.status || '').toUpperCase())).length;
+  const openRequirementCount = requirements.filter((item) => item.status === 'ACTIVE').length;
+  const activeJobCount = jobs.filter((item) => !['COMPLETED', 'CLOSED', 'PAYMENT_RELEASED'].includes((item.status || '').toUpperCase())).length;
+  const pendingPaymentCount = payments.filter((item) => ['CREATED', 'PENDING', 'FAILED'].includes((item.status || '').toUpperCase())).length;
+  const filteredPayments = payments.filter((payment) => {
+    if (paymentFilterStatus === 'NEEDS_REVIEW') {
+      if (!['CREATED', 'PENDING', 'FAILED'].includes((payment.status || '').toUpperCase())) return false;
+    } else if (paymentFilterStatus !== 'ALL') {
+      if (paymentFilterStatus === 'CAPTURED') {
+        if (!['CAPTURED', 'SECURED', 'PAID', 'RELEASED'].includes(payment.status)) return false;
+      } else if (payment.status !== paymentFilterStatus) return false;
+    }
+    const term = paymentSearch.trim().toLowerCase();
+    if (!term) return true;
+    return Boolean(
+      payment.orderId?.toLowerCase().includes(term) ||
+      payment.razorpayOrderId?.toLowerCase().includes(term) ||
+      payment.razorpayPaymentId?.toLowerCase().includes(term) ||
+      `${payment.user?.firstName || ''} ${payment.user?.lastName || ''}`.toLowerCase().includes(term) ||
+      payment.contact?.includes(term) || payment.email?.toLowerCase().includes(term)
+    );
+  });
+  const adminPageTitles: Record<typeof activeTab, string> = {
+    metrics: 'Operations overview',
+    users: 'People & accounts',
+    marketplace: 'Marketplace operations',
+    verifications: 'Verification review',
+    locations: 'Service areas',
+    settings: 'Platform settings',
+    payments: 'Payments & ledger',
+  };
 
   if (isAuthLoading || (loading && isAuthenticated && isAdmin)) {
     return (
@@ -458,7 +538,8 @@ export const AdminDashboardPage: React.FC = () => {
             </p>
           </div>
           <button
-            onClick={() => openAuthModal('CUSTOMER', 'admin@vaziro.in')}
+            type="button"
+            onClick={() => openAuthModal('CUSTOMER')}
             className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition cursor-pointer"
           >
             Sign In as Administrator
@@ -469,114 +550,138 @@ export const AdminDashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        {/* Header */}
+      <div className="mb-6 flex flex-col gap-4 border-b border-[#e7e8df] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-              Master Admin Control Center
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#718044]">
+              Vaziro operations
             </span>
-            <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">
-              Full Platform Access
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#dce8ce] bg-[#f1f4e9] px-2.5 py-1 text-xs font-semibold text-[#48633e]">
+              <ShieldCheck className="h-3.5 w-3.5" /> Admin session
             </span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight mt-2">
-            Vaziro™ Governance & User Management
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#24352b] sm:text-3xl">
+            {adminPageTitles[activeTab]}
           </h1>
-          <p className="text-xs text-gray-500 mt-1">
-            Proanta Technologies Private Limited • Complete Web App Controls, Credit Allotment & Marketplace Dispatch
+          <p className="mt-1 max-w-2xl text-sm leading-5 text-[#68716b]">
+            Review platform activity, process queues and manage operational settings.
           </p>
         </div>
 
         <button
-          onClick={fetchAdminData}
-          className="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 rounded-xl border border-gray-200 text-xs font-bold shadow-sm transition"
+          type="button"
+          onClick={() => fetchAdminData(true)}
+          disabled={refreshing}
+          className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-md border border-[#d8ddd3] bg-white px-4 text-sm font-semibold text-[#40583d] shadow-sm transition hover:bg-[#f7f7f1] disabled:cursor-wait disabled:opacity-60 sm:self-auto"
         >
-          <RefreshCw className="w-3.5 h-3.5 text-emerald-600" />
-          Refresh Data
+          {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          {refreshing ? 'Refreshing...' : 'Refresh data'}
         </button>
       </div>
 
+      {(loadError || feedback) && <div className={`mb-5 flex flex-col gap-3 rounded-lg border p-4 text-sm sm:flex-row sm:items-center sm:justify-between ${loadError || feedback?.type === 'error' ? 'border-red-200 bg-red-50 text-red-900' : 'border-[#dce8ce] bg-[#f1f4e9] text-[#40583d]'}`} role={loadError || feedback?.type === 'error' ? 'alert' : 'status'}>
+        <span>{loadError || feedback?.message}</span>
+        <div className="flex shrink-0 items-center gap-3">
+          {loadError && <button type="button" onClick={() => fetchAdminData(true)} disabled={refreshing} className="min-h-10 font-bold underline">Retry</button>}
+          {feedback && <button type="button" onClick={() => setFeedback(null)} aria-label="Dismiss notification" className="flex h-10 w-10 items-center justify-center rounded-md hover:bg-black/5"><X className="h-4 w-4" /></button>}
+        </div>
+      </div>}
+
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-gray-200 mb-8 overflow-x-auto pb-1">
+      <nav aria-label="Admin sections" className="mb-6 flex items-center gap-1 overflow-x-auto rounded-lg border border-[#e7e8df] bg-white p-1.5 shadow-sm">
         <button
+          type="button"
           onClick={() => setActiveTab('users')}
-          className={`pb-3 px-4 text-xs font-bold transition border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          aria-current={activeTab === 'users' ? 'page' : undefined}
+          className={`min-h-10 rounded-md px-3 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
             activeTab === 'users'
-              ? 'border-emerald-600 text-emerald-700'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'bg-[#203c32] text-white shadow-sm'
+              : 'text-[#647067] hover:bg-[#f1f2e9] hover:text-[#203c32]'
           }`}
         >
-          <Users className="w-4 h-4" /> Users & Credits Hub ({users.length})
+          <Users className="w-4 h-4" /> People <span className="hidden sm:inline">({users.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('marketplace')}
-          className={`pb-3 px-4 text-xs font-bold transition border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          type="button"
+          aria-current={activeTab === 'marketplace' ? 'page' : undefined}
+          className={`min-h-10 rounded-md px-3 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
             activeTab === 'marketplace'
-              ? 'border-emerald-600 text-emerald-700'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'bg-[#203c32] text-white shadow-sm'
+              : 'text-[#647067] hover:bg-[#f1f2e9] hover:text-[#203c32]'
           }`}
         >
-          <Layers className="w-4 h-4" /> Requirements & Jobs ({requirements.length + jobs.length})
+          <Layers className="w-4 h-4" /> Marketplace
         </button>
 
         <button
           onClick={() => setActiveTab('metrics')}
-          className={`pb-3 px-4 text-xs font-bold transition border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          type="button"
+          aria-current={activeTab === 'metrics' ? 'page' : undefined}
+          className={`min-h-10 rounded-md px-3 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
             activeTab === 'metrics'
-              ? 'border-emerald-600 text-emerald-700'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'bg-[#203c32] text-white shadow-sm'
+              : 'text-[#647067] hover:bg-[#f1f2e9] hover:text-[#203c32]'
           }`}
         >
-          <Briefcase className="w-4 h-4" /> Overview Metrics
+          <Home className="w-4 h-4" /> Overview
         </button>
 
         <button
           onClick={() => setActiveTab('verifications')}
-          className={`pb-3 px-4 text-xs font-bold transition border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          type="button"
+          aria-current={activeTab === 'verifications' ? 'page' : undefined}
+          className={`min-h-10 rounded-md px-3 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
             activeTab === 'verifications'
-              ? 'border-emerald-600 text-emerald-700'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'bg-[#203c32] text-white shadow-sm'
+              : 'text-[#647067] hover:bg-[#f1f2e9] hover:text-[#203c32]'
           }`}
         >
-          <ShieldCheck className="w-4 h-4" /> Verification Queue ({verifications.length})
+          <ShieldCheck className="w-4 h-4" /> Verify <span className="hidden sm:inline">({pendingVerificationCount})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('locations')}
-          className={`pb-3 px-4 text-xs font-bold transition border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          type="button"
+          aria-current={activeTab === 'locations' ? 'page' : undefined}
+          className={`min-h-10 rounded-md px-3 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
             activeTab === 'locations'
-              ? 'border-emerald-600 text-emerald-700'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'bg-[#203c32] text-white shadow-sm'
+              : 'text-[#647067] hover:bg-[#f1f2e9] hover:text-[#203c32]'
           }`}
         >
-          <MapPin className="w-4 h-4" /> Location Switchboard
+          <MapPin className="w-4 h-4" /> Locations
         </button>
 
         <button
           onClick={() => setActiveTab('settings')}
-          className={`pb-3 px-4 text-xs font-bold transition border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          type="button"
+          aria-current={activeTab === 'settings' ? 'page' : undefined}
+          className={`min-h-10 rounded-md px-3 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
             activeTab === 'settings'
-              ? 'border-emerald-600 text-emerald-700'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'bg-[#203c32] text-white shadow-sm'
+              : 'text-[#647067] hover:bg-[#f1f2e9] hover:text-[#203c32]'
           }`}
         >
-          <Settings className="w-4 h-4" /> Platform & Fees Rules
+          <Settings className="w-4 h-4" /> Settings
         </button>
 
         <button
           onClick={() => setActiveTab('payments')}
-          className={`pb-3 px-4 text-xs font-bold transition border-b-2 flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
+          type="button"
+          aria-current={activeTab === 'payments' ? 'page' : undefined}
+          className={`min-h-10 rounded-md px-3 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
             activeTab === 'payments'
-              ? 'border-emerald-600 text-emerald-700'
-              : 'border-transparent text-gray-500 hover:text-gray-700'
+              ? 'bg-[#203c32] text-white shadow-sm'
+              : 'text-[#647067] hover:bg-[#f1f2e9] hover:text-[#203c32]'
           }`}
         >
-          <CreditCard className="w-4 h-4" /> Razorpay Payments & Ledgers ({payments.length})
+          <CreditCard className="w-4 h-4" /> Payments <span className="hidden sm:inline">({payments.length})</span>
         </button>
-      </div>
+      </nav>
 
       {/* TAB 1: USERS & CREDITS HUB */}
       {activeTab === 'users' && (
@@ -590,7 +695,7 @@ export const AdminDashboardPage: React.FC = () => {
                 placeholder="Search by name, email, or mobile..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
+                className="min-h-11 w-full pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
               />
             </div>
 
@@ -599,7 +704,7 @@ export const AdminDashboardPage: React.FC = () => {
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="min-h-11 bg-gray-50 border border-gray-200 rounded-xl px-3 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="ALL">All Roles ({users.length})</option>
                 <option value="CUSTOMER">Customers</option>
@@ -746,24 +851,29 @@ export const AdminDashboardPage: React.FC = () => {
                         <td className="p-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             <button
+                              type="button"
                               onClick={() => openEditModal(u)}
-                              className="p-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
+                              aria-label={`Edit ${u.firstName || 'user'} profile`}
+                              className="flex h-11 w-11 items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
                               title="Edit User Profile & Roles"
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
 
                             <button
+                              type="button"
                               onClick={() => openPasswordModal(u)}
-                              className="p-1.5 bg-gray-100 hover:bg-gray-200 text-blue-700 rounded-lg transition"
+                              aria-label={`Reset ${u.firstName || 'user'} password`}
+                              className="flex h-11 w-11 items-center justify-center bg-gray-100 hover:bg-gray-200 text-blue-700 rounded-lg transition"
                               title="Force Reset Password"
                             >
                               <Key className="w-3.5 h-3.5" />
                             </button>
 
                             <button
+                              type="button"
                               onClick={() => handleToggleUserStatus(u.id, u.status)}
-                              className={`px-2 py-1 rounded-lg text-[11px] font-bold transition ${
+                              className={`min-h-11 px-2 rounded-lg text-[11px] font-bold transition ${
                                 u.status === 'ACTIVE'
                                   ? 'bg-amber-50 text-amber-800 hover:bg-amber-100'
                                   : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
@@ -773,8 +883,10 @@ export const AdminDashboardPage: React.FC = () => {
                             </button>
 
                             <button
+                              type="button"
                               onClick={() => handleDeleteUser(u)}
-                              className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition"
+                              aria-label={`Delete ${u.firstName || 'user'}`}
+                              className="flex h-11 w-11 items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition"
                               title="Permanently Delete User"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -784,6 +896,14 @@ export const AdminDashboardPage: React.FC = () => {
                       </tr>
                     );
                   })}
+                  {filteredUsers.length === 0 && (
+                    <tr><td colSpan={6} className="px-5 py-12 text-center">
+                      <Search className="mx-auto h-7 w-7 text-[#8a948b]" />
+                      <p className="mt-2 text-sm font-semibold text-[#344137]">No matching accounts</p>
+                      <p className="mt-1 text-xs text-neutral-500">Try another name, email, phone number or role.</p>
+                      {(searchQuery || roleFilter !== 'ALL') && <button type="button" onClick={() => { setSearchQuery(''); setRoleFilter('ALL'); }} className="mt-3 min-h-10 text-xs font-semibold text-emerald-800 hover:underline">Clear filters</button>}
+                    </td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -876,15 +996,19 @@ export const AdminDashboardPage: React.FC = () => {
                         <td className="p-4 text-right">
                           {req.status === 'ACTIVE' ? (
                             <button
+                              type="button"
                               onClick={() => handleUpdateRequirementStatus(req.id, 'CLOSED')}
-                              className="text-xs font-bold text-red-600 hover:underline cursor-pointer"
+                              disabled={savingActionKey === `requirement:${req.id}`}
+                              className="min-h-10 text-xs font-bold text-red-600 hover:underline disabled:opacity-50 cursor-pointer"
                             >
-                              Close
+                              {savingActionKey === `requirement:${req.id}` ? 'Updating...' : 'Close'}
                             </button>
                           ) : (
                             <button
+                              type="button"
                               onClick={() => handleUpdateRequirementStatus(req.id, 'ACTIVE')}
-                              className="text-xs font-bold text-emerald-600 hover:underline cursor-pointer"
+                              disabled={savingActionKey === `requirement:${req.id}`}
+                              className="min-h-10 text-xs font-bold text-emerald-600 hover:underline disabled:opacity-50 cursor-pointer"
                             >
                               Reopen
                             </button>
@@ -892,6 +1016,7 @@ export const AdminDashboardPage: React.FC = () => {
                         </td>
                       </tr>
                     ))}
+                    {requirements.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-neutral-500">No customer requests are available yet.</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -962,16 +1087,20 @@ export const AdminDashboardPage: React.FC = () => {
                             <div className="flex items-center justify-end gap-2">
                               {job.status !== 'PAYMENT_RELEASED' && (
                                 <button
+                                  type="button"
                                   onClick={() => handleUpdateJobStatus(job.id, 'PAYMENT_RELEASED')}
-                                  className="text-[11px] font-bold text-emerald-700 hover:underline cursor-pointer"
+                                  disabled={savingActionKey === `job:${job.id}`}
+                                  className="min-h-10 text-[11px] font-bold text-emerald-700 hover:underline disabled:opacity-50 cursor-pointer"
                                 >
-                                  Release Payout
+                                  {savingActionKey === `job:${job.id}` ? 'Updating...' : 'Release payout'}
                                 </button>
                               )}
                               {job.status !== 'CLOSED' && (
                                 <button
+                                  type="button"
                                   onClick={() => handleUpdateJobStatus(job.id, 'CLOSED')}
-                                  className="text-[11px] font-bold text-red-600 hover:underline cursor-pointer"
+                                  disabled={savingActionKey === `job:${job.id}`}
+                                  className="min-h-10 text-[11px] font-bold text-red-600 hover:underline disabled:opacity-50 cursor-pointer"
                                 >
                                   Force Close
                                 </button>
@@ -981,6 +1110,7 @@ export const AdminDashboardPage: React.FC = () => {
                         </tr>
                       );
                     })}
+                    {jobs.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-neutral-500">No service jobs are available yet.</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -992,39 +1122,68 @@ export const AdminDashboardPage: React.FC = () => {
       {/* TAB 3: METRICS */}
       {activeTab === 'metrics' && (
         <div className="space-y-6">
+          <section aria-labelledby="admin-queues-title">
+            <div className="mb-3">
+              <p className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#718044]">Action queues</p>
+              <h2 id="admin-queues-title" className="mt-1 text-lg font-semibold text-[#29382e]">Work that may need review</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <button type="button" onClick={() => { setVerificationFilterStatus('PENDING_REVIEW'); setActiveTab('verifications'); }} className="group rounded-lg border border-[#e7e8df] bg-white p-4 text-left transition hover:border-[#c5d5a8] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#78935f]">
+                <span className="flex items-center justify-between gap-2 text-xs font-semibold text-[#657168]"><span>Pending verification</span><ShieldCheck className="h-4 w-4 text-[#668044]" /></span>
+                <span className="mt-2 block text-2xl font-semibold text-[#29382e]">{pendingVerificationCount}</span>
+                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#506e40]">Open queue <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" /></span>
+              </button>
+              <button type="button" onClick={() => { setMarketplaceSubTab('requirements'); setActiveTab('marketplace'); }} className="group rounded-lg border border-[#e7e8df] bg-white p-4 text-left transition hover:border-[#c5d5a8] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#78935f]">
+                <span className="flex items-center justify-between gap-2 text-xs font-semibold text-[#657168]"><span>Open customer requests</span><FileText className="h-4 w-4 text-[#668044]" /></span>
+                <span className="mt-2 block text-2xl font-semibold text-[#29382e]">{openRequirementCount}</span>
+                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#506e40]">Moderate requests <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" /></span>
+              </button>
+              <button type="button" onClick={() => { setMarketplaceSubTab('jobs'); setActiveTab('marketplace'); }} className="group rounded-lg border border-[#e7e8df] bg-white p-4 text-left transition hover:border-[#c5d5a8] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#78935f]">
+                <span className="flex items-center justify-between gap-2 text-xs font-semibold text-[#657168]"><span>In-progress jobs</span><Briefcase className="h-4 w-4 text-[#668044]" /></span>
+                <span className="mt-2 block text-2xl font-semibold text-[#29382e]">{activeJobCount}</span>
+                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#506e40]">Review jobs <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" /></span>
+              </button>
+              <button type="button" onClick={() => { setPaymentFilterStatus('NEEDS_REVIEW'); setActiveTab('payments'); }} className="group rounded-lg border border-[#e7e8df] bg-white p-4 text-left transition hover:border-[#c5d5a8] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#78935f]">
+                <span className="flex items-center justify-between gap-2 text-xs font-semibold text-[#657168]"><span>Pending or failed payments</span><CreditCard className="h-4 w-4 text-[#668044]" /></span>
+                <span className="mt-2 block text-2xl font-semibold text-[#29382e]">{pendingPaymentCount}</span>
+                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#506e40]">Open ledger <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" /></span>
+              </button>
+            </div>
+          </section>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
               <span className="text-gray-400 text-xs font-bold uppercase">Total Users</span>
               <div className="text-3xl font-extrabold text-gray-900 mt-1">
-                {metrics?.users?.total || 0}
+                {metrics?.users?.total ?? '—'}
               </div>
               <p className="text-[11px] text-gray-500 mt-1">
-                {metrics?.users?.customers || 0} Customers • {metrics?.users?.professionals || 0} Professionals
+                {metrics?.users ? `${metrics.users.customers ?? 0} Customers • ${metrics.users.professionals ?? 0} Professionals` : 'Metrics unavailable'}
               </p>
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-              <span className="text-gray-400 text-xs font-bold uppercase">DigiLocker Verified</span>
+              <span className="text-gray-400 text-xs font-bold uppercase">Verified professional profiles</span>
               <div className="text-3xl font-extrabold text-emerald-700 mt-1">
-                {metrics?.users?.verifiedProfessionals || 0}
+                {metrics?.users?.verifiedProfessionals ?? '—'}
               </div>
-              <p className="text-[11px] text-emerald-600 mt-1">Government KYC validated</p>
+              <p className="text-[11px] text-emerald-600 mt-1">Marked verified in profile records</p>
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
               <span className="text-gray-400 text-xs font-bold uppercase">Active Jobs</span>
               <div className="text-3xl font-extrabold text-blue-700 mt-1">
-                {metrics?.marketplace?.activeJobs || 0}
+                {metrics?.marketplace?.activeJobs ?? '—'}
               </div>
               <p className="text-[11px] text-gray-500 mt-1">
-                {metrics?.marketplace?.completedJobs || 0} Completed Delivery
+                {metrics?.marketplace ? `${metrics.marketplace.completedJobs ?? 0} Completed` : 'Metrics unavailable'}
               </p>
             </div>
 
             <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
               <span className="text-gray-400 text-xs font-bold uppercase">Credits Deducted</span>
               <div className="text-3xl font-extrabold text-amber-600 mt-1">
-                {metrics?.financials?.totalCreditsDeducted || 0} <span className="text-xs font-normal">cr</span>
+                {metrics?.financials?.totalCreditsDeducted ?? '—'} <span className="text-xs font-normal">cr</span>
               </div>
               <p className="text-[11px] text-gray-500 mt-1">Application revenue ledger</p>
             </div>
@@ -1038,15 +1197,15 @@ export const AdminDashboardPage: React.FC = () => {
               <div className="space-y-3 text-xs">
                 <div className="flex justify-between py-2 border-b border-gray-100">
                   <span className="text-gray-500">Total Requirements Posted:</span>
-                  <span className="font-bold text-gray-900">{metrics?.marketplace?.totalRequirements || 0}</span>
+                  <span className="font-bold text-gray-900">{metrics?.marketplace?.totalRequirements ?? '—'}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-gray-100">
                   <span className="text-gray-500">Active Service Orders:</span>
-                  <span className="font-bold text-gray-900">{metrics?.marketplace?.activeJobs || 0}</span>
+                  <span className="font-bold text-gray-900">{metrics?.marketplace?.activeJobs ?? '—'}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-gray-100">
                   <span className="text-gray-500">Open Arbitration Disputes:</span>
-                  <span className="font-bold text-red-600">{metrics?.marketplace?.openDisputes || 0}</span>
+                  <span className="font-bold text-red-600">{metrics?.marketplace?.openDisputes ?? '—'}</span>
                 </div>
               </div>
             </div>
@@ -1059,13 +1218,13 @@ export const AdminDashboardPage: React.FC = () => {
                 <div className="flex justify-between py-2 border-b border-gray-100">
                   <span className="text-gray-500">Gross Contract Volume (GMV):</span>
                   <span className="font-black text-emerald-800 text-base">
-                    ₹{(metrics?.financials?.totalGmvInr || 0).toLocaleString('en-IN')}
+                    {metrics?.financials?.totalGmvInr === undefined ? '—' : `₹${metrics.financials.totalGmvInr.toLocaleString('en-IN')}`}
                   </span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-500">Platform Escrow Fee (6%):</span>
+                  <span className="text-gray-500">Payments recorded:</span>
                   <span className="font-bold text-gray-900">
-                    ₹{((metrics?.financials?.totalGmvInr || 0) * 0.06).toLocaleString('en-IN')}
+                    {payments.length}
                   </span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-gray-100">
@@ -1092,7 +1251,7 @@ export const AdminDashboardPage: React.FC = () => {
 
               {/* Status Filters */}
               <div className="flex flex-wrap items-center gap-1.5 bg-neutral-100 p-1 rounded-xl">
-                {['ALL', 'PENDING', 'VERIFIED', 'FAILED', 'REVIEW_REQUIRED', 'EXPIRED'].map((st) => (
+                {['ALL', 'PENDING_REVIEW', 'PENDING', 'VERIFIED', 'FAILED', 'REVIEW_REQUIRED', 'EXPIRED'].map((st) => (
                   <button
                     key={st}
                     onClick={() => setVerificationFilterStatus(st)}
@@ -1102,7 +1261,7 @@ export const AdminDashboardPage: React.FC = () => {
                         : 'text-neutral-600 hover:text-black'
                     }`}
                   >
-                    {st === 'ALL' ? 'All' : st.replace('_', ' ')}
+                    {st === 'ALL' ? 'All' : st === 'PENDING_REVIEW' ? 'Needs review' : st.replace('_', ' ')}
                   </button>
                 ))}
               </div>
@@ -1117,7 +1276,7 @@ export const AdminDashboardPage: React.FC = () => {
                   placeholder="Search by professional name, phone, email, reference ID, or professional ID..."
                   value={verificationSearch}
                   onChange={(e) => setVerificationSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-black focus:bg-white"
+                  className="min-h-11 w-full pl-10 pr-4 bg-neutral-50 border border-neutral-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black focus:bg-white"
                 />
               </div>
             </div>
@@ -1125,9 +1284,10 @@ export const AdminDashboardPage: React.FC = () => {
 
           <div className="divide-y divide-gray-100">
             {verifications.filter((v) => {
-              const matchesStatus =
-                verificationFilterStatus === 'ALL' ||
-                (v.status || 'NOT_STARTED').toUpperCase() === verificationFilterStatus;
+              const verificationStatus = (v.status || 'NOT_STARTED').toUpperCase();
+              const matchesStatus = verificationFilterStatus === 'ALL' || (verificationFilterStatus === 'PENDING_REVIEW'
+                ? ['PENDING', 'REVIEW_REQUIRED'].includes(verificationStatus)
+                : verificationStatus === verificationFilterStatus);
 
               const q = verificationSearch.toLowerCase().trim();
               if (!q) return matchesStatus;
@@ -1155,9 +1315,10 @@ export const AdminDashboardPage: React.FC = () => {
             ) : (
               verifications
                 .filter((v) => {
-                  const matchesStatus =
-                    verificationFilterStatus === 'ALL' ||
-                    (v.status || 'NOT_STARTED').toUpperCase() === verificationFilterStatus;
+                  const verificationStatus = (v.status || 'NOT_STARTED').toUpperCase();
+                  const matchesStatus = verificationFilterStatus === 'ALL' || (verificationFilterStatus === 'PENDING_REVIEW'
+                    ? ['PENDING', 'REVIEW_REQUIRED'].includes(verificationStatus)
+                    : verificationStatus === verificationFilterStatus);
 
                   const q = verificationSearch.toLowerCase().trim();
                   if (!q) return matchesStatus;
@@ -1341,7 +1502,8 @@ export const AdminDashboardPage: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleToggleLocation('state', st.id, st.isActive)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-sm cursor-pointer ${
+                        disabled={savingActionKey === `state:${st.id}`}
+                        className={`min-h-10 px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-sm disabled:opacity-50 cursor-pointer ${
                           st.isActive
                             ? 'text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300'
                             : 'text-neutral-600 bg-neutral-200 hover:bg-neutral-300 border border-neutral-300'
@@ -1385,7 +1547,8 @@ export const AdminDashboardPage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleToggleLocation('city', ct.id, ct.isActive)}
-                              className={`p-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                              disabled={savingActionKey === `city:${ct.id}`}
+                              className={`min-h-10 min-w-10 p-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 disabled:opacity-50 cursor-pointer ${
                                 ct.isActive
                                   ? 'text-emerald-700 hover:bg-emerald-50'
                                   : 'text-neutral-400 hover:bg-neutral-200'
@@ -1424,7 +1587,11 @@ export const AdminDashboardPage: React.FC = () => {
 
           <div className="p-6 space-y-4 max-w-2xl">
             {settings.length === 0 ? (
-              <p className="text-xs text-gray-400">Loading platform variables...</p>
+              <div className="rounded-lg border border-dashed border-[#d8ddd3] bg-[#f8f9f5] p-8 text-center">
+                <Settings className="mx-auto h-6 w-6 text-[#7c887d]" />
+                <p className="mt-2 text-sm font-semibold text-[#344137]">No configurable settings returned</p>
+                <p className="mt-1 text-xs text-neutral-500">If settings should be available, refresh the admin data or check the settings service.</p>
+              </div>
             ) : (
               settings.map((s) => (
                 <div key={s.id || s.key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
@@ -1503,7 +1670,7 @@ export const AdminDashboardPage: React.FC = () => {
                 placeholder="Search by Order ID, Razorpay Payment ID, Customer name or contact..."
                 value={paymentSearch}
                 onChange={(e) => setPaymentSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50"
+                 className="min-h-11 w-full pl-9 pr-4 border border-gray-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50"
               />
             </div>
 
@@ -1511,11 +1678,12 @@ export const AdminDashboardPage: React.FC = () => {
               <select
                 value={paymentFilterStatus}
                 onChange={(e) => setPaymentFilterStatus(e.target.value)}
-                className="px-3 py-2 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="min-h-11 px-3 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
                 <option value="ALL">All Statuses</option>
                 <option value="CAPTURED">CAPTURED / SECURED</option>
                 <option value="CREATED">CREATED / PENDING</option>
+                <option value="NEEDS_REVIEW">Pending / failed</option>
                 <option value="FAILED">FAILED</option>
                 <option value="RELEASED">RELEASED</option>
               </select>
@@ -1538,27 +1706,7 @@ export const AdminDashboardPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
-                  {payments
-                    .filter((p) => {
-                      if (paymentFilterStatus !== 'ALL') {
-                        if (paymentFilterStatus === 'CAPTURED') {
-                          if (!['CAPTURED', 'SECURED', 'PAID', 'RELEASED'].includes(p.status)) return false;
-                        } else if (p.status !== paymentFilterStatus) {
-                          return false;
-                        }
-                      }
-                      if (paymentSearch.trim()) {
-                        const term = paymentSearch.toLowerCase();
-                        const matchOrder = p.orderId?.toLowerCase().includes(term);
-                        const matchRzpOrder = p.razorpayOrderId?.toLowerCase().includes(term);
-                        const matchRzpPay = p.razorpayPaymentId?.toLowerCase().includes(term);
-                        const matchName = `${p.user?.firstName} ${p.user?.lastName}`.toLowerCase().includes(term);
-                        const matchContact = p.contact?.includes(term) || p.email?.toLowerCase().includes(term);
-                        return matchOrder || matchRzpOrder || matchRzpPay || matchName || matchContact;
-                      }
-                      return true;
-                    })
-                    .map((p) => (
+                  {filteredPayments.map((p) => (
                       <tr key={p.id} className="hover:bg-gray-50/80 transition">
                         <td className="py-3 px-4">
                           <span className="font-mono font-bold text-gray-900 block">{p.orderId || p.id.substring(0, 8)}</span>
@@ -1622,10 +1770,10 @@ export const AdminDashboardPage: React.FC = () => {
                         </td>
                       </tr>
                     ))}
-                  {payments.length === 0 && (
+                  {filteredPayments.length === 0 && (
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-gray-400 text-xs">
-                        No Razorpay transactions found yet. Live and test payments will populate here in real-time.
+                        {payments.length === 0 ? 'No payment transactions are available yet.' : 'No transactions match these filters.'}
                       </td>
                     </tr>
                   )}
@@ -1641,7 +1789,7 @@ export const AdminDashboardPage: React.FC = () => {
       {/* 1. CREDIT ALLOTMENT & ADJUSTMENT MODAL */}
       {creditModalUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-200 animate-in fade-in zoom-in-95 duration-200">
+          <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-lg border border-[#e7e8df] bg-[#fffefa] p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200 sm:p-6">
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
@@ -1655,8 +1803,10 @@ export const AdminDashboardPage: React.FC = () => {
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setCreditModalUser(null)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                aria-label="Close credit adjustment"
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1676,7 +1826,8 @@ export const AdminDashboardPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setCreditMode('ADD')}
-                    className={`py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition cursor-pointer ${
+                    aria-pressed={creditMode === 'ADD'}
+                    className={`min-h-11 px-2 sm:px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition cursor-pointer ${
                       creditMode === 'ADD'
                         ? 'bg-emerald-600 text-white shadow-sm'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -1687,7 +1838,8 @@ export const AdminDashboardPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setCreditMode('DEDUCT')}
-                    className={`py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition cursor-pointer ${
+                    aria-pressed={creditMode === 'DEDUCT'}
+                    className={`min-h-11 px-2 sm:px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition cursor-pointer ${
                       creditMode === 'DEDUCT'
                         ? 'bg-amber-600 text-white shadow-sm'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -1698,7 +1850,8 @@ export const AdminDashboardPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setCreditMode('SET')}
-                    className={`py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition cursor-pointer ${
+                    aria-pressed={creditMode === 'SET'}
+                    className={`min-h-11 px-2 sm:px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition cursor-pointer ${
                       creditMode === 'SET'
                         ? 'bg-black text-white shadow-sm'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -1761,7 +1914,7 @@ export const AdminDashboardPage: React.FC = () => {
       {/* 2. EDIT USER PROFILE & ROLES MODAL */}
       {editModalUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-200 animate-in fade-in zoom-in-95 duration-200">
+          <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-[#e7e8df] bg-[#fffefa] p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200 sm:p-6">
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center">
@@ -1773,15 +1926,17 @@ export const AdminDashboardPage: React.FC = () => {
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setEditModalUser(null)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                aria-label="Close edit user form"
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
             <form onSubmit={handleUpdateUser} className="mt-5 space-y-4 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="font-bold text-gray-700 block mb-1">First Name</label>
                   <input
@@ -1804,7 +1959,7 @@ export const AdminDashboardPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="font-bold text-gray-700 block mb-1">Mobile (+91)</label>
                   <input
@@ -1825,7 +1980,7 @@ export const AdminDashboardPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label className="font-bold text-gray-700 block mb-1">Account Status</label>
                   <select
@@ -1909,7 +2064,7 @@ export const AdminDashboardPage: React.FC = () => {
       {/* 3. RESET PASSWORD MODAL */}
       {passwordModalUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-gray-200 animate-in fade-in zoom-in-95 duration-200">
+          <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-lg border border-[#e7e8df] bg-[#fffefa] p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200 sm:p-6">
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center">
@@ -1923,8 +2078,10 @@ export const AdminDashboardPage: React.FC = () => {
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setPasswordModalUser(null)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                aria-label="Close password reset"
+                className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
