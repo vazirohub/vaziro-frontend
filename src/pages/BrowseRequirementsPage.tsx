@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Requirement, Category, DetailedCreditWallet } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { Search, MapPin, ShieldCheck, Coins, Send, X, Clock, Calendar, AlertCircle, Sparkles, ArrowRight } from 'lucide-react';
+import { Search, MapPin, ShieldCheck, Coins, Send, X, Clock, Calendar, AlertCircle, Sparkles, ArrowRight, Bookmark, BadgeCheck, CircleHelp, SlidersHorizontal } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { AddCreditsModal } from '../components/AddCreditsModal';
@@ -14,11 +14,26 @@ export const BrowseRequirementsPage: React.FC = () => {
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [wallet, setWallet] = useState<DetailedCreditWallet | null>(null);
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [walletError, setWalletError] = useState(false);
+  const [categorySlugApplied, setCategorySlugApplied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [searchCity, setSearchCity] = useState<string>(() => searchParams.get('city') || '');
   const [searchText, setSearchText] = useState(() => searchParams.get('q') || '');
+  const [sortBy, setSortBy] = useState<'BEST_MATCH' | 'NEWEST' | 'LOWEST_BUDGET' | 'HIGHEST_BUDGET'>('BEST_MATCH');
+  const [activeTab, setActiveTab] = useState<'BEST_MATCH' | 'MOST_RECENT' | 'SAVED'>('BEST_MATCH');
+  const [savedRequirementIds, setSavedRequirementIds] = useState<string[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('vaziro_saved_requirements') || '[]');
+    } catch {
+      return [];
+    }
+  });
+  const [budgetFrom, setBudgetFrom] = useState('');
+  const [budgetTo, setBudgetTo] = useState('');
+  const [profileStrength, setProfileStrength] = useState<number | null>(null);
 
   // Quotation Modal State
   const [selectedRequirement, setSelectedRequirement] = useState<Requirement | null>(null);
@@ -34,6 +49,10 @@ export const BrowseRequirementsPage: React.FC = () => {
   const [quoteSuccess, setQuoteSuccess] = useState<string | null>(null);
 
   const isProfessional = user?.roles?.includes('PROFESSIONAL');
+
+  useEffect(() => {
+    localStorage.setItem('vaziro_saved_requirements', JSON.stringify(savedRequirementIds));
+  }, [savedRequirementIds]);
 
   const fetchRequirements = async () => {
     try {
@@ -54,7 +73,8 @@ export const BrowseRequirementsPage: React.FC = () => {
         setCategories(catRes.data.data);
         const categorySlug = searchParams.get('category');
         const matchingCategory = categorySlug ? catRes.data.data.find((category) => category.slug === categorySlug) : undefined;
-        if (matchingCategory) setSelectedCategory(matchingCategory.id);
+        if (!categorySlugApplied && matchingCategory) setSelectedCategory(matchingCategory.id);
+        if (!categorySlugApplied) setCategorySlugApplied(true);
       }
     } catch (err) {
       setLoadError('Could not load work requests. Check your connection and try again.');
@@ -66,12 +86,18 @@ export const BrowseRequirementsPage: React.FC = () => {
   const fetchWallet = async () => {
     if (isAuthenticated && isProfessional) {
       try {
+        setWalletLoading(true);
+        setWalletError(false);
         const res = await api.getCreditWallet();
         if (res.data?.data) {
           setWallet(res.data.data);
+        } else {
+          setWalletError(true);
         }
-      } catch (err) {
-        console.error(err);
+      } catch {
+        setWalletError(true);
+      } finally {
+        setWalletLoading(false);
       }
     }
   };
@@ -82,6 +108,13 @@ export const BrowseRequirementsPage: React.FC = () => {
 
   useEffect(() => {
     fetchWallet();
+  }, [isAuthenticated, isProfessional]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !isProfessional) return;
+    api.getProfileStrength()
+      .then((res) => setProfileStrength(res.data?.data?.score ?? null))
+      .catch(() => setProfileStrength(null));
   }, [isAuthenticated, isProfessional]);
 
   const handleOpenQuoteModal = (req: Requirement) => {
@@ -137,13 +170,36 @@ export const BrowseRequirementsPage: React.FC = () => {
   };
 
   const currentBalance = wallet?.balance ?? user?.professionalProfile?.creditWallet?.balance ?? 0;
-  const visibleRequirements = requirements.filter((req) => {
+  const toggleSaved = (requirementId: string) => {
+    setSavedRequirementIds((current) => current.includes(requirementId)
+      ? current.filter((id) => id !== requirementId)
+      : [requirementId, ...current]);
+  };
+  const matchingRequirements = requirements.filter((req) => {
     const normalizedSearch = searchText.trim().toLocaleLowerCase();
     const normalizedCity = searchCity.trim().toLocaleLowerCase();
     const searchableText = `${req.title} ${req.description} ${req.category?.name || ''} ${req.subcategory?.name || ''}`.toLocaleLowerCase();
     const cityName = (req.city?.name || '').toLocaleLowerCase();
-    return (!normalizedSearch || searchableText.includes(normalizedSearch)) && (!normalizedCity || cityName.includes(normalizedCity));
+    const lowerBudget = budgetFrom ? Number(budgetFrom) : null;
+    const upperBudget = budgetTo ? Number(budgetTo) : null;
+    const matchesBudget = (lowerBudget === null || (req.budgetMax || req.budgetMin) >= lowerBudget) && (upperBudget === null || req.budgetMin <= upperBudget);
+    const matchesSaved = activeTab !== 'SAVED' || savedRequirementIds.includes(req.id);
+    return (!normalizedSearch || searchableText.includes(normalizedSearch)) && (!normalizedCity || cityName.includes(normalizedCity)) && matchesBudget && matchesSaved;
   });
+  const visibleRequirements = [...matchingRequirements].sort((a, b) => {
+    if (sortBy === 'LOWEST_BUDGET') return a.budgetMin - b.budgetMin;
+    if (sortBy === 'HIGHEST_BUDGET') return b.budgetMin - a.budgetMin;
+    if (sortBy === 'BEST_MATCH') return Number(Boolean(b.isBoosted)) - Number(Boolean(a.isBoosted)) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+  const hasActiveFilters = Boolean(searchText || searchCity || selectedCategory || budgetFrom || budgetTo);
+  const clearFilters = () => {
+    setSearchText('');
+    setSearchCity('');
+    setSelectedCategory('');
+    setBudgetFrom('');
+    setBudgetTo('');
+  };
 
   return (
     <div className="min-h-full bg-[#f7f8f6]">
@@ -153,9 +209,9 @@ export const BrowseRequirementsPage: React.FC = () => {
             <p className="inline-flex items-center gap-2 text-xs font-extrabold uppercase tracking-[0.14em] text-emerald-800">
               <span className="h-2 w-2 rounded-full bg-emerald-600" /> Find work
             </p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight text-[#10241e] sm:text-4xl">Make your next move.</h1>
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-[#10241e] sm:text-4xl">Find work that fits your skills.</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-[#52665d]">
-              Explore customer requests, review the scope and budget, then send a proposal when the work fits you.
+              Browse customer requests, compare the scope and budget, then decide where to send a proposal.
             </p>
           </div>
 
@@ -164,7 +220,7 @@ export const BrowseRequirementsPage: React.FC = () => {
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#10241e] text-emerald-200"><Coins className="h-5 w-5" /></div>
               <div className="min-w-0 flex-1">
                 <span className="block text-xs font-semibold text-neutral-500">Available to apply</span>
-                <span className="mt-0.5 block text-xl font-black text-[#10241e]">{currentBalance} <span className="text-xs font-bold text-neutral-500">credits</span></span>
+                <span className="mt-0.5 block text-xl font-black text-[#10241e]">{walletLoading ? '...' : walletError ? '—' : currentBalance} <span className="text-xs font-bold text-neutral-500">credits</span></span>
               </div>
               <Link to="/credits" className="inline-flex min-h-10 items-center rounded-lg px-3 text-xs font-extrabold text-emerald-800 transition hover:bg-emerald-50">Add credits</Link>
             </div>
@@ -174,6 +230,21 @@ export const BrowseRequirementsPage: React.FC = () => {
             </button>
           )}
         </header>
+
+        {isProfessional && (
+          <section className="mb-6 flex flex-col gap-4 rounded-2xl bg-[#183e33] p-5 text-white shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[#c9f27d]"><BadgeCheck className="h-5 w-5" /></span>
+              <div>
+                <h2 className="text-base font-semibold">Make your profile easy to evaluate</h2>
+                <p className="mt-1 max-w-xl text-sm leading-5 text-[#c0d0c2]">Add your services, experience and availability so customers can compare your proposal with confidence.</p>
+              </div>
+            </div>
+            <Link to="/profile" className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-md bg-[#c9f27d] px-4 text-sm font-semibold text-[#203c32] transition hover:bg-[#d7f8a0] sm:shrink-0 sm:self-auto">
+              {profileStrength === null ? 'Complete profile' : `Profile ${profileStrength}% complete`} <ArrowRight className="h-4 w-4" />
+            </Link>
+          </section>
+        )}
 
         <div className="mb-7 grid gap-3 rounded-2xl border border-[#dce6df] bg-white p-3 shadow-sm md:grid-cols-[minmax(0,1fr)_minmax(220px,0.44fr)] md:p-4">
           <label className="flex min-h-12 items-center gap-3 rounded-xl border border-[#e2e8e3] bg-[#fbfcfa] px-4 focus-within:border-emerald-600 focus-within:ring-2 focus-within:ring-emerald-700/10">
@@ -188,8 +259,8 @@ export const BrowseRequirementsPage: React.FC = () => {
           </label>
         </div>
 
-        <div className="grid items-start gap-6 lg:grid-cols-[236px_minmax(0,1fr)]">
-          <aside className="space-y-4 lg:sticky lg:top-24">
+        <div className="grid items-start gap-5 lg:gap-6 lg:grid-cols-[236px_minmax(0,1fr)]">
+          <aside className="hidden space-y-4 lg:sticky lg:top-24 lg:block">
             <section className="rounded-2xl border border-[#dce6df] bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-extrabold text-[#10241e]">Service category</h2>
@@ -208,6 +279,21 @@ export const BrowseRequirementsPage: React.FC = () => {
               </div>
             </section>
 
+            <section className="rounded-2xl border border-[#dce6df] bg-white p-4 shadow-sm">
+              <h2 className="text-sm font-extrabold text-[#10241e]">Budget range</h2>
+              <p className="mt-1 text-xs leading-5 text-neutral-500">Filter by the customer’s stated budget.</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <label className="min-w-0">
+                  <span className="mb-1 block text-xs font-semibold text-neutral-600">From ₹</span>
+                  <input type="number" min="0" inputMode="numeric" value={budgetFrom} onChange={(event) => setBudgetFrom(event.target.value)} placeholder="Min" className="min-h-11 w-full rounded-lg border border-[#dce6df] px-2 text-sm text-neutral-900 outline-none focus:border-emerald-600" />
+                </label>
+                <label className="min-w-0">
+                  <span className="mb-1 block text-xs font-semibold text-neutral-600">To ₹</span>
+                  <input type="number" min="0" inputMode="numeric" value={budgetTo} onChange={(event) => setBudgetTo(event.target.value)} placeholder="Max" className="min-h-11 w-full rounded-lg border border-[#dce6df] px-2 text-sm text-neutral-900 outline-none focus:border-emerald-600" />
+                </label>
+              </div>
+            </section>
+
             <section className="rounded-2xl border border-[#dce6df] bg-[#edf4ef] p-4">
               <h2 className="text-sm font-extrabold text-[#10241e]">Before you apply</h2>
               <p className="mt-2 text-xs leading-5 text-[#52665d]">Review the customer&apos;s scope and location. Credits are deducted only when you submit a proposal.</p>
@@ -216,14 +302,65 @@ export const BrowseRequirementsPage: React.FC = () => {
           </aside>
 
           <main className="min-w-0">
-            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <details className="mb-3 rounded-xl border border-[#dce6df] bg-white p-3 lg:hidden">
+              <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-[#344137]">
+                <span className="inline-flex items-center gap-2"><SlidersHorizontal className="h-4 w-4 text-emerald-800" /> More filters</span>
+                <span className="text-xs font-medium text-neutral-500">Budget</span>
+              </summary>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <label>
+                  <span className="mb-1 block text-xs font-semibold text-neutral-600">Minimum budget (₹)</span>
+                  <input type="number" min="0" inputMode="numeric" value={budgetFrom} onChange={(event) => setBudgetFrom(event.target.value)} placeholder="No minimum" className="min-h-11 w-full rounded-lg border border-[#dce6df] px-3 text-base text-neutral-900 outline-none focus:border-emerald-600" />
+                </label>
+                <label>
+                  <span className="mb-1 block text-xs font-semibold text-neutral-600">Maximum budget (₹)</span>
+                  <input type="number" min="0" inputMode="numeric" value={budgetTo} onChange={(event) => setBudgetTo(event.target.value)} placeholder="No maximum" className="min-h-11 w-full rounded-lg border border-[#dce6df] px-3 text-base text-neutral-900 outline-none focus:border-emerald-600" />
+                </label>
+              </div>
+              {(budgetFrom || budgetTo) && <button type="button" onClick={() => { setBudgetFrom(''); setBudgetTo(''); }} className="mt-2 min-h-10 text-sm font-semibold text-emerald-800">Clear budget</button>}
+            </details>
+
+            <div className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-thin lg:hidden" role="group" aria-label="Filter customer requests by category">
+              <button type="button" onClick={() => setSelectedCategory('')} aria-pressed={!selectedCategory} className={`min-h-10 shrink-0 rounded-full border px-4 text-sm font-semibold transition ${!selectedCategory ? 'border-[#203c32] bg-[#203c32] text-white' : 'border-[#dce6df] bg-white text-[#506057] hover:bg-[#edf4ef]'}`}>All work</button>
+              {categories.map((category) => (
+                <button key={category.id} type="button" onClick={() => setSelectedCategory(category.id)} aria-pressed={selectedCategory === category.id} className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition ${selectedCategory === category.id ? 'border-[#203c32] bg-[#203c32] text-white' : 'border-[#dce6df] bg-white text-[#506057] hover:bg-[#edf4ef]'}`}>
+                  <CategoryIcon icon={category.icon} className="h-4 w-4" /> {category.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="mb-4 flex items-center gap-5 overflow-x-auto border-b border-[#dce6df]" role="group" aria-label="Request feed views">
+              {([
+                { id: 'BEST_MATCH', label: 'Featured first' },
+                { id: 'MOST_RECENT', label: 'Most recent' },
+                { id: 'SAVED', label: `Saved${savedRequirementIds.length ? ` (${savedRequirementIds.length})` : ''}` },
+              ] as const).map((tab) => (
+                <button key={tab.id} type="button" aria-pressed={activeTab === tab.id} onClick={() => { setActiveTab(tab.id); setSortBy(tab.id === 'BEST_MATCH' ? 'BEST_MATCH' : 'NEWEST'); }} className={`relative min-h-11 shrink-0 px-1 text-sm transition ${activeTab === tab.id ? 'font-bold text-[#203c32] after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-[#719453]' : 'font-medium text-neutral-500 hover:text-neutral-800'}`}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <h2 className="text-lg font-extrabold tracking-tight text-[#10241e]">Customer requests</h2>
                 <p className="mt-1 text-sm text-neutral-500">{loading ? 'Updating opportunities...' : `${visibleRequirements.length} ${visibleRequirements.length === 1 ? 'request' : 'requests'}${searchCity ? ` near ${searchCity}` : ''}`}</p>
               </div>
-              <button type="button" onClick={fetchRequirements} disabled={loading} aria-label="Refresh customer requests" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#dce6df] bg-white px-3 text-xs font-bold text-neutral-700 transition hover:bg-[#edf4ef] disabled:opacity-60">
-                <Clock className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Refreshing...' : 'Refresh list'}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {visibleRequirements.length > 1 && <label className="flex min-h-10 items-center gap-2 rounded-lg border border-[#dce6df] bg-white px-3 text-xs font-semibold text-neutral-600">
+                  <span>Sort</span>
+                  <select aria-label="Sort customer requests" value={sortBy} onChange={(event) => { const value = event.target.value as typeof sortBy; setSortBy(value); if (activeTab !== 'SAVED') setActiveTab(value === 'NEWEST' ? 'MOST_RECENT' : 'BEST_MATCH'); }} className="min-h-10 bg-transparent text-sm font-semibold text-[#344137] outline-none">
+                    <option value="BEST_MATCH">Featured first</option>
+                    <option value="NEWEST">Newest</option>
+                    <option value="LOWEST_BUDGET">Lowest budget</option>
+                    <option value="HIGHEST_BUDGET">Highest budget</option>
+                  </select>
+                </label>}
+                {hasActiveFilters && <button type="button" onClick={clearFilters} className="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">Clear filters</button>}
+                <button type="button" onClick={fetchRequirements} disabled={loading} aria-label="Refresh customer requests" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#dce6df] bg-white px-3 text-sm font-semibold text-neutral-700 transition hover:bg-[#edf4ef] disabled:opacity-60">
+                  <Clock className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> {loading ? 'Refreshing...' : 'Refresh'}
+                </button>
+              </div>
             </div>
 
             {loading ? (
@@ -239,10 +376,10 @@ export const BrowseRequirementsPage: React.FC = () => {
               </div>
             ) : visibleRequirements.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-[#cad9ce] bg-white px-6 py-12 text-center">
-                <Search className="mx-auto h-9 w-9 text-emerald-800" />
-                <h3 className="mt-3 text-lg font-extrabold text-[#10241e]">No matching requests</h3>
-                <p className="mx-auto mt-1 max-w-md text-sm text-neutral-600">Try another service, city, or category to widen your search.</p>
-                {(searchText || searchCity || selectedCategory) && <button type="button" onClick={() => { setSearchText(''); setSearchCity(''); setSelectedCategory(''); }} className="mt-4 min-h-11 rounded-xl border border-[#cad9ce] px-4 text-sm font-bold text-emerald-900 hover:bg-[#edf4ef]">Clear all filters</button>}
+                {activeTab === 'SAVED' ? <Bookmark className="mx-auto h-9 w-9 text-emerald-800" /> : <Search className="mx-auto h-9 w-9 text-emerald-800" />}
+                <h3 className="mt-3 text-lg font-extrabold text-[#10241e]">{activeTab === 'SAVED' ? 'No saved requests yet' : 'No matching requests'}</h3>
+                <p className="mx-auto mt-1 max-w-md text-sm text-neutral-600">{activeTab === 'SAVED' ? 'Save a request to keep it handy while you compare opportunities.' : 'Try another keyword, city, category or budget range.'}</p>
+                {activeTab === 'SAVED' ? <button type="button" onClick={() => { setActiveTab('BEST_MATCH'); setSortBy('BEST_MATCH'); }} className="mt-4 min-h-11 rounded-xl border border-[#cad9ce] px-4 text-sm font-bold text-emerald-900 hover:bg-[#edf4ef]">Browse all requests</button> : hasActiveFilters && <button type="button" onClick={clearFilters} className="mt-4 min-h-11 rounded-xl border border-[#cad9ce] px-4 text-sm font-bold text-emerald-900 hover:bg-[#edf4ef]">Clear all filters</button>}
               </div>
             ) : (
               <div className="space-y-3">
@@ -262,6 +399,9 @@ export const BrowseRequirementsPage: React.FC = () => {
                       </span>
                       {req.isBoosted && <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-900"><Sparkles className="h-3 w-3" /> Featured request</span>}
                       <span className="text-xs text-neutral-400">Posted {new Date(req.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                      <button type="button" onClick={() => toggleSaved(req.id)} aria-pressed={savedRequirementIds.includes(req.id)} aria-label={savedRequirementIds.includes(req.id) ? 'Remove saved request' : 'Save request'} className={`ml-auto inline-flex min-h-10 min-w-10 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold transition ${savedRequirementIds.includes(req.id) ? 'border-[#bfd1a6] bg-[#f1f4e9] text-[#48633e]' : 'border-[#e7e8df] text-neutral-500 hover:bg-[#f7f7f1] hover:text-[#344137]'}`}>
+                        <Bookmark className={`h-4 w-4 ${savedRequirementIds.includes(req.id) ? 'fill-current' : ''}`} /> <span className="hidden sm:inline">{savedRequirementIds.includes(req.id) ? 'Saved' : 'Save'}</span>
+                      </button>
                     </div>
                     <Link to={`/requirements/${req.id}`} className="mt-3 inline-block text-lg font-extrabold tracking-tight text-[#10241e] hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700">
                       {req.title}
@@ -269,7 +409,7 @@ export const BrowseRequirementsPage: React.FC = () => {
                     <p className="mt-2 line-clamp-3 text-sm leading-6 text-neutral-600">{req.description}</p>
                     <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-neutral-600">
                       <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-emerald-800" />{req.city?.name || 'Location not specified'}</span>
-                      <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-emerald-800" />{req.customerTrust?.firstName || 'Verified customer'}{req.customerTrust?.jobsPostedCount ? ` · ${req.customerTrust.jobsPostedCount} requests` : ''}</span>
+                      <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-emerald-800" />{req.customerTrust?.firstName || 'Customer'}{req.customerTrust?.jobsPostedCount ? ` · ${req.customerTrust.jobsPostedCount} requests posted` : ''}</span>
                       {req.preferredDate && <span className="inline-flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5 text-emerald-800" />{new Date(req.preferredDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>}
                     </div>
                   </div>
@@ -296,6 +436,41 @@ export const BrowseRequirementsPage: React.FC = () => {
               </div>
             )}
           </main>
+
+          <aside className="hidden space-y-4 xl:block">
+            {isProfessional && (
+              <>
+                <section className="rounded-2xl border border-[#dce6df] bg-white p-5 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#e9efdd] text-sm font-bold text-[#48633e]">{user?.firstName?.[0] || 'P'}</span>
+                    <div className="min-w-0">
+                      <h2 className="truncate text-sm font-bold text-[#29382e]">{user?.firstName || 'Your profile'}</h2>
+                      <p className="truncate text-xs text-neutral-500">{user?.professionalProfile?.title || 'Professional account'}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <div className="mb-1.5 flex justify-between text-xs"><span className="text-neutral-600">Profile completion</span><span className="font-bold text-[#344137]">{profileStrength === null ? '—' : `${profileStrength}%`}</span></div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-[#e9eee8]" role="progressbar" aria-label="Profile completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={profileStrength ?? 0}><div className="h-full rounded-full bg-[#78935f] transition-all" style={{ width: `${profileStrength ?? 0}%` }} /></div>
+                  </div>
+                  <Link to="/profile" className="mt-3 inline-flex min-h-10 items-center gap-1 text-xs font-semibold text-emerald-800 hover:underline">Edit profile <ArrowRight className="h-3.5 w-3.5" /></Link>
+                </section>
+
+                <section className="rounded-2xl border border-[#dce6df] bg-white p-5 shadow-sm">
+                  <div className="flex items-center gap-2 text-sm font-bold text-[#29382e]"><Coins className="h-4 w-4 text-emerald-800" /> Proposal credits</div>
+                  <p className="mt-2 text-2xl font-black text-[#203c32]">{walletLoading ? '...' : walletError ? '—' : currentBalance}</p>
+                  <p className="text-xs text-neutral-500">Credits are charged when your proposal is submitted.</p>
+                  {walletError && <button type="button" onClick={fetchWallet} className="mt-2 min-h-10 text-xs font-semibold text-red-700 hover:underline">Credits unavailable. Retry</button>}
+                  <Link to="/credits" className="mt-3 inline-flex min-h-10 items-center text-xs font-semibold text-emerald-800 hover:underline">View credit plans <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
+                </section>
+              </>
+            )}
+
+            <section className="rounded-2xl border border-[#dce6df] bg-[#edf4ef] p-5">
+              <div className="flex items-center gap-2 text-sm font-bold text-[#29382e]"><CircleHelp className="h-4 w-4 text-emerald-800" /> A thoughtful proposal</div>
+              <p className="mt-2 text-xs leading-5 text-[#52665d]">Refer to the customer’s request, explain your relevant experience, and include a clear price and timeline.</p>
+              <Link to="/workflow-preview" className="mt-3 inline-flex min-h-10 items-center text-xs font-semibold text-emerald-900 hover:underline">How it works <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
+            </section>
+          </aside>
         </div>
       </div>
 
