@@ -156,6 +156,7 @@ export const DashboardPage: React.FC = () => {
   const recentQuotations = [...quotations]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 4);
+  const visibleJobs = showJobsView ? jobs : jobs.slice(0, 2);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
@@ -438,9 +439,10 @@ export const DashboardPage: React.FC = () => {
       <div className="mb-10">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">{showJobsView ? `My Jobs (${jobs.length})` : `Active Service Contracts (${jobs.length})`}</h2>
-            <p className="text-xs text-gray-500">{showJobsView ? 'Open a job to review progress, coordinate, and manage the service.' : 'Track milestones, payment protection, and partner messages.'}</p>
+            <h2 className="text-lg font-bold text-gray-900">{showJobsView ? `My Jobs (${jobs.length})` : `Recent Service Contracts${jobs.length ? ` (${jobs.length})` : ''}`}</h2>
+            <p className="text-xs text-gray-500">{showJobsView ? 'All your active service contracts. Open one to review progress and manage the service.' : 'A quick look at your latest work. Open My Jobs to see every contract.'}</p>
           </div>
+          {!showJobsView && isProfessional && jobs.length > 0 && <Link to="/dashboard?tab=jobs" className="inline-flex min-h-10 shrink-0 items-center gap-1 self-start text-sm font-semibold text-emerald-800 hover:text-emerald-950 sm:self-auto">View all jobs <ArrowRight className="h-4 w-4" /></Link>}
         </div>
 
         {jobs.length === 0 ? (
@@ -451,7 +453,7 @@ export const DashboardPage: React.FC = () => {
             </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {jobs.map((job) => (
+              {visibleJobs.map((job) => (
               <div key={job.id} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col justify-between hover:border-gray-300 transition">
                 <div>
                   <div className="flex items-center justify-between mb-2">

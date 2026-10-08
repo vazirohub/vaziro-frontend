@@ -63,6 +63,7 @@ export const MobileBottomNav: React.FC = () => {
             <Link
               to="/requirements"
               aria-current={isActive('/requirements') ? 'page' : undefined}
+              aria-label="Find work: browse customer requests"
               className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
                 isActive('/requirements')
                   ? 'text-[#355e3e] font-semibold'
@@ -73,12 +74,13 @@ export const MobileBottomNav: React.FC = () => {
                 <span className="absolute top-0 w-8 h-0.5 rounded-full bg-[#8bb647]" />
               )}
               <Search className="w-5 h-5 mb-0.5" />
-              <span>Leads</span>
+              <span>Find work</span>
             </Link>
 
             <Link
               to="/dashboard?tab=jobs"
               aria-current={location.pathname === '/dashboard' && location.search.includes('tab=jobs') ? 'page' : undefined}
+              aria-label="My jobs: view active service contracts"
               className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
                 location.pathname === '/dashboard' && location.search.includes('tab=jobs')
                   ? 'text-[#355e3e] font-semibold'
@@ -89,7 +91,7 @@ export const MobileBottomNav: React.FC = () => {
                 <span className="absolute top-0 w-8 h-0.5 rounded-full bg-[#8bb647]" />
               )}
               <Briefcase className="w-5 h-5 mb-0.5" />
-              <span>Jobs</span>
+              <span>My jobs</span>
             </Link>
 
             <Link
