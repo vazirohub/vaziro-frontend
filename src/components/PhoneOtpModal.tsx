@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   X,
   Loader2,
@@ -53,7 +53,7 @@ export const PhoneOtpModal: React.FC = () => {
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(true);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   // Forgot Password State
   const [forgotStep, setForgotStep] = useState<'REQUEST' | 'RESET'>('REQUEST');
@@ -80,6 +80,7 @@ export const PhoneOtpModal: React.FC = () => {
   useEffect(() => {
     if (isAuthModalOpen) {
       setSelectedRole(defaultRole || 'CUSTOMER');
+      setTermsAccepted(false);
       setViewMode(
         initialMode === 'SIGNUP'
           ? 'SIGNUP'
@@ -376,26 +377,28 @@ export const PhoneOtpModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <div className="relative bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-neutral-200 animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#203c32]/55 p-3 backdrop-blur-sm animate-in fade-in duration-150 sm:p-6" onMouseDown={(event) => { if (event.target === event.currentTarget && !isLoading) closeAuthModal(); }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="auth-title" className="relative my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-[10px] border border-[#e7e8df] bg-[#fffefa] p-5 shadow-[0_24px_80px_rgba(24,62,51,0.28)] animate-in zoom-in-95 duration-200 sm:max-h-[calc(100dvh-3rem)] sm:p-8">
         
         {/* Close Button */}
         <button
           onClick={closeAuthModal}
-          className="absolute top-5 right-5 text-neutral-400 hover:text-black p-2 rounded-full hover:bg-neutral-100 transition cursor-pointer"
+          type="button"
+          disabled={isLoading}
+          className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-md text-neutral-500 transition hover:bg-[#f1f2e9] hover:text-[#203c32] disabled:opacity-50 sm:right-4 sm:top-4"
           aria-label="Close modal"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Brand Header */}
-        <div className="text-center mb-5">
+        <div className="mb-5 pr-9 sm:pr-0 sm:text-center">
           <img
             src="/logo.png"
             alt="Vaziro"
-            className="h-10 mx-auto object-contain mb-2"
+            className="mb-2 h-9 object-contain sm:mx-auto sm:h-10"
           />
-          <h3 className="text-2xl font-black text-black tracking-tight">
+          <h3 id="auth-title" className="text-2xl font-semibold tracking-tight text-[#29382e]">
             {viewMode === 'FORGOT_PASSWORD'
               ? 'Account Recovery'
               : viewMode === 'OTP_LOGIN'
@@ -404,7 +407,7 @@ export const PhoneOtpModal: React.FC = () => {
               ? 'Create Your Account'
               : 'Sign In to Vaziro'}
           </h3>
-          <p className="text-xs text-neutral-500 mt-1">
+          <p className="mt-1 text-sm leading-5 text-[#737c73]">
             {viewMode === 'FORGOT_PASSWORD'
               ? 'Reset your password securely with a 6-digit code'
               : viewMode === 'OTP_LOGIN'
@@ -417,7 +420,7 @@ export const PhoneOtpModal: React.FC = () => {
 
         {/* Top Navigation Tabs (Visible on Login & Signup) */}
         {(viewMode === 'LOGIN' || viewMode === 'SIGNUP') && (
-          <div className="grid grid-cols-2 p-1 bg-neutral-100 rounded-2xl mb-5">
+          <div className="mb-5 grid grid-cols-2 rounded-md border border-[#e7e8df] bg-[#f7f7f1] p-1">
             <button
               type="button"
               onClick={() => {
@@ -425,10 +428,10 @@ export const PhoneOtpModal: React.FC = () => {
                 setErrorMessage(null);
                 setSuccessMessage(null);
               }}
-              className={`py-2.5 rounded-xl text-xs font-black transition cursor-pointer text-center ${
+              className={`min-h-11 rounded-sm text-sm font-semibold transition cursor-pointer text-center ${
                 viewMode === 'LOGIN'
-                  ? 'bg-white text-black shadow-sm'
-                  : 'text-neutral-500 hover:text-black'
+                  ? 'bg-[#203c32] text-white shadow-sm'
+                  : 'text-[#68716b] hover:text-[#203c32]'
               }`}
             >
               Sign In
@@ -440,10 +443,10 @@ export const PhoneOtpModal: React.FC = () => {
                 setErrorMessage(null);
                 setSuccessMessage(null);
               }}
-              className={`py-2.5 rounded-xl text-xs font-black transition cursor-pointer text-center ${
+              className={`min-h-11 rounded-sm text-sm font-semibold transition cursor-pointer text-center ${
                 viewMode === 'SIGNUP'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-neutral-500 hover:text-black'
+                  ? 'bg-[#203c32] text-white shadow-sm'
+                  : 'text-[#68716b] hover:text-[#203c32]'
               }`}
             >
               Create Account
@@ -460,7 +463,7 @@ export const PhoneOtpModal: React.FC = () => {
         )}
 
         {errorMessage && (
-          <div className="mb-4 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold leading-relaxed animate-in fade-in">
+          <div role="alert" className="mb-4 rounded-md border border-red-200 bg-red-50 p-3.5 text-sm font-medium leading-relaxed text-red-800 animate-in fade-in">
             {errorMessage}
           </div>
         )}
@@ -471,16 +474,19 @@ export const PhoneOtpModal: React.FC = () => {
         {viewMode === 'LOGIN' && (
           <form onSubmit={handlePasswordLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                Email or Mobile Number *
+              <label htmlFor="auth-login-identifier" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                Email or mobile number
               </label>
               <div className="relative">
                 <input
+                  id="auth-login-identifier"
                   type="text"
+                  autoComplete="username"
+                  inputMode="email"
                   placeholder="name@email.com or 10-digit mobile"
                   value={loginIdentifier}
                   onChange={(e) => setLoginIdentifier(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-2xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
+                  className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                   required
                   autoFocus
                 />
@@ -489,8 +495,8 @@ export const PhoneOtpModal: React.FC = () => {
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-black uppercase tracking-wider">
-                  Password *
+                <label htmlFor="auth-login-password" className="text-sm font-semibold text-[#374239]">
+                  Password
                 </label>
                 <button
                   type="button"
@@ -501,24 +507,26 @@ export const PhoneOtpModal: React.FC = () => {
                     setErrorMessage(null);
                     setSuccessMessage(null);
                   }}
-                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline cursor-pointer"
+                  className="min-h-11 px-1 text-xs font-semibold text-[#506e40] hover:text-[#355e3e] hover:underline cursor-pointer"
                 >
                   Forgot Password?
                 </button>
               </div>
               <div className="relative">
                 <input
+                  id="auth-login-password"
                   type={showLoginPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
                   placeholder="Enter your password"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  className="w-full px-4 py-3.5 rounded-2xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition pr-11"
+                  className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 pr-12 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowLoginPassword(!showLoginPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 p-1 cursor-pointer"
+                  className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-neutral-500 hover:bg-[#f1f2e9] hover:text-[#203c32] cursor-pointer"
                   aria-label={showLoginPassword ? 'Hide password' : 'Show password'}
                 >
                   {showLoginPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -528,13 +536,13 @@ export const PhoneOtpModal: React.FC = () => {
 
             <button
               type="submit"
-              disabled={isLoading || !loginIdentifier.trim() || !loginPassword}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-black text-sm shadow-md transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-2"
+              disabled={isLoading}
+              className="mt-2 flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#203c32] py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2d5144] disabled:cursor-wait disabled:opacity-60"
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Signing In...</span>
+                  <span>Signing in...</span>
                 </>
               ) : (
                 <span>Sign In</span>
@@ -542,7 +550,7 @@ export const PhoneOtpModal: React.FC = () => {
             </button>
 
             {/* Alternative OTP Login Trigger */}
-            <div className="pt-2 text-center border-t border-neutral-100">
+            <div className="border-t border-[#e7e8df] pt-3 text-center">
               <button
                 type="button"
                 onClick={() => {
@@ -550,7 +558,7 @@ export const PhoneOtpModal: React.FC = () => {
                   setErrorMessage(null);
                   setSuccessMessage(null);
                 }}
-                className="text-xs font-bold text-neutral-600 hover:text-black flex items-center justify-center gap-1.5 mx-auto cursor-pointer"
+                className="inline-flex min-h-11 items-center justify-center gap-1.5 px-2 text-sm font-semibold text-[#59645b] hover:text-[#355e3e] cursor-pointer"
               >
                 <Phone className="w-3.5 h-3.5 text-neutral-400" />
                 <span>Or sign in with SMS OTP</span>
@@ -563,90 +571,96 @@ export const PhoneOtpModal: React.FC = () => {
         {/* VIEW 2: SIGNUP FORM (FULL NAME, EMAIL, MOBILE, PASSWORD, ROLE)   */}
         {/* ================================================================= */}
         {viewMode === 'SIGNUP' && (
-          <form onSubmit={handleSignupSubmit} className="space-y-3.5">
+          <form onSubmit={handleSignupSubmit} className="space-y-4">
             {/* Role Selection */}
             <div>
-              <label className="block text-[11px] font-bold text-neutral-600 uppercase tracking-wider mb-1.5">
-                I want to register as:
+              <label className="mb-2 block text-sm font-semibold text-[#374239]">
+                I&apos;m here to
               </label>
               <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => setSelectedRole('CUSTOMER')}
-                  className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
+                  aria-pressed={selectedRole === 'CUSTOMER'}
+                  className={`min-h-[76px] rounded-md border p-3 text-left transition cursor-pointer ${
                     selectedRole === 'CUSTOMER'
-                      ? 'border-black bg-neutral-50 ring-2 ring-black'
-                      : 'border-neutral-200 hover:border-neutral-300'
+                      ? 'border-[#78935f] bg-[#f1f4e9] ring-1 ring-[#78935f]/20'
+                      : 'border-[#e7e8df] hover:border-[#c5d5a8]'
                   }`}
                 >
-                  <div className="font-black text-xs text-black">Customer</div>
-                  <div className="text-[10px] text-neutral-500 mt-0.5 leading-tight">Post jobs & hire pros</div>
+                  <div className="text-sm font-semibold text-[#344137]">Hire a professional</div>
+                  <div className="mt-1 text-xs leading-4 text-[#737c73]">Post a request and compare quotations</div>
                 </button>
                 <button
                   type="button"
                   onClick={() => setSelectedRole('PROFESSIONAL')}
-                  className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
+                  aria-pressed={selectedRole === 'PROFESSIONAL'}
+                  className={`min-h-[76px] rounded-md border p-3 text-left transition cursor-pointer ${
                     selectedRole === 'PROFESSIONAL'
-                      ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600'
-                      : 'border-neutral-200 hover:border-neutral-300'
+                      ? 'border-[#78935f] bg-[#f1f4e9] ring-1 ring-[#78935f]/20'
+                      : 'border-[#e7e8df] hover:border-[#c5d5a8]'
                   }`}
                 >
-                  <div className="font-black text-xs text-emerald-800 flex items-center justify-between">
-                    <span>Professional</span>
-                    <span className="text-[9px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold">+10 Free</span>
-                  </div>
-                  <div className="text-[10px] text-emerald-700 mt-0.5 leading-tight">Get work & 0% cut</div>
+                  <div className="text-sm font-semibold text-[#344137]">Find professional work</div>
+                  <div className="mt-1 text-xs leading-4 text-[#737c73]">Build a profile and respond to requests</div>
                 </button>
               </div>
             </div>
 
             {/* Full Name */}
             <div>
-              <label className="block text-[11px] font-bold text-black uppercase tracking-wider mb-1">
-                Full Name *
+              <label htmlFor="auth-signup-name" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                Full name
               </label>
               <input
+                id="auth-signup-name"
                 type="text"
-                placeholder="e.g. Rahul Sharma"
+                autoComplete="name"
+                placeholder="Your name"
                 value={signupName}
                 onChange={(e) => setSignupName(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-xs font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
+                className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                 required
               />
             </div>
 
             {/* Email Address */}
             <div>
-              <label className="block text-[11px] font-bold text-black uppercase tracking-wider mb-1">
-                Email Address *
+              <label htmlFor="auth-signup-email" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                Email address
               </label>
               <input
+                id="auth-signup-email"
                 type="email"
-                placeholder="name@example.com"
+                autoComplete="email"
+                inputMode="email"
+                placeholder="you@example.com"
                 value={signupEmail}
                 onChange={(e) => setSignupEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-neutral-300 text-xs font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
+                className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                 required
               />
             </div>
 
             {/* Mobile Number */}
             <div>
-              <label className="block text-[11px] font-bold text-black uppercase tracking-wider mb-1">
-                Mobile Number *
+              <label htmlFor="auth-signup-mobile" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                Mobile number
               </label>
-              <div className="flex rounded-xl border border-neutral-300 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 bg-white transition">
-                <span className="inline-flex items-center gap-1 px-3 bg-neutral-100 text-neutral-700 font-bold text-xs border-r border-neutral-300 select-none">
-                  <span>🇮🇳</span> +91
+              <div className="flex min-h-12 overflow-hidden rounded-md border border-[#dfe2d9] bg-white transition focus-within:border-[#78935f] focus-within:ring-2 focus-within:ring-[#7a945f]/20">
+                <span className="inline-flex items-center border-r border-[#e7e8df] bg-[#f7f7f1] px-3 text-sm font-medium text-[#59645b] select-none">
+                  +91
                 </span>
                 <input
+                  id="auth-signup-mobile"
                   type="tel"
+                  autoComplete="tel-national"
                   inputMode="numeric"
                   maxLength={10}
                   placeholder="10-digit number"
                   value={signupMobile}
                   onChange={(e) => setSignupMobile(e.target.value.replace(/\D/g, ''))}
-                  className="w-full px-3 py-2.5 text-xs font-semibold text-black placeholder:text-neutral-400 focus:outline-none"
+                  className="w-full px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none"
                   required
                 />
               </div>
@@ -655,22 +669,26 @@ export const PhoneOtpModal: React.FC = () => {
             {/* Password & Confirm Password */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <div>
-                <label className="block text-[11px] font-bold text-black uppercase tracking-wider mb-1">
-                  Password *
+                <label htmlFor="auth-signup-password" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                  Password
                 </label>
                 <div className="relative">
                   <input
+                    id="auth-signup-password"
                     type={showSignupPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    minLength={6}
                     placeholder="Min 6 chars"
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 text-xs font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition pr-9"
+                    className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 pr-11 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowSignupPassword(!showSignupPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 p-0.5 cursor-pointer"
+                    className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-neutral-500 hover:bg-[#f1f2e9] hover:text-[#203c32] cursor-pointer"
+                    aria-label={showSignupPassword ? 'Hide password' : 'Show password'}
                   >
                     {showSignupPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
@@ -678,22 +696,25 @@ export const PhoneOtpModal: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-black uppercase tracking-wider mb-1">
-                  Confirm Password *
+                <label htmlFor="auth-signup-confirm" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                  Confirm password
                 </label>
                 <div className="relative">
                   <input
+                    id="auth-signup-confirm"
                     type={showSignupConfirmPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
                     placeholder="Repeat password"
                     value={signupConfirmPassword}
                     onChange={(e) => setSignupConfirmPassword(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-neutral-300 text-xs font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition pr-9"
+                    className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 pr-11 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowSignupConfirmPassword(!showSignupConfirmPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 p-0.5 cursor-pointer"
+                    className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-neutral-500 hover:bg-[#f1f2e9] hover:text-[#203c32] cursor-pointer"
+                    aria-label={showSignupConfirmPassword ? 'Hide password' : 'Show password'}
                   >
                     {showSignupConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
@@ -708,24 +729,24 @@ export const PhoneOtpModal: React.FC = () => {
                 id="termsConsent"
                 checked={termsAccepted}
                 onChange={(e) => setTermsAccepted(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                className="mt-1 h-4 w-4 rounded border-[#dfe2d9] accent-[#527346] focus:ring-[#78935f] cursor-pointer"
                 required
               />
-              <label htmlFor="termsConsent" className="text-[11px] text-neutral-600 leading-snug cursor-pointer">
-                I agree to the <span className="text-black font-semibold">Terms of Service</span> and{' '}
-                <span className="text-black font-semibold">Privacy Policy</span>.
+              <label htmlFor="termsConsent" className="text-xs leading-5 text-[#68716b] cursor-pointer">
+                I agree to the <Link to="/terms" className="font-semibold text-[#40583d] underline">Terms of Service</Link> and{' '}
+                <Link to="/privacy" className="font-semibold text-[#40583d] underline">Privacy Policy</Link>.
               </label>
             </div>
 
             <button
               type="submit"
-              disabled={isLoading || !signupName || !signupEmail || signupMobile.length < 10 || !signupPassword}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-black text-sm shadow-md transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-1"
+              disabled={isLoading}
+              className="mt-1 flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#203c32] py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2d5144] disabled:cursor-wait disabled:opacity-60"
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Creating Account...</span>
+                  <span>Creating account...</span>
                 </>
               ) : (
                 <span>Create Account</span>

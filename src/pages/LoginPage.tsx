@@ -83,35 +83,38 @@ export const LoginPage: React.FC = () => {
 
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 bg-neutral-50/50">
-      <div className="w-full max-w-md bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-neutral-200">
-        <div className="text-center mb-8">
+    <div className="min-h-[85vh] bg-[#fcfbf8] px-4 py-8 sm:flex sm:items-center sm:justify-center sm:px-6 sm:py-12">
+      <div className="w-full max-w-md rounded-[10px] border border-[#e7e8df] bg-[#fffefa] p-5 shadow-[0_18px_55px_-42px_rgba(24,62,51,0.4)] sm:p-9">
+        <div className="mb-7 text-center">
           <Link to="/">
             <img src="/logo.png" alt="Vaziro" className="h-11 mx-auto mb-3 object-contain" />
           </Link>
-          <h2 className="text-2xl font-black text-black tracking-tight">Sign In to Vaziro</h2>
-          <p className="text-xs text-neutral-500 mt-1">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[1.6px] text-[#718044]">Welcome back</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-[#29382e]">Sign in to Vaziro</h2>
+          <p className="mt-2 text-sm leading-5 text-[#737c73]">
             Enter your registered email or 10-digit mobile number and password
           </p>
         </div>
 
         {errorMessage && (
-          <div className="mb-5 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold leading-relaxed animate-in fade-in">
+          <div role="alert" className="mb-5 rounded-md border border-red-200 bg-red-50 p-3.5 text-sm font-medium leading-relaxed text-red-800 animate-in fade-in">
             {errorMessage}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-              Email or Mobile Number *
+            <label htmlFor="login-identifier" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+              Email or mobile number
             </label>
             <input
+              id="login-identifier"
               type="text"
+              autoComplete="username"
               placeholder="name@example.com or 9876543210"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              className="w-full px-4 py-3.5 rounded-2xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
+              className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
               required
               autoFocus
             />
@@ -119,30 +122,32 @@ export const LoginPage: React.FC = () => {
 
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-bold text-black uppercase tracking-wider">
-                Password *
+              <label htmlFor="login-password" className="text-sm font-semibold text-[#374239]">
+                Password
               </label>
               <button
                 type="button"
                 onClick={() => openAuthModal('CUSTOMER', identifier, 'FORGOT_PASSWORD')}
-                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline cursor-pointer"
+                className="min-h-11 px-1 text-xs font-semibold text-[#506e40] hover:text-[#355e3e] hover:underline cursor-pointer"
               >
                 Forgot Password?
               </button>
             </div>
             <div className="relative">
               <input
+                id="login-password"
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3.5 rounded-2xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition pr-11"
+                className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 pr-12 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 p-1 cursor-pointer"
+                className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-neutral-500 hover:bg-[#f1f2e9] hover:text-[#203c32] cursor-pointer"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -152,13 +157,13 @@ export const LoginPage: React.FC = () => {
 
           <button
             type="submit"
-            disabled={isLoading || !identifier.trim() || !password}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-black text-sm shadow-md transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-2"
+            disabled={isLoading}
+            className="mt-2 flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#203c32] py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2d5144] disabled:cursor-wait disabled:opacity-60"
           >
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Signing In...</span>
+                <span>Signing in...</span>
               </>
             ) : (
               <span>Sign In</span>
@@ -166,10 +171,10 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-neutral-100 text-center space-y-3">
-          <p className="text-xs text-neutral-600">
+        <div className="mt-6 space-y-3 border-t border-[#e7e8df] pt-5 text-center">
+          <p className="text-sm text-[#68716b]">
             Don't have an account?{' '}
-            <Link to="/signup" className="font-bold text-emerald-600 hover:text-emerald-700 hover:underline">
+            <Link to="/signup" className="font-semibold text-[#506e40] hover:text-[#355e3e] hover:underline">
               Create an Account
             </Link>
           </p>
@@ -177,7 +182,7 @@ export const LoginPage: React.FC = () => {
           <button
             type="button"
             onClick={() => openAuthModal('CUSTOMER', identifier, 'OTP_LOGIN')}
-            className="text-xs font-semibold text-neutral-500 hover:text-black flex items-center justify-center gap-1 mx-auto cursor-pointer"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 px-2 text-sm font-semibold text-[#59645b] hover:text-[#355e3e] cursor-pointer"
           >
             <Phone className="w-3 h-3 text-neutral-400" />
             <span>Sign in with SMS OTP instead</span>

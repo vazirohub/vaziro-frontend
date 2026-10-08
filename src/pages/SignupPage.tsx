@@ -19,7 +19,7 @@ export const SignupPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(true);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -114,20 +114,21 @@ export const SignupPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 bg-neutral-50/50">
-      <div className="w-full max-w-lg bg-white rounded-3xl p-8 sm:p-10 shadow-xl border border-neutral-200">
-        <div className="text-center mb-6">
+    <div className="min-h-[85vh] bg-[#fcfbf8] px-4 py-8 sm:flex sm:items-center sm:justify-center sm:px-6 sm:py-12">
+      <div className="w-full max-w-lg rounded-[10px] border border-[#e7e8df] bg-[#fffefa] p-5 shadow-[0_18px_55px_-42px_rgba(24,62,51,0.4)] sm:p-9">
+        <div className="mb-7 text-center">
           <Link to="/">
             <img src="/logo.png" alt="Vaziro" className="h-11 mx-auto mb-3 object-contain" />
           </Link>
-          <h2 className="text-2xl font-black text-black tracking-tight">Create Your Account</h2>
-          <p className="text-xs text-neutral-500 mt-1">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[1.6px] text-[#718044]">A good place to begin</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-[#29382e]">Create your Vaziro account</h2>
+          <p className="mt-2 text-sm leading-5 text-[#737c73]">
             Join India’s trusted services marketplace as a Customer or Verified Professional
           </p>
         </div>
 
         {errorMessage && (
-          <div className="mb-5 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold leading-relaxed animate-in fade-in">
+          <div role="alert" className="mb-5 rounded-md border border-red-200 bg-red-50 p-3.5 text-sm font-medium leading-relaxed text-red-800 animate-in fade-in">
             {errorMessage}
           </div>
         )}
@@ -135,87 +136,93 @@ export const SignupPage: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Role Selector */}
           <div>
-            <label className="block text-xs font-bold text-neutral-600 uppercase tracking-wider mb-2">
-              Select Your Account Type:
+            <label className="mb-2 block text-sm font-semibold text-[#374239]">
+              I&apos;m here to
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setRole('CUSTOMER')}
-                className={`p-3.5 rounded-2xl border text-left transition cursor-pointer ${
+                aria-pressed={role === 'CUSTOMER'}
+                className={`min-h-[76px] rounded-md border p-3.5 text-left transition cursor-pointer ${
                   role === 'CUSTOMER'
-                    ? 'border-black bg-neutral-50 ring-2 ring-black'
-                    : 'border-neutral-200 hover:border-neutral-300'
+                    ? 'border-[#78935f] bg-[#f1f4e9] ring-1 ring-[#78935f]/20'
+                    : 'border-[#e7e8df] hover:border-[#c5d5a8]'
                 }`}
               >
-                <div className="font-black text-sm text-black">Customer</div>
-                <div className="text-[11px] text-neutral-500 mt-0.5">Post requirements & hire pros</div>
+                <div className="text-sm font-semibold text-[#344137]">Hire a professional</div>
+                <div className="mt-1 text-xs leading-4 text-[#737c73]">Post a request and compare quotations</div>
               </button>
               <button
                 type="button"
                 onClick={() => setRole('PROFESSIONAL')}
-                className={`p-3.5 rounded-2xl border text-left transition cursor-pointer ${
+                aria-pressed={role === 'PROFESSIONAL'}
+                className={`min-h-[76px] rounded-md border p-3.5 text-left transition cursor-pointer ${
                   role === 'PROFESSIONAL'
-                    ? 'border-emerald-600 bg-emerald-50 ring-2 ring-emerald-600'
-                    : 'border-neutral-200 hover:border-neutral-300'
+                    ? 'border-[#78935f] bg-[#f1f4e9] ring-1 ring-[#78935f]/20'
+                    : 'border-[#e7e8df] hover:border-[#c5d5a8]'
                 }`}
               >
-                <div className="font-black text-sm text-emerald-800 flex items-center justify-between">
-                  <span>Professional</span>
-                  <span className="text-[9px] bg-emerald-600 text-white px-2 py-0.5 rounded-full font-extrabold">+10 Free</span>
-                </div>
-                <div className="text-[11px] text-emerald-700 mt-0.5">Get leads with 0% cut</div>
+                <div className="text-sm font-semibold text-[#344137]">Find professional work</div>
+                <div className="mt-1 text-xs leading-4 text-[#737c73]">Build a profile and respond to requests</div>
               </button>
             </div>
           </div>
 
           {/* Full Name */}
           <div>
-            <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-              Full Name *
+            <label htmlFor="signup-name" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+              Full name
             </label>
             <input
+              id="signup-name"
               type="text"
-              placeholder="e.g. Rahul Sharma"
+              autoComplete="name"
+              placeholder="Your name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 rounded-2xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
+              className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
               required
             />
           </div>
 
           {/* Email Address */}
           <div>
-            <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-              Email Address *
+            <label htmlFor="signup-email" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+              Email address
             </label>
             <input
+              id="signup-email"
               type="email"
+              autoComplete="email"
+              inputMode="email"
               placeholder="name@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-2xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
+              className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
               required
             />
           </div>
 
           {/* Mobile Number */}
           <div>
-            <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-              Mobile Number *
+            <label htmlFor="signup-mobile" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+              Mobile number
             </label>
-            <div className="flex rounded-2xl border border-neutral-300 overflow-hidden focus-within:ring-2 focus-within:ring-emerald-500 focus-within:border-emerald-500 bg-white transition">
-              <span className="inline-flex items-center gap-1.5 px-3.5 bg-neutral-100 text-neutral-700 font-bold text-xs border-r border-neutral-300 select-none">
-                <span>🇮🇳</span> +91
+            <div className="flex min-h-12 overflow-hidden rounded-md border border-[#dfe2d9] bg-white transition focus-within:border-[#78935f] focus-within:ring-2 focus-within:ring-[#7a945f]/20">
+              <span className="inline-flex items-center border-r border-[#e7e8df] bg-[#f7f7f1] px-3 text-sm font-medium text-[#59645b] select-none">
+                +91
               </span>
               <input
+                id="signup-mobile"
                 type="tel"
+                autoComplete="tel-national"
                 inputMode="numeric"
                 maxLength={10}
                 placeholder="10-digit mobile number"
                 value={mobile}
                 onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))}
-                className="w-full px-4 py-3 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none"
+                className="w-full px-3 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none"
                 required
               />
             </div>
@@ -224,22 +231,25 @@ export const SignupPage: React.FC = () => {
           {/* Password & Confirm Password */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                Password *
+              <label htmlFor="signup-password" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                Password
               </label>
               <div className="relative">
                 <input
+                  id="signup-password"
                   type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  minLength={6}
                   placeholder="Min 6 characters"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition pr-10"
+                  className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 pr-11 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 p-1 cursor-pointer"
+                  className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-neutral-500 hover:bg-[#f1f2e9] hover:text-[#203c32] cursor-pointer"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -248,22 +258,24 @@ export const SignupPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-black uppercase tracking-wider mb-1.5">
-                Confirm Password *
+              <label htmlFor="signup-confirm-password" className="mb-1.5 block text-sm font-semibold text-[#374239]">
+                Confirm password
               </label>
               <div className="relative">
                 <input
+                  id="signup-confirm-password"
                   type={showConfirmPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
                   placeholder="Repeat password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-neutral-300 text-sm font-semibold text-black placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition pr-10"
+                  className="min-h-12 w-full rounded-md border border-[#dfe2d9] bg-white px-3 pr-11 text-base font-medium text-[#2e3930] placeholder:text-[#8b928c] outline-none transition focus:border-[#78935f] focus:ring-2 focus:ring-[#7a945f]/20"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 p-1 cursor-pointer"
+                  className="absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md text-neutral-500 hover:bg-[#f1f2e9] hover:text-[#203c32] cursor-pointer"
                   aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -279,24 +291,24 @@ export const SignupPage: React.FC = () => {
               id="termsCheckbox"
               checked={termsAccepted}
               onChange={(e) => setTermsAccepted(e.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-neutral-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+              className="mt-1 h-4 w-4 rounded border-[#dfe2d9] accent-[#527346] focus:ring-[#78935f] cursor-pointer"
               required
             />
-            <label htmlFor="termsCheckbox" className="text-xs text-neutral-600 leading-normal cursor-pointer">
-              I agree to the <span className="text-black font-semibold">Terms of Service</span> and{' '}
-              <span className="text-black font-semibold">Privacy Policy</span>.
+            <label htmlFor="termsCheckbox" className="text-xs leading-5 text-[#68716b] cursor-pointer">
+              I agree to the <Link to="/terms" className="font-semibold text-[#40583d] underline">Terms of Service</Link> and{' '}
+              <Link to="/privacy" className="font-semibold text-[#40583d] underline">Privacy Policy</Link>.
             </label>
           </div>
 
           <button
             type="submit"
-            disabled={isLoading || !name || !email || mobile.length < 10 || !password}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-black text-sm shadow-md transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer mt-2"
+            disabled={isLoading}
+            className="mt-2 flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#203c32] py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2d5144] disabled:cursor-wait disabled:opacity-60"
           >
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Creating Account...</span>
+                <span>Creating account...</span>
               </>
             ) : (
               <span>Create Account</span>
@@ -304,10 +316,10 @@ export const SignupPage: React.FC = () => {
           </button>
         </form>
 
-        <div className="mt-6 pt-6 border-t border-neutral-100 text-center">
-          <p className="text-xs text-neutral-600">
+        <div className="mt-6 border-t border-[#e7e8df] pt-5 text-center">
+          <p className="text-sm text-[#68716b]">
             Already have an account?{' '}
-            <Link to="/login" className="font-bold text-emerald-600 hover:text-emerald-700 hover:underline">
+            <Link to="/login" className="font-semibold text-[#506e40] hover:text-[#355e3e] hover:underline">
               Sign In
             </Link>
           </p>
