@@ -925,7 +925,7 @@ export const Navbar: React.FC = () => {
                 {user && (
                   <>
                     <Link
-                      to="/dashboard"
+                      to={isProfessional ? '/dashboard?tab=overview' : '/dashboard'}
                       onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-3 p-3 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold text-xs transition"
                     >
