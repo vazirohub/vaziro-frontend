@@ -259,8 +259,8 @@ export const BrowseRequirementsPage: React.FC = () => {
           </label>
         </div>
 
-        <div className="grid items-start gap-5 lg:gap-6 lg:grid-cols-[236px_minmax(0,1fr)]">
-          <aside className="hidden space-y-4 lg:sticky lg:top-24 lg:block">
+        <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[220px_minmax(0,1fr)_260px] xl:gap-6">
+          <aside className="hidden min-w-0 space-y-4 xl:block">
             <section className="rounded-2xl border border-[#dce6df] bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-extrabold text-[#10241e]">Service category</h2>
@@ -302,7 +302,7 @@ export const BrowseRequirementsPage: React.FC = () => {
           </aside>
 
           <main className="min-w-0">
-            <details className="mb-3 rounded-xl border border-[#dce6df] bg-white p-3 lg:hidden">
+            <details className="mb-3 rounded-xl border border-[#dce6df] bg-white p-3 xl:hidden">
               <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 text-sm font-semibold text-[#344137]">
                 <span className="inline-flex items-center gap-2"><SlidersHorizontal className="h-4 w-4 text-emerald-800" /> More filters</span>
                 <span className="text-xs font-medium text-neutral-500">Budget</span>
@@ -320,7 +320,7 @@ export const BrowseRequirementsPage: React.FC = () => {
               {(budgetFrom || budgetTo) && <button type="button" onClick={() => { setBudgetFrom(''); setBudgetTo(''); }} className="mt-2 min-h-10 text-sm font-semibold text-emerald-800">Clear budget</button>}
             </details>
 
-            <div className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-thin lg:hidden" role="group" aria-label="Filter customer requests by category">
+            <div className="-mx-1 mb-4 flex gap-2 overflow-x-auto px-1 pb-1 scrollbar-thin xl:hidden" role="group" aria-label="Filter customer requests by category">
               <button type="button" onClick={() => setSelectedCategory('')} aria-pressed={!selectedCategory} className={`min-h-10 shrink-0 rounded-full border px-4 text-sm font-semibold transition ${!selectedCategory ? 'border-[#203c32] bg-[#203c32] text-white' : 'border-[#dce6df] bg-white text-[#506057] hover:bg-[#edf4ef]'}`}>All work</button>
               {categories.map((category) => (
                 <button key={category.id} type="button" onClick={() => setSelectedCategory(category.id)} aria-pressed={selectedCategory === category.id} className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition ${selectedCategory === category.id ? 'border-[#203c32] bg-[#203c32] text-white' : 'border-[#dce6df] bg-white text-[#506057] hover:bg-[#edf4ef]'}`}>
