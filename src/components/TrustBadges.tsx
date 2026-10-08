@@ -11,9 +11,9 @@ export const TrustBadges: React.FC = () => {
               <ShieldCheck className="w-6 h-6 text-black" />
             </div>
             <div>
-              <div className="font-black text-sm text-black uppercase tracking-wide">DigiLocker Verified</div>
+              <div className="font-black text-sm text-black uppercase tracking-wide">Verification shown clearly</div>
               <div className="text-xs text-neutral-500 mt-1 leading-relaxed">
-                Aadhaar and police verification via government DigiLocker ensures verified identities and certified credentials.
+                Review each professional’s profile and check for a verification badge when one is available.
               </div>
             </div>
           </div>
@@ -25,7 +25,7 @@ export const TrustBadges: React.FC = () => {
             <div>
               <div className="font-black text-sm text-black uppercase tracking-wide">Payment Protection</div>
               <div className="text-xs text-neutral-500 mt-1 leading-relaxed">
-                Funds held in escrow until service delivery is completed and you approve. 6% platform fee with GST tax invoices.
+                An optional way to manage payment for a service. Any applicable fee is shown before you confirm.
               </div>
             </div>
           </div>
@@ -35,9 +35,9 @@ export const TrustBadges: React.FC = () => {
               <PhoneOff className="w-6 h-6 text-black" />
             </div>
             <div>
-              <div className="font-black text-sm text-black uppercase tracking-wide">Privacy Masked Calls</div>
+              <div className="font-black text-sm text-black uppercase tracking-wide">Keep conversations together</div>
               <div className="text-xs text-neutral-500 mt-1 leading-relaxed">
-                Personal mobile numbers remain concealed. Communicate securely via in-app chat and virtual masked calling.
+                Use the in-app conversation to discuss the request and keep important details in one place.
               </div>
             </div>
           </div>
@@ -47,9 +47,9 @@ export const TrustBadges: React.FC = () => {
               <Award className="w-6 h-6 text-black" />
             </div>
             <div>
-              <div className="font-black text-sm text-black uppercase tracking-wide">AI Match Scoring</div>
+              <div className="font-black text-sm text-black uppercase tracking-wide">Compare proposals</div>
               <div className="text-xs text-neutral-500 mt-1 leading-relaxed">
-                Compare proposals with algorithmic compatibility scores based on skill match, pincode proximity, and verified reviews.
+                Review proposed price, timeline, professional experience and other profile details together.
               </div>
             </div>
           </div>

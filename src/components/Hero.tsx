@@ -42,7 +42,7 @@ export const Hero: React.FC = () => {
 
             {/* Subtitle */}
             <p className="text-base sm:text-lg text-[#52665d] font-medium leading-relaxed max-w-xl">
-              Find background-checked home and personal care professionals, compare transparent quotations and choose the right person for your family.
+              Find local home and personal care professionals, compare their profiles and quotations, then choose the right person for your family.
             </p>
 
             {/* Search Bar with Service Zone Dropdown inside the Get Quotes box */}
@@ -127,7 +127,7 @@ export const Hero: React.FC = () => {
               <div className="relative rounded-[2rem] overflow-hidden shadow-[0_36px_80px_-38px_rgba(16,36,30,0.45)] border-[7px] border-white aspect-[4/5] bg-neutral-100">
                 <img
                   src="https://images.unsplash.com/photo-1582750433449-648ed127bb54?auto=format&fit=crop&w=1000&q=80"
-                  alt="Verified Indian Healthcare Specialist"
+                  alt="A care professional meeting with a family"
                   className="w-full h-full object-cover object-center transform hover:scale-105 transition-transform duration-700"
                   loading="eager"
                 />
