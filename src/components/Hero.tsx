@@ -45,15 +45,11 @@ export const Hero: React.FC = () => {
         }`
       );
     } else {
-      if (searchQuery.trim()) {
-        navigate(
-          `/post-requirement?city=${encodeURIComponent(selectedCity)}&q=${encodeURIComponent(
-            searchQuery.trim()
-          )}`
-        );
-      } else {
-        navigate(`/post-requirement?city=${encodeURIComponent(selectedCity)}`);
-      }
+      navigate(
+        `/professionals?city=${encodeURIComponent(selectedCity)}${
+          searchQuery.trim() ? `&q=${encodeURIComponent(searchQuery.trim())}` : ''
+        }`
+      );
     }
   };
 
@@ -61,7 +57,7 @@ export const Hero: React.FC = () => {
     if (searchMode === 'WORK') {
       navigate(`/requirements?city=${encodeURIComponent(selectedCity)}`);
     } else {
-      navigate(`/post-requirement?city=${encodeURIComponent(selectedCity)}`);
+      navigate(`/professionals?city=${encodeURIComponent(selectedCity)}`);
     }
   };
 
@@ -70,7 +66,7 @@ export const Hero: React.FC = () => {
     if (searchMode === 'WORK') {
       navigate(`/requirements?city=${encodeURIComponent(selectedCity)}&q=${encodeURIComponent(tagQuery)}`);
     } else {
-      navigate(`/post-requirement?city=${encodeURIComponent(selectedCity)}&q=${encodeURIComponent(tagQuery)}`);
+      navigate(`/professionals?city=${encodeURIComponent(selectedCity)}&q=${encodeURIComponent(tagQuery)}`);
     }
   };
 

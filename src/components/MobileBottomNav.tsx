@@ -225,19 +225,19 @@ export const MobileBottomNav: React.FC = () => {
             </Link>
 
             <Link
-              to="/requirements"
-              aria-current={isActive('/requirements') ? 'page' : undefined}
+              to="/professionals"
+              aria-current={isActive('/professionals') ? 'page' : undefined}
               className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
-                isActive('/requirements')
+                isActive('/professionals')
                   ? 'text-[#355e3e] font-semibold'
                   : 'text-[#737c73] hover:text-[#203c32] font-medium'
               }`}
             >
-              {isActive('/requirements') && (
+              {isActive('/professionals') && (
                 <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
               )}
               <Search className="w-5 h-5 mb-0.5" />
-              <span>Browse</span>
+              <span>Talent</span>
             </Link>
 
             {/* Prominent Floating Center Action: Post Job */}

@@ -28,6 +28,7 @@ import {
   Activity,
   Search,
   Home,
+  UserCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -60,10 +61,29 @@ export const Navbar: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [proBalance, setProBalance] = useState<number | null>(null);
 
+  // Header Search State (Upwork-Style)
+  const [headerSearchQuery, setHeaderSearchQuery] = useState('');
+  const [headerSearchMode, setHeaderSearchMode] = useState<'TALENT' | 'JOBS'>('TALENT');
+  const [headerSearchDropdownOpen, setHeaderSearchDropdownOpen] = useState(false);
+
   // Refs for click outside
   const notificationRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const categoriesRef = useRef<HTMLDivElement>(null);
+  const headerSearchRef = useRef<HTMLDivElement>(null);
+
+  const handleHeaderSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!headerSearchQuery.trim()) return;
+    if (headerSearchMode === 'TALENT') {
+      navigate(`/professionals?q=${encodeURIComponent(headerSearchQuery.trim())}`);
+    } else {
+      navigate(`/requirements?q=${encodeURIComponent(headerSearchQuery.trim())}`);
+    }
+    setHeaderSearchQuery('');
+    setHeaderSearchDropdownOpen(false);
+    setMobileMenuOpen(false);
+  };
 
   const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
   const isProfessional = user?.roles?.includes('PROFESSIONAL');
@@ -145,6 +165,9 @@ export const Navbar: React.FC = () => {
       }
       if (categoriesRef.current && !categoriesRef.current.contains(event.target as Node)) {
         setCategoriesOpen(false);
+      }
+      if (headerSearchRef.current && !headerSearchRef.current.contains(event.target as Node)) {
+        setHeaderSearchDropdownOpen(false);
       }
     };
 
@@ -325,6 +348,19 @@ export const Navbar: React.FC = () => {
                 )}
               </div>
 
+              {/* Find Talent (Upwork Directory) */}
+              <Link
+                to="/professionals"
+                className={`flex h-full items-center gap-1.5 border-b-2 px-3 transition-colors ${
+                  isActive('/professionals') || isActive('/talent')
+                    ? 'border-[#719453] text-[#355e3e] font-semibold'
+                    : 'border-transparent text-[#444d47] hover:text-[#578329]'
+                }`}
+              >
+                <UserCheck className="w-4 h-4 text-emerald-600" />
+                <span>Find Talent</span>
+              </Link>
+
               {/* Browse Jobs */}
               <Link
                 to={isProfessional ? '/dashboard?tab=jobs' : '/requirements'}
@@ -377,8 +413,90 @@ export const Navbar: React.FC = () => {
               )}
             </nav>
 
-            {/* Right: Actions, Balance, Notifications & Profile */}
+            {/* Right: Search Box, Actions, Balance, Notifications & Profile */}
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* Upwork-Style Integrated Header Search Box */}
+              <div className="hidden lg:flex items-center">
+                <form onSubmit={handleHeaderSearchSubmit} className="relative flex items-center">
+                  <div className="flex items-center bg-neutral-100/90 hover:bg-neutral-200/70 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500/25 border border-neutral-300/80 rounded-full transition pl-2.5 pr-1 py-1 shadow-2xs">
+                    {/* Mode Selector Dropdown (Talent vs Jobs) */}
+                    <div className="relative" ref={headerSearchRef}>
+                      <button
+                        type="button"
+                        onClick={() => setHeaderSearchDropdownOpen(!headerSearchDropdownOpen)}
+                        className="flex items-center gap-1 text-[11px] font-extrabold text-neutral-800 pr-2 border-r border-neutral-300 hover:text-emerald-700 cursor-pointer select-none"
+                        title="Switch search mode"
+                      >
+                        <span>{headerSearchMode === 'TALENT' ? 'Talent' : 'Jobs'}</span>
+                        <ChevronDown className="w-3 h-3 text-neutral-500" />
+                      </button>
+
+                      {headerSearchDropdownOpen && (
+                        <div className="absolute left-0 mt-2 w-28 bg-white rounded-xl shadow-lg border border-neutral-200 py-1 z-50">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setHeaderSearchMode('TALENT');
+                              setHeaderSearchDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                              headerSearchMode === 'TALENT'
+                                ? 'text-emerald-700 bg-emerald-50'
+                                : 'text-neutral-700 hover:bg-neutral-50'
+                            }`}
+                          >
+                            Talent
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setHeaderSearchMode('JOBS');
+                              setHeaderSearchDropdownOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
+                              headerSearchMode === 'JOBS'
+                                ? 'text-emerald-700 bg-emerald-50'
+                                : 'text-neutral-700 hover:bg-neutral-50'
+                            }`}
+                          >
+                            Jobs
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Search Input */}
+                    <Search className="w-3.5 h-3.5 text-neutral-400 ml-2 shrink-0" />
+                    <input
+                      type="text"
+                      value={headerSearchQuery}
+                      onChange={(e) => setHeaderSearchQuery(e.target.value)}
+                      placeholder={headerSearchMode === 'TALENT' ? 'Search talent...' : 'Search jobs...'}
+                      className="w-24 xl:w-36 text-xs font-medium text-neutral-800 placeholder:text-neutral-400 bg-transparent focus:outline-none px-2 py-0.5"
+                    />
+
+                    {headerSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setHeaderSearchQuery('')}
+                        className="p-0.5 text-neutral-400 hover:text-neutral-600 mr-1 cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+
+                    {/* Search Submit Button */}
+                    <button
+                      type="submit"
+                      aria-label="Search"
+                      className="p-1 rounded-full bg-[#108a00] hover:bg-[#14a800] text-white shrink-0 cursor-pointer shadow-xs transition"
+                    >
+                      <Search className="w-3 h-3" />
+                    </button>
+                  </div>
+                </form>
+              </div>
+
               {/* Primary Action Button (Desktop) - Customers & Guests */}
               {(!isProfessional || isAdmin) ? (
                 <Link
@@ -802,8 +920,54 @@ export const Navbar: React.FC = () => {
                 </div>
               )}
 
+              {/* Mobile Upwork Search Box */}
+              <form onSubmit={handleHeaderSearchSubmit} className="pt-1">
+                <div className="flex items-center bg-white rounded-2xl border border-neutral-300 p-1.5 shadow-xs gap-2">
+                  <select
+                    value={headerSearchMode}
+                    onChange={(e) => setHeaderSearchMode(e.target.value as 'TALENT' | 'JOBS')}
+                    className="text-xs font-bold text-neutral-800 bg-neutral-100 rounded-xl px-2 py-1.5 border border-neutral-200 focus:outline-none cursor-pointer"
+                  >
+                    <option value="TALENT">Talent</option>
+                    <option value="JOBS">Jobs</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={headerSearchQuery}
+                    onChange={(e) => setHeaderSearchQuery(e.target.value)}
+                    placeholder={headerSearchMode === 'TALENT' ? 'Search talent by skill...' : 'Search jobs...'}
+                    className="flex-1 text-xs font-semibold text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
+                  />
+                  <button
+                    type="submit"
+                    aria-label="Submit search"
+                    className="p-2 rounded-xl bg-[#108a00] text-white shrink-0 cursor-pointer"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </form>
+
               {/* Primary Mobile Action Cards */}
               <div className="space-y-2">
+                {/* Find Talent Card */}
+                <Link
+                  to="/professionals"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex min-h-[68px] items-center justify-between rounded-md border border-[#e7e8df] bg-white p-3.5 transition group hover:bg-[#f7f7f1]"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-700 shadow-xs">
+                      <UserCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-extrabold text-xs text-neutral-900">Find Talent (Professionals)</div>
+                      <div className="text-[10px] text-neutral-500">Browse verified independent partners</div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+
                 {(!isProfessional || isAdmin) && (
                   <Link
                     to="/post-requirement"

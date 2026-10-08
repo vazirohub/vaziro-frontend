@@ -289,6 +289,28 @@ export const api = {
     apiClient.post<ApiResponse<{ authUrl: string; state: string; requestId: string; provider: string }>>('/professionals/verification/start'),
   completeApiSetuVerification: (code: string, state: string) =>
     apiClient.post<ApiResponse<any>>('/professionals/verification/callback', { code, state }),
+  getProfessionals: (params?: {
+    q?: string;
+    category?: string;
+    subcategory?: string;
+    city?: string;
+    verifiedOnly?: boolean;
+    minRate?: number;
+    maxRate?: number;
+    minExperience?: number;
+    sortBy?: string;
+    page?: number;
+    limit?: number;
+  }) =>
+    apiClient.get<
+      ApiResponse<{
+        professionals: PublicProfessionalProfile[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      }>
+    >('/professionals', { params }),
   getPublicProfessionalProfile: (idOrSlug: string) => apiClient.get<ApiResponse<PublicProfessionalProfile>>(`/professionals/${idOrSlug}`),
 
   // Disputes & Reviews

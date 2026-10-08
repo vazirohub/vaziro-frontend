@@ -127,6 +127,11 @@ export interface PublicProfessionalProfile {
   memberSince?: string;
   skills: string[];
   serviceAreas: string[];
+  phone?: string | null;
+  email?: string | null;
+  isHiredByCurrentUser?: boolean;
+  canViewContact?: boolean;
+  contactLockedReason?: string | null;
   trustSummary: {
     digilockerVerified: boolean;
     mobileVerified: boolean;

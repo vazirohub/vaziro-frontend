@@ -84,7 +84,7 @@ export const HomePage: React.FC = () => {
                 title: 'Choose with confidence',
                 body: 'Talk through the details and hire the person who feels right for you.',
                 action: 'Explore professionals',
-                href: '/requirements',
+                href: '/professionals',
                 icon: UserRoundCheck,
               },
             ] : [

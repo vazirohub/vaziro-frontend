@@ -25,6 +25,7 @@ import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { DigiLockerCallbackPage } from './pages/DigiLockerCallbackPage';
 import { PublicProfessionalProfilePage } from './pages/PublicProfessionalProfilePage';
+import { BrowseProfessionalsPage } from './pages/BrowseProfessionalsPage';
 import { ScrollToTop } from './components/ScrollToTop';
 import { MobileBottomNav } from './components/MobileBottomNav';
 import { IshaChatWidget } from './components/IshaChatWidget';
@@ -49,6 +50,8 @@ const AppShell: React.FC = () => {
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/professionals" element={<BrowseProfessionalsPage />} />
+              <Route path="/talent" element={<BrowseProfessionalsPage />} />
               <Route path="/professionals/:idOrSlug" element={<PublicProfessionalProfilePage />} />
               <Route path="/professional/:idOrSlug" element={<PublicProfessionalProfilePage />} />
               <Route path="/admin" element={<AdminDashboardPage />} />

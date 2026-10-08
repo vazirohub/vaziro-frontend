@@ -21,6 +21,9 @@ import {
   ChevronRight,
   User as UserIcon,
   MessageSquare,
+  Phone,
+  Mail,
+  Lock,
 } from 'lucide-react';
 
 export const PublicProfessionalProfilePage: React.FC = () => {
@@ -453,6 +456,71 @@ export const PublicProfessionalProfilePage: React.FC = () => {
 
           {/* Sidebar Column (1 col) */}
           <div className="space-y-6">
+            {/* Contact Details Card: Visible only when hired by customer */}
+            {profile.isHiredByCurrentUser && (profile.phone || profile.email) ? (
+              <div className="bg-emerald-50 rounded-3xl p-6 border border-emerald-200 shadow-sm space-y-3">
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-950">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  Direct Contact (Unlocked)
+                </div>
+                <p className="text-[11px] text-emerald-800 leading-relaxed">
+                  You have hired {name}. Direct phone and email communication are now available.
+                </p>
+                <div className="space-y-2 pt-1">
+                  {profile.phone && (
+                    <a
+                      href={`tel:${profile.phone}`}
+                      className="flex items-center justify-between p-3 rounded-2xl bg-white border border-emerald-300 text-xs font-bold text-emerald-950 hover:bg-emerald-100/50 transition"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-emerald-600" />
+                        <span>{profile.phone}</span>
+                      </div>
+                      <span className="text-[11px] font-bold text-emerald-700 underline">Call</span>
+                    </a>
+                  )}
+                  {profile.email && (
+                    <a
+                      href={`mailto:${profile.email}`}
+                      className="flex items-center justify-between p-3 rounded-2xl bg-white border border-emerald-300 text-xs font-bold text-emerald-950 hover:bg-emerald-100/50 transition"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-emerald-600" />
+                        <span className="truncate max-w-[160px]">{profile.email}</span>
+                      </div>
+                      <span className="text-[11px] font-bold text-emerald-700 underline">Email</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-3">
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-900">
+                  <Lock className="w-4 h-4 text-amber-600" />
+                  Contact Details Protected
+                </div>
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span>Mobile Phone</span>
+                    <span className="font-mono font-bold tracking-widest text-slate-400">••••••••••</span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span>Email Address</span>
+                    <span className="font-mono font-bold tracking-widest text-slate-400">•••••••••••••</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed font-normal">
+                  Phone and email are hidden to prevent spam and maintain Vaziro Payment Protection. Details unlock automatically once you hire {name}.
+                </p>
+                <Link
+                  to={`/post-requirement?prefProfessional=${profile.id}&category=${category?.name || ''}`}
+                  className="inline-flex items-center justify-center w-full bg-[#108a00] hover:bg-[#14a800] text-white font-bold text-xs py-2.5 rounded-xl shadow-xs transition cursor-pointer"
+                >
+                  Hire to Unlock Contact
+                </Link>
+              </div>
+            )}
+
             {/* Trust & Verification Card */}
             <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
               <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-900">
