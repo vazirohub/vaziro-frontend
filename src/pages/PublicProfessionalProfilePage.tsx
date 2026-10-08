@@ -533,7 +533,7 @@ export const PublicProfessionalProfilePage: React.FC = () => {
             )}
 
             {/* Hire Banner CTA */}
-            <div className="p-6 rounded-3xl bg-linear-to-br from-emerald-600 to-teal-700 text-white space-y-3 shadow-md">
+            <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-800 to-teal-900 text-white space-y-3 shadow-md">
               <h3 className="text-base font-black tracking-tight">Need service from {name}?</h3>
               <p className="text-xs text-emerald-50 leading-relaxed font-normal">
                 Post your requirement and receive direct quotes with Vaziro Payment Protection.
