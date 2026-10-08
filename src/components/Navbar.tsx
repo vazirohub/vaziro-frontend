@@ -231,7 +231,7 @@ export const Navbar: React.FC = () => {
                 <img
                   src="/logo.png"
                   alt="Vaziro"
-                  className="h-10 w-auto object-contain transition-transform group-hover:scale-[1.02] lg:h-12"
+                  className="h-8 w-auto object-contain transition-transform group-hover:scale-[1.02] sm:h-9 lg:h-10"
                 />
               </Link>
 
