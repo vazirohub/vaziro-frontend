@@ -479,9 +479,9 @@ export const ChatPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-3 py-3 sm:px-6 sm:py-6 lg:px-8">
       {/* Container Card */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col md:flex-row h-[min(780px,calc(100dvh-10rem))] min-h-[520px]">
+      <div className="flex h-[calc(100dvh-11rem)] min-h-[360px] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm md:h-[min(780px,calc(100dvh-10rem))] md:min-h-[520px] md:flex-row sm:rounded-2xl">
         {/* ================= THREADS SIDEBAR ================= */}
         <div
           className={`w-full md:w-[300px] lg:w-96 border-r border-gray-200 flex flex-col shrink-0 ${
@@ -635,7 +635,8 @@ export const ChatPage: React.FC = () => {
                 {/* Mobile Back Button */}
                 <button
                   onClick={() => setSelectedThread(null)}
-                  className="md:hidden p-1.5 -ml-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+                  className="md:hidden -ml-1 flex h-11 w-11 items-center justify-center rounded-lg text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
+                  aria-label="Back to conversations"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
@@ -1019,8 +1020,9 @@ export const ChatPage: React.FC = () => {
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadingAttachment}
-                  className="p-2.5 text-gray-500 hover:text-emerald-600 hover:bg-gray-100 rounded-xl transition shrink-0 disabled:opacity-50"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-emerald-600 disabled:opacity-50"
                   title="Attach file or photo (max 10MB)"
+                  aria-label="Attach file or photo"
                 >
                   {uploadingAttachment ? (
                     <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
@@ -1035,14 +1037,14 @@ export const ChatPage: React.FC = () => {
                   value={newMessage}
                   onChange={handleInputChange}
                   placeholder="Type your message..."
-                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-gray-400"
+                  className="min-w-0 min-h-11 flex-1 rounded-lg border border-gray-300 px-3 text-base focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-gray-400"
                 />
 
                 {/* Send Button */}
                 <button
                   type="submit"
                   disabled={sending || (!newMessage.trim() && !pendingAttachment)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition disabled:opacity-50 flex items-center gap-1.5 shadow-xs shrink-0"
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 text-sm font-bold text-white shadow-xs transition hover:bg-emerald-700 disabled:opacity-50 sm:px-5"
                 >
                   {sending ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />

@@ -392,7 +392,7 @@ export const JobTrackerPage: React.FC = () => {
         <div className="mt-6 pt-6 border-t border-gray-100 flex flex-wrap items-center gap-3">
           <Link
             to="/chat"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-xs font-bold transition"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-4 text-sm font-semibold text-gray-800 transition hover:bg-gray-200"
           >
             <MessageSquare className="w-4 h-4 text-emerald-600" />
             In-App Chat
@@ -401,7 +401,7 @@ export const JobTrackerPage: React.FC = () => {
           <button
             onClick={handleInitiateCall}
             disabled={callLoading}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-xs font-bold transition cursor-pointer"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-4 text-sm font-semibold text-gray-800 transition hover:bg-gray-200 cursor-pointer"
           >
             <Phone className="w-4 h-4 text-blue-600" />
             {callLoading ? 'Connecting...' : 'Masked Virtual Call'}
@@ -409,7 +409,7 @@ export const JobTrackerPage: React.FC = () => {
 
           <button
             onClick={handleViewInvoice}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-xs font-bold transition cursor-pointer"
+            className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-gray-100 px-4 text-sm font-semibold text-gray-800 transition hover:bg-gray-200 cursor-pointer"
           >
             <FileText className="w-4 h-4 text-gray-600" />
             GST Tax Invoice

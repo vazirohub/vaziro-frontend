@@ -23,6 +23,9 @@ export const MobileBottomNav: React.FC = () => {
   if (location.pathname.startsWith('/admin')) {
     return null;
   }
+  if (location.pathname === '/login' || location.pathname === '/signup' || location.pathname.startsWith('/verify/callback')) {
+    return null;
+  }
 
   const isActive = (path: string, exact = true) => {
     if (exact) {
@@ -33,24 +36,25 @@ export const MobileBottomNav: React.FC = () => {
 
   return (
     <nav
-      aria-label="Mobile Navigation"
+      aria-label="Primary mobile navigation"
       className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#e7e8df] bg-[#fffefa]/95 shadow-[0_-4px_20px_rgba(24,62,51,0.07)] backdrop-blur-xl lg:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div className="mx-auto grid h-16 max-w-lg grid-cols-5 px-2">
+      <div className="mx-auto grid h-16 max-w-lg grid-cols-5 px-1 sm:px-2">
         {isProfessional ? (
           // Professional Navigation
           <>
             <Link
               to="/dashboard"
-              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
+              aria-current={isActive('/dashboard') && !location.search.includes('tab=jobs') ? 'page' : undefined}
+              className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
                 isActive('/dashboard') && !location.search.includes('tab=jobs')
-                  ? 'text-emerald-700 font-extrabold'
-                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
+                  ? 'text-[#355e3e] font-semibold'
+                  : 'text-[#737c73] hover:text-[#203c32] font-medium'
               }`}
             >
               {isActive('/dashboard') && !location.search.includes('tab=jobs') && (
-                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
+                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-[#8bb647]" />
               )}
               <Home className="w-5 h-5 mb-0.5" />
               <span>Overview</span>
@@ -58,14 +62,15 @@ export const MobileBottomNav: React.FC = () => {
 
             <Link
               to="/requirements"
-              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
+              aria-current={isActive('/requirements') ? 'page' : undefined}
+              className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
                 isActive('/requirements')
-                  ? 'text-emerald-700 font-extrabold'
-                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
+                  ? 'text-[#355e3e] font-semibold'
+                  : 'text-[#737c73] hover:text-[#203c32] font-medium'
               }`}
             >
               {isActive('/requirements') && (
-                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
+                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-[#8bb647]" />
               )}
               <Search className="w-5 h-5 mb-0.5" />
               <span>Leads</span>
@@ -73,14 +78,15 @@ export const MobileBottomNav: React.FC = () => {
 
             <Link
               to="/dashboard?tab=jobs"
-              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
+              aria-current={location.pathname === '/dashboard' && location.search.includes('tab=jobs') ? 'page' : undefined}
+              className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
                 location.pathname === '/dashboard' && location.search.includes('tab=jobs')
-                  ? 'text-emerald-700 font-extrabold'
-                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
+                  ? 'text-[#355e3e] font-semibold'
+                  : 'text-[#737c73] hover:text-[#203c32] font-medium'
               }`}
             >
               {location.pathname === '/dashboard' && location.search.includes('tab=jobs') && (
-                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
+                <span className="absolute top-0 w-8 h-0.5 rounded-full bg-[#8bb647]" />
               )}
               <Briefcase className="w-5 h-5 mb-0.5" />
               <span>Jobs</span>
@@ -88,7 +94,8 @@ export const MobileBottomNav: React.FC = () => {
 
             <Link
               to="/credits"
-              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
+              aria-current={isActive('/credits') ? 'page' : undefined}
+              className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
                 isActive('/credits')
                   ? 'text-amber-700 font-extrabold'
                   : 'text-neutral-500 hover:text-neutral-900 font-medium'
@@ -103,7 +110,8 @@ export const MobileBottomNav: React.FC = () => {
 
             <Link
               to="/profile"
-              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
+              aria-current={isActive('/profile') ? 'page' : undefined}
+              className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
                 isActive('/profile')
                   ? 'text-emerald-700 font-extrabold'
                   : 'text-neutral-500 hover:text-neutral-900 font-medium'
@@ -121,10 +129,11 @@ export const MobileBottomNav: React.FC = () => {
           <>
             <Link
               to="/"
-              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
+              aria-current={isActive('/') ? 'page' : undefined}
+              className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
                 isActive('/')
-                  ? 'text-emerald-700 font-extrabold'
-                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
+                  ? 'text-[#355e3e] font-semibold'
+                  : 'text-[#737c73] hover:text-[#203c32] font-medium'
               }`}
             >
               {isActive('/') && (
@@ -136,10 +145,11 @@ export const MobileBottomNav: React.FC = () => {
 
             <Link
               to="/dashboard"
-              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
+              aria-current={isActive('/dashboard') ? 'page' : undefined}
+              className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
                 isActive('/dashboard')
-                  ? 'text-emerald-700 font-extrabold'
-                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
+                  ? 'text-[#355e3e] font-semibold'
+                  : 'text-[#737c73] hover:text-[#203c32] font-medium'
               }`}
             >
               {isActive('/dashboard') && (
@@ -152,20 +162,22 @@ export const MobileBottomNav: React.FC = () => {
             {/* Prominent Floating Center Action: Post Job */}
             <Link
               to="/post-requirement"
-              className="flex flex-col items-center justify-center min-h-[44px] -mt-3.5 text-[10.5px] font-extrabold transition group"
+              aria-label="Post a service request"
+              className="group -mt-3.5 flex min-h-[44px] flex-col items-center justify-center text-[11px] font-semibold transition"
             >
-              <div className="w-12 h-12 rounded-full bg-black group-hover:bg-neutral-800 flex items-center justify-center shadow-lg border-2 border-white transition-transform active:scale-95">
-                <PlusCircle className="w-6 h-6 text-emerald-400" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-[#c9f27d] shadow-md transition-transform group-active:scale-95">
+                <PlusCircle className="h-6 w-6 text-[#203c32]" />
               </div>
-              <span className="text-black text-[9.5px] font-black mt-0.5">Post Job</span>
+              <span className="mt-0.5 text-[#203c32]">Post</span>
             </Link>
 
             <Link
               to="/chat"
-              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
+              aria-current={isActive('/chat') ? 'page' : undefined}
+              className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
                 isActive('/chat')
-                  ? 'text-emerald-700 font-extrabold'
-                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
+                  ? 'text-[#355e3e] font-semibold'
+                  : 'text-[#737c73] hover:text-[#203c32] font-medium'
               }`}
             >
               {isActive('/chat') && (
@@ -177,7 +189,8 @@ export const MobileBottomNav: React.FC = () => {
 
             <Link
               to="/profile"
-              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
+              aria-current={isActive('/profile') ? 'page' : undefined}
+              className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
                 isActive('/profile')
                   ? 'text-emerald-700 font-extrabold'
                   : 'text-neutral-500 hover:text-neutral-900 font-medium'
@@ -195,10 +208,11 @@ export const MobileBottomNav: React.FC = () => {
           <>
             <Link
               to="/"
-              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
+              aria-current={isActive('/') ? 'page' : undefined}
+              className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
                 isActive('/')
-                  ? 'text-emerald-700 font-extrabold'
-                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
+                  ? 'text-[#355e3e] font-semibold'
+                  : 'text-[#737c73] hover:text-[#203c32] font-medium'
               }`}
             >
               {isActive('/') && (
@@ -210,10 +224,11 @@ export const MobileBottomNav: React.FC = () => {
 
             <Link
               to="/requirements"
-              className={`relative flex flex-col items-center justify-center min-h-[44px] text-[10.5px] transition ${
+              aria-current={isActive('/requirements') ? 'page' : undefined}
+              className={`relative flex min-h-[44px] flex-col items-center justify-center text-[11px] transition ${
                 isActive('/requirements')
-                  ? 'text-emerald-700 font-extrabold'
-                  : 'text-neutral-500 hover:text-neutral-900 font-medium'
+                  ? 'text-[#355e3e] font-semibold'
+                  : 'text-[#737c73] hover:text-[#203c32] font-medium'
               }`}
             >
               {isActive('/requirements') && (
@@ -226,18 +241,19 @@ export const MobileBottomNav: React.FC = () => {
             {/* Prominent Floating Center Action: Post Job */}
             <Link
               to="/post-requirement"
-              className="flex flex-col items-center justify-center min-h-[44px] -mt-3.5 text-[10.5px] font-extrabold transition group"
+              aria-label="Post a service request"
+              className="group -mt-3.5 flex min-h-[44px] flex-col items-center justify-center text-[11px] font-semibold transition"
             >
-              <div className="w-12 h-12 rounded-full bg-black group-hover:bg-neutral-800 flex items-center justify-center shadow-lg border-2 border-white transition-transform active:scale-95">
-                <PlusCircle className="w-6 h-6 text-emerald-400" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-[#c9f27d] shadow-md transition-transform group-active:scale-95">
+                <PlusCircle className="h-6 w-6 text-[#203c32]" />
               </div>
-              <span className="text-black text-[9.5px] font-black mt-0.5">Post Job</span>
+              <span className="mt-0.5 text-[#203c32]">Post</span>
             </Link>
 
             <button
               type="button"
               onClick={() => openAuthModal('PROFESSIONAL', undefined, 'SIGNUP')}
-              className="flex flex-col items-center justify-center min-h-[44px] text-[10.5px] font-medium text-neutral-500 hover:text-emerald-700 transition cursor-pointer"
+              className="flex min-h-[44px] flex-col items-center justify-center text-[11px] font-medium text-[#737c73] transition hover:text-[#355e3e] cursor-pointer"
             >
               <Sparkles className="w-5 h-5 mb-0.5 text-amber-500" />
               <span>Join Pro</span>
@@ -246,7 +262,7 @@ export const MobileBottomNav: React.FC = () => {
             <button
               type="button"
               onClick={() => openAuthModal('CUSTOMER', undefined, 'LOGIN')}
-              className="flex flex-col items-center justify-center min-h-[44px] text-[10.5px] font-semibold text-neutral-800 hover:text-black transition cursor-pointer"
+              className="flex min-h-[44px] flex-col items-center justify-center text-[11px] font-semibold text-[#355e3e] transition hover:text-[#203c32] cursor-pointer"
             >
               <LogIn className="w-5 h-5 mb-0.5 text-emerald-600" />
               <span>Sign In</span>

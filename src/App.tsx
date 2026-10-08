@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -30,14 +30,14 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { IshaChatWidget } from './components/IshaChatWidget';
 import { WorkflowPreviewPage } from './pages/WorkflowPreviewPage';
 
-export const App: React.FC = () => {
+const AppShell: React.FC = () => {
+  const { pathname } = useLocation();
+  const hasMobileNavigation = !pathname.startsWith('/admin') && !['/login', '/signup'].includes(pathname) && !pathname.startsWith('/verify/callback');
+
   return (
-    <AuthProvider>
-      <Router>
-        <ScrollToTop />
-        <div className="min-h-screen min-h-[100dvh] flex flex-col overflow-x-clip text-[#1e2824] selection:bg-[#c9f27d] selection:text-[#183e33]">
+    <div className="min-h-screen min-h-[100dvh] flex flex-col overflow-x-clip text-[#1e2824] selection:bg-[#c9f27d] selection:text-[#183e33]">
           <Navbar />
-          <main className="min-w-0 flex-1 bg-[#fcfbf8] pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
+          <main className={`min-w-0 flex-1 bg-[#fcfbf8] ${hasMobileNavigation ? 'pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0' : 'pb-0'}`}>
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/workflow-preview" element={<WorkflowPreviewPage />} />
@@ -68,11 +68,20 @@ export const App: React.FC = () => {
               <Route path="*" element={<HomePage />} />
             </Routes>
           </main>
-          <Footer />
-          <PhoneOtpModal />
-          <MobileBottomNav />
-          <IshaChatWidget />
-        </div>
+      <Footer />
+      <PhoneOtpModal />
+      <MobileBottomNav />
+      <IshaChatWidget />
+    </div>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <Router>
+        <ScrollToTop />
+        <AppShell />
       </Router>
     </AuthProvider>
   );
