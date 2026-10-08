@@ -237,7 +237,7 @@ export const MobileBottomNav: React.FC = () => {
                 <span className="absolute top-0 w-8 h-0.5 rounded-full bg-emerald-600" />
               )}
               <Search className="w-5 h-5 mb-0.5" />
-              <span>Talent</span>
+              <span>Professional</span>
             </Link>
 
             {/* Prominent Floating Center Action: Post Job */}

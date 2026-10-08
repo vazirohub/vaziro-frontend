@@ -540,7 +540,7 @@ export const BrowseProfessionalsPage: React.FC = () => {
       <section className="bg-white border-b border-neutral-200/80 pt-6 pb-5 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
           
-          {/* Main Search Bar & Talent/Jobs Pill Switcher */}
+          {/* Main Search Bar & Professional/Jobs Pill Switcher */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             
             {/* Search Input Box */}
@@ -551,7 +551,7 @@ export const BrowseProfessionalsPage: React.FC = () => {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder='Search verified talent (e.g. "Physiotherapist", "Elderly Care", "Cook", "Maths Tutor")...'
+                  placeholder='Search verified professionals (e.g. "Physiotherapist", "Elderly Care", "Cook", "Maths Tutor")...'
                   className="w-full text-sm font-semibold text-neutral-900 placeholder:text-neutral-400 placeholder:font-normal focus:outline-none bg-transparent"
                 />
                 {searchQuery && (
@@ -576,10 +576,10 @@ export const BrowseProfessionalsPage: React.FC = () => {
               </div>
             </form>
 
-            {/* Talent vs Jobs Tabs Toggle */}
+            {/* Professional vs Jobs Tabs Toggle */}
             <div className="flex items-center gap-1 bg-neutral-100 p-1 rounded-full self-start md:self-auto shrink-0 border border-neutral-200">
               <span className="px-4 py-1.5 rounded-full text-xs font-bold bg-white text-neutral-900 shadow-xs">
-                Talent
+                Professional
               </span>
               <Link
                 to={queryParam ? `/requirements?q=${encodeURIComponent(queryParam)}` : '/requirements'}
@@ -624,7 +624,7 @@ export const BrowseProfessionalsPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-neutral-200">
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-neutral-900 tracking-tight">
-              {queryParam ? `Verified Professionals for "${queryParam}"` : 'Browse Verified Independent Talent'}
+              {queryParam ? `Verified Professionals for "${queryParam}"` : 'Browse Verified Independent Professionals'}
             </h1>
             <p className="text-xs sm:text-sm text-neutral-500 font-medium mt-0.5">
               {loading ? 'Finding top professionals...' : `${totalCount} verified service partners across Delhi NCR`}
@@ -674,7 +674,7 @@ export const BrowseProfessionalsPage: React.FC = () => {
             <div className="flex items-center justify-between pb-2 border-b border-neutral-200">
               <span className="text-xs font-black uppercase tracking-wider text-neutral-900 flex items-center gap-2">
                 <Filter className="w-4 h-4 text-emerald-600" />
-                Filter Talent
+                Filter Professionals
               </span>
               {(queryParam || selectedCategory || selectedCity !== 'All Delhi NCR' || verifiedOnly || rateRange !== 'any' || expRange !== 'any') && (
                 <button
@@ -803,7 +803,7 @@ export const BrowseProfessionalsPage: React.FC = () => {
 
           </aside>
 
-          {/* ================= RIGHT MAIN LIST: UPWORK TALENT CARDS ================= */}
+          {/* ================= RIGHT MAIN LIST: PROFESSIONAL CARDS ================= */}
           <main className="lg:col-span-3 space-y-4">
             
             {loading ? (

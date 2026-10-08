@@ -61,9 +61,9 @@ export const Navbar: React.FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [proBalance, setProBalance] = useState<number | null>(null);
 
-  // Header Search State (Upwork-Style)
+  // Header Search State
   const [headerSearchQuery, setHeaderSearchQuery] = useState('');
-  const [headerSearchMode, setHeaderSearchMode] = useState<'TALENT' | 'JOBS'>('TALENT');
+  const [headerSearchMode, setHeaderSearchMode] = useState<'PROFESSIONAL' | 'JOBS'>('PROFESSIONAL');
   const [headerSearchDropdownOpen, setHeaderSearchDropdownOpen] = useState(false);
 
   // Refs for click outside
@@ -75,7 +75,7 @@ export const Navbar: React.FC = () => {
   const handleHeaderSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!headerSearchQuery.trim()) return;
-    if (headerSearchMode === 'TALENT') {
+    if (headerSearchMode === 'PROFESSIONAL') {
       navigate(`/professionals?q=${encodeURIComponent(headerSearchQuery.trim())}`);
     } else {
       navigate(`/requirements?q=${encodeURIComponent(headerSearchQuery.trim())}`);
@@ -348,17 +348,17 @@ export const Navbar: React.FC = () => {
                 )}
               </div>
 
-              {/* Find Talent (Upwork Directory) */}
+              {/* Find Professionals Directory */}
               <Link
                 to="/professionals"
                 className={`flex h-full items-center gap-1.5 border-b-2 px-3 transition-colors ${
-                  isActive('/professionals') || isActive('/talent')
+                  isActive('/professionals')
                     ? 'border-[#719453] text-[#355e3e] font-semibold'
                     : 'border-transparent text-[#444d47] hover:text-[#578329]'
                 }`}
               >
                 <UserCheck className="w-4 h-4 text-emerald-600" />
-                <span>Find Talent</span>
+                <span>Find Professionals</span>
               </Link>
 
               {/* Browse Jobs */}
@@ -419,7 +419,7 @@ export const Navbar: React.FC = () => {
               <div className="hidden lg:flex items-center">
                 <form onSubmit={handleHeaderSearchSubmit} className="relative flex items-center">
                   <div className="flex items-center bg-neutral-100/90 hover:bg-neutral-200/70 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500/25 border border-neutral-300/80 rounded-full transition pl-2.5 pr-1 py-1 shadow-2xs">
-                    {/* Mode Selector Dropdown (Talent vs Jobs) */}
+                    {/* Mode Selector Dropdown (Professional vs Jobs) */}
                     <div className="relative" ref={headerSearchRef}>
                       <button
                         type="button"
@@ -427,25 +427,25 @@ export const Navbar: React.FC = () => {
                         className="flex items-center gap-1 text-[11px] font-extrabold text-neutral-800 pr-2 border-r border-neutral-300 hover:text-emerald-700 cursor-pointer select-none"
                         title="Switch search mode"
                       >
-                        <span>{headerSearchMode === 'TALENT' ? 'Talent' : 'Jobs'}</span>
+                        <span>{headerSearchMode === 'PROFESSIONAL' ? 'Professional' : 'Jobs'}</span>
                         <ChevronDown className="w-3 h-3 text-neutral-500" />
                       </button>
 
                       {headerSearchDropdownOpen && (
-                        <div className="absolute left-0 mt-2 w-28 bg-white rounded-xl shadow-lg border border-neutral-200 py-1 z-50">
+                        <div className="absolute left-0 mt-2 w-32 bg-white rounded-xl shadow-lg border border-neutral-200 py-1 z-50">
                           <button
                             type="button"
                             onClick={() => {
-                              setHeaderSearchMode('TALENT');
+                              setHeaderSearchMode('PROFESSIONAL');
                               setHeaderSearchDropdownOpen(false);
                             }}
                             className={`w-full text-left px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
-                              headerSearchMode === 'TALENT'
+                              headerSearchMode === 'PROFESSIONAL'
                                 ? 'text-emerald-700 bg-emerald-50'
                                 : 'text-neutral-700 hover:bg-neutral-50'
                             }`}
                           >
-                            Talent
+                            Professional
                           </button>
                           <button
                             type="button"
@@ -471,7 +471,7 @@ export const Navbar: React.FC = () => {
                       type="text"
                       value={headerSearchQuery}
                       onChange={(e) => setHeaderSearchQuery(e.target.value)}
-                      placeholder={headerSearchMode === 'TALENT' ? 'Search talent...' : 'Search jobs...'}
+                      placeholder={headerSearchMode === 'PROFESSIONAL' ? 'Search professionals...' : 'Search jobs...'}
                       className="w-24 xl:w-36 text-xs font-medium text-neutral-800 placeholder:text-neutral-400 bg-transparent focus:outline-none px-2 py-0.5"
                     />
 
@@ -925,17 +925,17 @@ export const Navbar: React.FC = () => {
                 <div className="flex items-center bg-white rounded-2xl border border-neutral-300 p-1.5 shadow-xs gap-2">
                   <select
                     value={headerSearchMode}
-                    onChange={(e) => setHeaderSearchMode(e.target.value as 'TALENT' | 'JOBS')}
+                    onChange={(e) => setHeaderSearchMode(e.target.value as 'PROFESSIONAL' | 'JOBS')}
                     className="text-xs font-bold text-neutral-800 bg-neutral-100 rounded-xl px-2 py-1.5 border border-neutral-200 focus:outline-none cursor-pointer"
                   >
-                    <option value="TALENT">Talent</option>
+                    <option value="PROFESSIONAL">Professional</option>
                     <option value="JOBS">Jobs</option>
                   </select>
                   <input
                     type="text"
                     value={headerSearchQuery}
                     onChange={(e) => setHeaderSearchQuery(e.target.value)}
-                    placeholder={headerSearchMode === 'TALENT' ? 'Search talent by skill...' : 'Search jobs...'}
+                    placeholder={headerSearchMode === 'PROFESSIONAL' ? 'Search professionals...' : 'Search jobs...'}
                     className="flex-1 text-xs font-semibold text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
                   />
                   <button
@@ -950,7 +950,7 @@ export const Navbar: React.FC = () => {
 
               {/* Primary Mobile Action Cards */}
               <div className="space-y-2">
-                {/* Find Talent Card */}
+                {/* Find Professionals Card */}
                 <Link
                   to="/professionals"
                   onClick={() => setMobileMenuOpen(false)}
@@ -961,7 +961,7 @@ export const Navbar: React.FC = () => {
                       <UserCheck className="w-5 h-5" />
                     </div>
                     <div>
-                      <div className="font-extrabold text-xs text-neutral-900">Find Talent (Professionals)</div>
+                      <div className="font-extrabold text-xs text-neutral-900">Find Professionals</div>
                       <div className="text-[10px] text-neutral-500">Browse verified independent partners</div>
                     </div>
                   </div>
