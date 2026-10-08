@@ -329,6 +329,8 @@ export const api = {
   updateAdminUser: (id: string, data: any) => apiClient.put<ApiResponse<any>>(`/admin/users/${id}`, data),
   deleteAdminUser: (id: string) => apiClient.delete<ApiResponse<any>>(`/admin/users/${id}`),
   updateUserStatus: (id: string, status: string) => apiClient.patch<ApiResponse<any>>(`/admin/users/${id}/status`, { status }),
+  bulkAdminUsersAction: (data: { userIds: string[]; action: 'DELETE' | 'STATUS_UPDATE' | 'VERIFY'; status?: string }) =>
+    apiClient.post<ApiResponse<{ affectedCount: number }>>('/admin/users/bulk-action', data),
   adjustAdminUserCredits: (id: string, data: { amount: number; mode: 'ADD' | 'DEDUCT' | 'SET'; notes?: string }) =>
     apiClient.post<ApiResponse<any>>(`/admin/users/${id}/credits`, data),
   resetAdminUserPassword: (id: string, data: { newPassword: string }) =>
@@ -336,9 +338,13 @@ export const api = {
   getAdminRequirements: () => apiClient.get<ApiResponse<any[]>>('/admin/requirements'),
   updateAdminRequirementStatus: (id: string, status: string) =>
     apiClient.patch<ApiResponse<any>>(`/admin/requirements/${id}/status`, { status }),
+  bulkAdminRequirementsAction: (data: { requirementIds: string[]; action: 'DELETE' | 'STATUS_UPDATE'; status?: string }) =>
+    apiClient.post<ApiResponse<{ affectedCount: number }>>('/admin/requirements/bulk-action', data),
   getAdminJobs: () => apiClient.get<ApiResponse<any[]>>('/admin/jobs'),
   updateAdminJobStatus: (id: string, status: string, reason?: string) =>
     apiClient.patch<ApiResponse<any>>(`/admin/jobs/${id}/status`, { status, reason }),
+  bulkAdminJobsAction: (data: { jobIds: string[]; action: 'DELETE' | 'STATUS_UPDATE'; status?: string }) =>
+    apiClient.post<ApiResponse<{ affectedCount: number }>>('/admin/jobs/bulk-action', data),
   getAdminVerifications: (params?: { status?: string; search?: string }) =>
     apiClient.get<ApiResponse<any[]>>('/admin/verifications', { params }),
   getAdminVerificationById: (id: string) => apiClient.get<ApiResponse<any>>(`/admin/verifications/${id}`),
@@ -348,6 +354,8 @@ export const api = {
     apiClient.post<ApiResponse<any>>(`/admin/verifications/${id}/override`, { action, reason }),
   reviewVerification: (id: string, status: string, rejectionReason?: string) =>
     apiClient.patch<ApiResponse<any>>(`/admin/verifications/${id}`, { status, rejectionReason }),
+  bulkAdminVerificationsAction: (data: { verificationIds: string[]; action: 'APPROVE' | 'REJECT' | 'RESET' | 'DELETE'; rejectionReason?: string }) =>
+    apiClient.post<ApiResponse<{ affectedCount: number }>>('/admin/verifications/bulk-action', data),
   getAdminSettings: () => apiClient.get<ApiResponse<any[]>>('/admin/settings'),
   updateAdminSetting: (key: string, value: any) => apiClient.put<ApiResponse<any>>('/admin/settings', { key, value }),
   getAdminLocations: () => apiClient.get<ApiResponse<any[]>>('/admin/locations'),
@@ -373,6 +381,8 @@ export const api = {
   getAdminReportById: (id: string) => apiClient.get<ApiResponse<any>>(`/admin/reports/${id}`),
   resolveAdminReport: (id: string, data: { status: string; adminNotes?: string }) =>
     apiClient.post<ApiResponse<any>>(`/admin/reports/${id}/resolve`, data),
+  bulkAdminReportsAction: (data: { reportIds: string[]; action: 'RESOLVE' | 'DISMISS' | 'DELETE'; adminNotes?: string }) =>
+    apiClient.post<ApiResponse<{ affectedCount: number }>>('/admin/reports/bulk-action', data),
 
   // Isha AI Assistant Endpoints
   aiChat: (message: string, history?: any[]) =>

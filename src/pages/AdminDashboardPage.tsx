@@ -47,7 +47,12 @@ import {
   ChevronDown,
   Zap,
   Sparkles,
+  FileSpreadsheet,
+  CheckSquare,
+  Square,
+  MinusSquare,
 } from 'lucide-react';
+import { exportToExcel, exportRawToExcel, exportToCSV } from '../utils/excel';
 
 const defaultAdminLocations = [
   {
@@ -202,6 +207,25 @@ export const AdminDashboardPage: React.FC = () => {
   const [resolveReportNotes, setResolveReportNotes] = useState('');
   const [submittingResolveReport, setSubmittingResolveReport] = useState(false);
 
+  // Multi-Select Batch Operations States
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [selectedVerificationIds, setSelectedVerificationIds] = useState<string[]>([]);
+  const [selectedRequirementIds, setSelectedRequirementIds] = useState<string[]>([]);
+  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([]);
+  const [selectedDisputeIds, setSelectedDisputeIds] = useState<string[]>([]);
+  const [selectedReportIds, setSelectedReportIds] = useState<string[]>([]);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+
+  // Generic Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    actionLabel: string;
+    isDanger?: boolean;
+    onConfirm: () => Promise<void> | void;
+  } | null>(null);
+
   // Fetch all admin data
   const fetchAdminData = async (silent = false) => {
     try {
@@ -287,84 +311,6 @@ export const AdminDashboardPage: React.FC = () => {
       }
     }
   }, [isAuthenticated, isAdmin, isAuthLoading]);
-
-  // CSV Exporter Helper
-  const exportToCSV = (filename: string, headers: string[], rows: (string | number)[][]) => {
-    const csvContent =
-      'data:text/csv;charset=utf-8,' +
-      [headers.join(','), ...rows.map((e) => e.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))].join(
-        '\n'
-      );
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `${filename}-${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setFeedback({ type: 'success', message: `Exported ${filename} successfully.` });
-  };
-
-  // Export Users CSV
-  const handleExportUsers = () => {
-    const headers = ['User ID', 'First Name', 'Last Name', 'Email', 'Phone', 'Roles', 'Status', 'Verified', 'Credits', 'Created At'];
-    const rows = users.map((u) => [
-      u.id,
-      u.firstName || '',
-      u.lastName || '',
-      u.email || '',
-      u.phone || '',
-      u.roles?.map((r: any) => r.role?.name || r.name).join('; ') || '',
-      u.status || 'ACTIVE',
-      u.professionalProfile?.isVerified ? 'YES' : 'NO',
-      u.professionalProfile?.creditWallet?.balance ?? 0,
-      u.createdAt || '',
-    ]);
-    exportToCSV('vaziro-users', headers, rows);
-  };
-
-  // Export Payments CSV
-  const handleExportPayments = () => {
-    const headers = ['Payment ID', 'Order ID', 'Job ID', 'Amount (INR)', 'Status', 'Method', 'Created At'];
-    const rows = payments.map((p) => [
-      p.id,
-      p.orderId || p.razorpayOrderId || '',
-      p.jobId || '',
-      p.amount || 0,
-      p.status || '',
-      p.paymentMethod || 'Razorpay',
-      p.createdAt || '',
-    ]);
-    exportToCSV('vaziro-payments', headers, rows);
-  };
-
-  // Export Marketplace CSV
-  const handleExportMarketplace = () => {
-    const headers = ['Type', 'ID', 'Title / Client', 'Category / Pro', 'Status', 'Budget / Amount', 'City', 'Created At'];
-    const rows = [
-      ...requirements.map((r) => [
-        'REQUIREMENT',
-        r.id,
-        r.title || '',
-        r.category?.name || '',
-        r.status || '',
-        r.budgetMin ? `INR ${r.budgetMin}-${r.budgetMax || ''}` : '',
-        r.city || '',
-        r.createdAt || '',
-      ]),
-      ...jobs.map((j) => [
-        'JOB_CONTRACT',
-        j.id,
-        j.client?.firstName || '',
-        j.professional?.user?.firstName || '',
-        j.status || '',
-        j.agreedAmount || '',
-        j.location || '',
-        j.createdAt || '',
-      ]),
-    ];
-    exportToCSV('vaziro-marketplace', headers, rows);
-  };
 
   // User Actions Handlers
   const handleAdjustCredits = async (e: React.FormEvent) => {
@@ -749,6 +695,543 @@ export const AdminDashboardPage: React.FC = () => {
 
   const pendingVerificationCount = verifications.filter((v) => v.status === 'PENDING').length;
   const pendingReportsCount = reports.filter((r) => r.status === 'PENDING').length;
+
+  // Clear selections when switching tabs
+  useEffect(() => {
+    setSelectedUserIds([]);
+    setSelectedVerificationIds([]);
+    setSelectedRequirementIds([]);
+    setSelectedJobIds([]);
+    setSelectedDisputeIds([]);
+    setSelectedReportIds([]);
+  }, [activeTab]);
+
+  // ============================================================================
+  // MULTI-SELECT HANDLERS & BATCH ACTIONS
+  // ============================================================================
+
+  // Users Multi-Select
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUserIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const toggleAllUsersSelection = () => {
+    const visibleIds = filteredUsers.map((u) => u.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedUserIds.includes(id));
+    if (allSelected) {
+      setSelectedUserIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedUserIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const handleBulkUsersDelete = async () => {
+    if (selectedUserIds.length === 0) return;
+    try {
+      setBulkActionLoading(true);
+      const res = await api.bulkAdminUsersAction({ userIds: selectedUserIds, action: 'DELETE' });
+      setFeedback({ type: 'success', message: `Deleted ${res.data?.data?.affectedCount ?? selectedUserIds.length} users successfully.` });
+      setSelectedUserIds([]);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Failed to delete users.' });
+    } finally {
+      setBulkActionLoading(false);
+      setConfirmModal(null);
+    }
+  };
+
+  const handleBulkUsersStatus = async (status: 'ACTIVE' | 'SUSPENDED' | 'INACTIVE') => {
+    if (selectedUserIds.length === 0) return;
+    try {
+      setBulkActionLoading(true);
+      const res = await api.bulkAdminUsersAction({ userIds: selectedUserIds, action: 'STATUS_UPDATE', status });
+      setFeedback({ type: 'success', message: `Updated ${res.data?.data?.affectedCount ?? selectedUserIds.length} users to ${status}.` });
+      setSelectedUserIds([]);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Failed to update user status.' });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkUsersVerify = async () => {
+    if (selectedUserIds.length === 0) return;
+    try {
+      setBulkActionLoading(true);
+      const res = await api.bulkAdminUsersAction({ userIds: selectedUserIds, action: 'VERIFY' });
+      setFeedback({ type: 'success', message: `Verified ${res.data?.data?.affectedCount ?? selectedUserIds.length} professional profiles.` });
+      setSelectedUserIds([]);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Failed to verify users.' });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  // Verifications Multi-Select
+  const toggleVerificationSelection = (verId: string) => {
+    setSelectedVerificationIds((prev) =>
+      prev.includes(verId) ? prev.filter((id) => id !== verId) : [...prev, verId]
+    );
+  };
+
+  const toggleAllVerificationsSelection = () => {
+    const visibleIds = filteredVerifications.map((v) => v.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedVerificationIds.includes(id));
+    if (allSelected) {
+      setSelectedVerificationIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedVerificationIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const handleBulkVerificationsApprove = async () => {
+    if (selectedVerificationIds.length === 0) return;
+    try {
+      setBulkActionLoading(true);
+      const res = await api.bulkAdminVerificationsAction({ verificationIds: selectedVerificationIds, action: 'APPROVE' });
+      setFeedback({ type: 'success', message: `Approved & verified ${res.data?.data?.affectedCount ?? selectedVerificationIds.length} submissions.` });
+      setSelectedVerificationIds([]);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Failed to approve verifications.' });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkVerificationsReject = async (reason?: string) => {
+    if (selectedVerificationIds.length === 0) return;
+    try {
+      setBulkActionLoading(true);
+      const res = await api.bulkAdminVerificationsAction({
+        verificationIds: selectedVerificationIds,
+        action: 'REJECT',
+        rejectionReason: reason || 'Bulk rejected by administrator',
+      });
+      setFeedback({ type: 'success', message: `Rejected ${res.data?.data?.affectedCount ?? selectedVerificationIds.length} verification cases.` });
+      setSelectedVerificationIds([]);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Failed to reject verifications.' });
+    } finally {
+      setBulkActionLoading(false);
+      setConfirmModal(null);
+    }
+  };
+
+  const handleBulkVerificationsReset = async () => {
+    if (selectedVerificationIds.length === 0) return;
+    try {
+      setBulkActionLoading(true);
+      const res = await api.bulkAdminVerificationsAction({ verificationIds: selectedVerificationIds, action: 'RESET' });
+      setFeedback({ type: 'success', message: `Reset ${res.data?.data?.affectedCount ?? selectedVerificationIds.length} cases to Pending.` });
+      setSelectedVerificationIds([]);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Failed to reset verifications.' });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  // Requirements Multi-Select
+  const toggleRequirementSelection = (reqId: string) => {
+    setSelectedRequirementIds((prev) =>
+      prev.includes(reqId) ? prev.filter((id) => id !== reqId) : [...prev, reqId]
+    );
+  };
+
+  const toggleAllRequirementsSelection = () => {
+    const visibleIds = filteredRequirements.map((r) => r.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedRequirementIds.includes(id));
+    if (allSelected) {
+      setSelectedRequirementIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedRequirementIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const handleBulkRequirementsStatus = async (status: string) => {
+    if (selectedRequirementIds.length === 0) return;
+    try {
+      setBulkActionLoading(true);
+      const res = await api.bulkAdminRequirementsAction({ requirementIds: selectedRequirementIds, action: 'STATUS_UPDATE', status });
+      setFeedback({ type: 'success', message: `Updated ${res.data?.data?.affectedCount ?? selectedRequirementIds.length} requirements to ${status}.` });
+      setSelectedRequirementIds([]);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Failed to update requirements.' });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkRequirementsDelete = async () => {
+    if (selectedRequirementIds.length === 0) return;
+    try {
+      setBulkActionLoading(true);
+      const res = await api.bulkAdminRequirementsAction({ requirementIds: selectedRequirementIds, action: 'DELETE' });
+      setFeedback({ type: 'success', message: `Deleted ${res.data?.data?.affectedCount ?? selectedRequirementIds.length} requirements.` });
+      setSelectedRequirementIds([]);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Failed to delete requirements.' });
+    } finally {
+      setBulkActionLoading(false);
+      setConfirmModal(null);
+    }
+  };
+
+  // Jobs Multi-Select
+  const toggleJobSelection = (jobId: string) => {
+    setSelectedJobIds((prev) =>
+      prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]
+    );
+  };
+
+  const toggleAllJobsSelection = () => {
+    const visibleIds = filteredJobs.map((j) => j.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedJobIds.includes(id));
+    if (allSelected) {
+      setSelectedJobIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedJobIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const handleBulkJobsStatus = async (status: string) => {
+    if (selectedJobIds.length === 0) return;
+    try {
+      setBulkActionLoading(true);
+      const res = await api.bulkAdminJobsAction({ jobIds: selectedJobIds, action: 'STATUS_UPDATE', status });
+      setFeedback({ type: 'success', message: `Updated ${res.data?.data?.affectedCount ?? selectedJobIds.length} jobs to ${status}.` });
+      setSelectedJobIds([]);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Failed to update jobs.' });
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  const handleBulkJobsDelete = async () => {
+    if (selectedJobIds.length === 0) return;
+    try {
+      setBulkActionLoading(true);
+      const res = await api.bulkAdminJobsAction({ jobIds: selectedJobIds, action: 'DELETE' });
+      setFeedback({ type: 'success', message: `Deleted ${res.data?.data?.affectedCount ?? selectedJobIds.length} jobs.` });
+      setSelectedJobIds([]);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Failed to delete jobs.' });
+    } finally {
+      setBulkActionLoading(false);
+      setConfirmModal(null);
+    }
+  };
+
+  // Reports Multi-Select
+  const toggleReportSelection = (reportId: string) => {
+    setSelectedReportIds((prev) =>
+      prev.includes(reportId) ? prev.filter((id) => id !== reportId) : [...prev, reportId]
+    );
+  };
+
+  const toggleAllReportsSelection = () => {
+    const visibleIds = reports.map((r) => r.id);
+    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedReportIds.includes(id));
+    if (allSelected) {
+      setSelectedReportIds((prev) => prev.filter((id) => !visibleIds.includes(id)));
+    } else {
+      setSelectedReportIds((prev) => Array.from(new Set([...prev, ...visibleIds])));
+    }
+  };
+
+  const handleBulkReportsAction = async (action: 'RESOLVE' | 'DISMISS' | 'DELETE', notes?: string) => {
+    if (selectedReportIds.length === 0) return;
+    try {
+      setBulkActionLoading(true);
+      const res = await api.bulkAdminReportsAction({ reportIds: selectedReportIds, action, adminNotes: notes });
+      setFeedback({ type: 'success', message: `Bulk ${action.toLowerCase()} executed on ${res.data?.data?.affectedCount ?? selectedReportIds.length} reports.` });
+      setSelectedReportIds([]);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Failed to process reports.' });
+    } finally {
+      setBulkActionLoading(false);
+      setConfirmModal(null);
+    }
+  };
+
+  // ============================================================================
+  // EXCEL & CSV EXPORTERS
+  // ============================================================================
+
+  // 1. Export Users (Excel & CSV)
+  const handleExportUsersExcel = (selectedOnly = false) => {
+    const targetData = selectedOnly && selectedUserIds.length > 0
+      ? filteredUsers.filter((u) => selectedUserIds.includes(u.id))
+      : filteredUsers;
+
+    const columns = [
+      { header: 'User ID', accessor: (u: any) => u.id },
+      { header: 'First Name', accessor: (u: any) => u.firstName || '' },
+      { header: 'Last Name', accessor: (u: any) => u.lastName || '' },
+      { header: 'Email', accessor: (u: any) => u.email || '' },
+      { header: 'Phone', accessor: (u: any) => u.phone || '' },
+      { header: 'Role(s)', accessor: (u: any) => u.roles?.map((r: any) => r.role?.name || r.name).join(', ') || 'CUSTOMER' },
+      { header: 'Status', accessor: (u: any) => u.status || 'ACTIVE' },
+      { header: 'Verified Professional', accessor: (u: any) => u.professionalProfile?.isVerified ? 'YES' : 'NO' },
+      { header: 'Credits Balance', accessor: (u: any) => u.professionalProfile?.creditWallet?.balance ?? 0 },
+      { header: 'Registration Date', accessor: (u: any) => u.createdAt ? new Date(u.createdAt).toLocaleString('en-IN') : '' },
+    ];
+
+    exportToExcel('vaziro-users', 'Users', columns, targetData);
+    setFeedback({ type: 'success', message: `Exported ${targetData.length} users to Excel (.xlsx) successfully.` });
+  };
+
+  const handleExportUsersCSV = (selectedOnly = false) => {
+    const targetData = selectedOnly && selectedUserIds.length > 0
+      ? filteredUsers.filter((u) => selectedUserIds.includes(u.id))
+      : filteredUsers;
+
+    const headers = ['User ID', 'First Name', 'Last Name', 'Email', 'Phone', 'Roles', 'Status', 'Verified', 'Credits', 'Created At'];
+    const rows = targetData.map((u) => [
+      u.id,
+      u.firstName || '',
+      u.lastName || '',
+      u.email || '',
+      u.phone || '',
+      u.roles?.map((r: any) => r.role?.name || r.name).join('; ') || '',
+      u.status || 'ACTIVE',
+      u.professionalProfile?.isVerified ? 'YES' : 'NO',
+      u.professionalProfile?.creditWallet?.balance ?? 0,
+      u.createdAt || '',
+    ]);
+
+    exportToCSV('vaziro-users', headers, rows);
+    setFeedback({ type: 'success', message: `Exported ${targetData.length} users to CSV successfully.` });
+  };
+
+  // 2. Export Verifications (Excel & CSV)
+  const handleExportVerificationsExcel = (selectedOnly = false) => {
+    const targetData = selectedOnly && selectedVerificationIds.length > 0
+      ? filteredVerifications.filter((v) => selectedVerificationIds.includes(v.id))
+      : filteredVerifications;
+
+    const columns = [
+      { header: 'Verification ID', accessor: (v: any) => v.id },
+      { header: 'Reference ID', accessor: (v: any) => v.referenceId || v.requestId || '' },
+      { header: 'Professional Name', accessor: (v: any) => `${v.professional?.user?.firstName || ''} ${v.professional?.user?.lastName || ''}`.trim() },
+      { header: 'Phone', accessor: (v: any) => v.professional?.user?.phone || '' },
+      { header: 'Email', accessor: (v: any) => v.professional?.user?.email || '' },
+      { header: 'Status', accessor: (v: any) => v.status || 'PENDING' },
+      { header: 'Submission Date', accessor: (v: any) => v.createdAt ? new Date(v.createdAt).toLocaleString('en-IN') : '' },
+      { header: 'Verified Date', accessor: (v: any) => v.verifiedAt ? new Date(v.verifiedAt).toLocaleString('en-IN') : '' },
+      { header: 'Rejection Reason', accessor: (v: any) => v.rejectionReason || '' },
+    ];
+
+    exportToExcel('vaziro-verifications', 'Verifications', columns, targetData);
+    setFeedback({ type: 'success', message: `Exported ${targetData.length} verifications to Excel (.xlsx) successfully.` });
+  };
+
+  // 3. Export Requirements (Excel & CSV)
+  const handleExportRequirementsExcel = (selectedOnly = false) => {
+    const targetData = selectedOnly && selectedRequirementIds.length > 0
+      ? filteredRequirements.filter((r) => selectedRequirementIds.includes(r.id))
+      : filteredRequirements;
+
+    const columns = [
+      { header: 'Requirement ID', accessor: (r: any) => r.id },
+      { header: 'Title', accessor: (r: any) => r.title || '' },
+      { header: 'Category', accessor: (r: any) => r.category?.name || '' },
+      { header: 'Client Name', accessor: (r: any) => `${r.client?.firstName || ''} ${r.client?.lastName || ''}`.trim() || 'Client' },
+      { header: 'Min Budget (INR)', accessor: (r: any) => r.budgetMin ?? '' },
+      { header: 'Max Budget (INR)', accessor: (r: any) => r.budgetMax ?? '' },
+      { header: 'City', accessor: (r: any) => r.city || '' },
+      { header: 'Status', accessor: (r: any) => r.status || 'OPEN' },
+      { header: 'Posted Date', accessor: (r: any) => r.createdAt ? new Date(r.createdAt).toLocaleString('en-IN') : '' },
+    ];
+
+    exportToExcel('vaziro-requirements', 'Requirements', columns, targetData);
+    setFeedback({ type: 'success', message: `Exported ${targetData.length} requirements to Excel (.xlsx) successfully.` });
+  };
+
+  // 4. Export Jobs (Excel & CSV)
+  const handleExportJobsExcel = (selectedOnly = false) => {
+    const targetData = selectedOnly && selectedJobIds.length > 0
+      ? filteredJobs.filter((j) => selectedJobIds.includes(j.id))
+      : filteredJobs;
+
+    const columns = [
+      { header: 'Job ID', accessor: (j: any) => j.id },
+      { header: 'Requirement', accessor: (j: any) => j.requirement?.title || '' },
+      { header: 'Client', accessor: (j: any) => `${j.client?.firstName || ''} ${j.client?.lastName || ''}`.trim() },
+      { header: 'Professional', accessor: (j: any) => `${j.professional?.user?.firstName || ''} ${j.professional?.user?.lastName || ''}`.trim() },
+      { header: 'Agreed Price (INR)', accessor: (j: any) => j.agreedAmount || j.agreedPrice || 0 },
+      { header: 'Job Status', accessor: (j: any) => j.status || '' },
+      { header: 'Work Status', accessor: (j: any) => j.workStatus || '' },
+      { header: 'Escrow Secured', accessor: (j: any) => j.paymentSecured ? 'YES' : 'NO' },
+      { header: 'Created Date', accessor: (j: any) => j.createdAt ? new Date(j.createdAt).toLocaleString('en-IN') : '' },
+    ];
+
+    exportToExcel('vaziro-jobs', 'Jobs', columns, targetData);
+    setFeedback({ type: 'success', message: `Exported ${targetData.length} jobs to Excel (.xlsx) successfully.` });
+  };
+
+  // 5. Export Payments (Excel & CSV)
+  const handleExportPaymentsExcel = () => {
+    const columns = [
+      { header: 'Payment ID', accessor: (p: any) => p.id },
+      { header: 'Order ID', accessor: (p: any) => p.orderId || p.razorpayOrderId || '' },
+      { header: 'Job ID', accessor: (p: any) => p.jobId || '' },
+      { header: 'Amount (INR)', accessor: (p: any) => p.amount || 0 },
+      { header: 'Status', accessor: (p: any) => p.status || '' },
+      { header: 'Payment Method', accessor: (p: any) => p.paymentMethod || 'Razorpay' },
+      { header: 'Created Date', accessor: (p: any) => p.createdAt ? new Date(p.createdAt).toLocaleString('en-IN') : '' },
+    ];
+
+    exportToExcel('vaziro-payments', 'Payments', columns, filteredPayments);
+    setFeedback({ type: 'success', message: `Exported ${filteredPayments.length} payments to Excel (.xlsx) successfully.` });
+  };
+
+  const handleExportUsers = () => handleExportUsersExcel(false);
+
+  const handleExportVerificationsCSV = (selectedOnly = false) => {
+    const targetData = selectedOnly && selectedVerificationIds.length > 0
+      ? filteredVerifications.filter((v) => selectedVerificationIds.includes(v.id))
+      : filteredVerifications;
+    const headers = ['Verification ID', 'Reference ID', 'Professional Name', 'Phone', 'Email', 'Status', 'Submitted At', 'Verified At', 'Reason'];
+    const rows = targetData.map((v) => [
+      v.id,
+      v.referenceId || v.requestId || '',
+      `${v.professional?.user?.firstName || ''} ${v.professional?.user?.lastName || ''}`.trim(),
+      v.professional?.user?.phone || '',
+      v.professional?.user?.email || '',
+      v.status || 'PENDING',
+      v.createdAt || '',
+      v.verifiedAt || '',
+      v.rejectionReason || '',
+    ]);
+    exportToCSV('vaziro-verifications', headers, rows);
+    setFeedback({ type: 'success', message: `Exported ${targetData.length} verifications to CSV.` });
+  };
+  const handleExportVerifications = () => handleExportVerificationsCSV(false);
+
+  const handleExportRequirementsCSV = (selectedOnly = false) => {
+    const targetData = selectedOnly && selectedRequirementIds.length > 0
+      ? filteredRequirements.filter((r) => selectedRequirementIds.includes(r.id))
+      : filteredRequirements;
+    const headers = ['Requirement ID', 'Title', 'Category', 'Client', 'Min Budget', 'Max Budget', 'City', 'Status', 'Created At'];
+    const rows = targetData.map((r) => [
+      r.id,
+      r.title || '',
+      r.category?.name || '',
+      `${r.client?.firstName || ''} ${r.client?.lastName || ''}`.trim(),
+      r.budgetMin ?? '',
+      r.budgetMax ?? '',
+      r.city || '',
+      r.status || 'OPEN',
+      r.createdAt || '',
+    ]);
+    exportToCSV('vaziro-requirements', headers, rows);
+    setFeedback({ type: 'success', message: `Exported ${targetData.length} requirements to CSV.` });
+  };
+
+  const handleExportJobsCSV = (selectedOnly = false) => {
+    const targetData = selectedOnly && selectedJobIds.length > 0
+      ? filteredJobs.filter((j) => selectedJobIds.includes(j.id))
+      : filteredJobs;
+    const headers = ['Job ID', 'Requirement', 'Client', 'Professional', 'Agreed Price', 'Status', 'Work Status', 'Created At'];
+    const rows = targetData.map((j) => [
+      j.id,
+      j.requirement?.title || '',
+      `${j.client?.firstName || ''} ${j.client?.lastName || ''}`.trim(),
+      `${j.professional?.user?.firstName || ''} ${j.professional?.user?.lastName || ''}`.trim(),
+      j.agreedAmount || j.agreedPrice || 0,
+      j.status || '',
+      j.workStatus || '',
+      j.createdAt || '',
+    ]);
+    exportToCSV('vaziro-jobs', headers, rows);
+    setFeedback({ type: 'success', message: `Exported ${targetData.length} jobs to CSV.` });
+  };
+
+  const handleExportMarketplace = () => {
+    if (marketplaceSubTab === 'requirements') {
+      handleExportRequirementsCSV(false);
+    } else {
+      handleExportJobsCSV(false);
+    }
+  };
+
+  const handleExportPaymentsCSV = () => {
+    const headers = ['Payment ID', 'Order ID', 'Job ID', 'Amount', 'Status', 'Payment Method', 'Created At'];
+    const rows = filteredPayments.map((p) => [
+      p.id,
+      p.orderId || p.razorpayOrderId || '',
+      p.jobId || '',
+      p.amount || 0,
+      p.status || '',
+      p.paymentMethod || 'Razorpay',
+      p.createdAt || '',
+    ]);
+    exportToCSV('vaziro-payments', headers, rows);
+    setFeedback({ type: 'success', message: `Exported ${filteredPayments.length} payments to CSV.` });
+  };
+  const handleExportPayments = () => handleExportPaymentsCSV();
+
+  // 6. Export Categories Taxonomy (Excel)
+  const handleExportCategoriesExcel = () => {
+    const columns = [
+      { header: 'Category Name', accessor: (c: any) => c.name },
+      { header: 'Slug', accessor: (c: any) => c.slug },
+      { header: 'Subcategories Count', accessor: (c: any) => c.subcategories?.length || 0 },
+      { header: 'Description', accessor: (c: any) => c.description || '' },
+    ];
+    exportToExcel('vaziro-categories', 'Categories', columns, categories);
+    setFeedback({ type: 'success', message: `Exported ${categories.length} categories to Excel (.xlsx) successfully.` });
+  };
+
+  // 7. Export Plans & Batches (Excel)
+  const handleExportPlansExcel = () => {
+    const columns = [
+      { header: 'Plan ID', accessor: (p: any) => p.id },
+      { header: 'Plan Name', accessor: (p: any) => p.name },
+      { header: 'Credits Allotted', accessor: (p: any) => p.credits },
+      { header: 'Price (INR)', accessor: (p: any) => p.priceInr },
+      { header: 'Validity (Days)', accessor: (p: any) => p.validityDays },
+      { header: 'Active', accessor: (p: any) => p.isActive ? 'YES' : 'NO' },
+    ];
+    exportToExcel('vaziro-credit-plans', 'Plans', columns, plans);
+    setFeedback({ type: 'success', message: `Exported credit plans to Excel (.xlsx) successfully.` });
+  };
+
+  // 8. Export Moderation Reports (Excel)
+  const handleExportReportsExcel = (selectedOnly = false) => {
+    const targetData = selectedOnly && selectedReportIds.length > 0
+      ? reports.filter((r) => selectedReportIds.includes(r.id))
+      : reports;
+
+    const columns = [
+      { header: 'Report ID', accessor: (r: any) => r.id },
+      { header: 'Reason', accessor: (r: any) => r.reason || '' },
+      { header: 'Description', accessor: (r: any) => r.description || '' },
+      { header: 'Status', accessor: (r: any) => r.status || 'OPEN' },
+      { header: 'Reported User ID', accessor: (r: any) => r.reportedUserId || '' },
+      { header: 'Reporter User ID', accessor: (r: any) => r.reporterUserId || '' },
+      { header: 'Admin Notes', accessor: (r: any) => r.adminNotes || '' },
+      { header: 'Created Date', accessor: (r: any) => r.createdAt ? new Date(r.createdAt).toLocaleString('en-IN') : '' },
+    ];
+    exportToExcel('vaziro-moderation-reports', 'Reports', columns, targetData);
+    setFeedback({ type: 'success', message: `Exported ${targetData.length} reports to Excel (.xlsx) successfully.` });
+  };
 
   if (loading) {
     return (
@@ -1221,7 +1704,17 @@ export const AdminDashboardPage: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={handleExportUsers}
+                  onClick={() => handleExportUsersExcel(selectedUserIds.length > 0)}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                  title="Export to Microsoft Excel (.xlsx)"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Excel{selectedUserIds.length > 0 ? ` (${selectedUserIds.length})` : ''}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleExportUsersCSV(selectedUserIds.length > 0)}
                   className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
                   title="Export filtered users to CSV"
                 >
@@ -1237,6 +1730,15 @@ export const AdminDashboardPage: React.FC = () => {
                 <table className="w-full text-left text-xs">
                   <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-400 uppercase font-black tracking-wider text-[10px]">
                     <tr>
+                      <th className="p-4 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={filteredUsers.length > 0 && filteredUsers.every((u) => selectedUserIds.includes(u.id))}
+                          onChange={toggleAllUsersSelection}
+                          className="w-4 h-4 rounded text-[#108a00] focus:ring-[#108a00] border-neutral-300 cursor-pointer"
+                          title="Select all visible users"
+                        />
+                      </th>
                       <th className="p-4">User</th>
                       <th className="p-4">Contact</th>
                       <th className="p-4">Role & KYC</th>
@@ -1252,9 +1754,18 @@ export const AdminDashboardPage: React.FC = () => {
                       const wallet = u.professionalProfile?.creditWallet;
                       const balance = wallet?.balance ?? 0;
                       const isVerified = Boolean(u.professionalProfile?.isVerified);
+                      const isSelected = selectedUserIds.includes(u.id);
 
                       return (
-                        <tr key={u.id} className="hover:bg-neutral-50/60 transition">
+                        <tr key={u.id} className={`hover:bg-neutral-50/60 transition ${isSelected ? 'bg-emerald-50/40' : ''}`}>
+                          <td className="p-4 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleUserSelection(u.id)}
+                              className="w-4 h-4 rounded text-[#108a00] focus:ring-[#108a00] border-neutral-300 cursor-pointer"
+                            />
+                          </td>
                           <td className="p-4">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full bg-neutral-900 text-white flex items-center justify-center font-black text-xs shrink-0">
@@ -1449,14 +1960,37 @@ export const AdminDashboardPage: React.FC = () => {
                 </button>
               </div>
 
-              <button
-                type="button"
-                onClick={handleExportMarketplace}
-                className="px-3.5 py-1.5 bg-white border border-neutral-200 rounded-xl text-xs font-bold text-neutral-700 flex items-center gap-1.5 hover:bg-neutral-50 transition cursor-pointer"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Export Marketplace CSV</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    marketplaceSubTab === 'requirements'
+                      ? handleExportRequirementsExcel(selectedRequirementIds.length > 0)
+                      : handleExportJobsExcel(selectedJobIds.length > 0)
+                  }
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                  title="Export to Microsoft Excel (.xlsx)"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>
+                    Excel
+                    {marketplaceSubTab === 'requirements' && selectedRequirementIds.length > 0
+                      ? ` (${selectedRequirementIds.length})`
+                      : marketplaceSubTab === 'jobs' && selectedJobIds.length > 0
+                      ? ` (${selectedJobIds.length})`
+                      : ''}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportMarketplace}
+                  className="px-3.5 py-1.5 bg-white border border-neutral-200 rounded-xl text-xs font-bold text-neutral-700 flex items-center gap-1.5 hover:bg-neutral-50 transition cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>CSV</span>
+                </button>
+              </div>
             </div>
 
             {/* Requirements Sub-Tab */}
@@ -1488,6 +2022,15 @@ export const AdminDashboardPage: React.FC = () => {
                     <table className="w-full text-left text-xs">
                       <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-400 uppercase font-black tracking-wider text-[10px]">
                         <tr>
+                          <th className="p-4 w-10 text-center">
+                            <input
+                              type="checkbox"
+                              checked={filteredRequirements.length > 0 && filteredRequirements.every((r) => selectedRequirementIds.includes(r.id))}
+                              onChange={toggleAllRequirementsSelection}
+                              className="w-4 h-4 rounded text-[#108a00] focus:ring-[#108a00] border-neutral-300 cursor-pointer"
+                              title="Select all visible requirements"
+                            />
+                          </th>
                           <th className="p-4">Title & Description</th>
                           <th className="p-4">Category</th>
                           <th className="p-4">Client</th>
@@ -1497,38 +2040,49 @@ export const AdminDashboardPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-neutral-100">
-                        {filteredRequirements.map((r) => (
-                          <tr key={r.id} className="hover:bg-neutral-50/60 transition">
-                            <td className="p-4 max-w-xs">
-                              <div className="font-bold text-neutral-900 truncate">{r.title}</div>
-                              <div className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">{r.description}</div>
-                            </td>
-                            <td className="p-4">
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-[#108a00]">
-                                {r.category?.name || 'General'}
-                              </span>
-                            </td>
-                            <td className="p-4 text-neutral-700">
-                              {r.client?.firstName} {r.client?.lastName}
-                            </td>
-                            <td className="p-4 font-bold text-neutral-900">
-                              ₹{r.budgetMin || 0} - ₹{r.budgetMax || 'Negotiable'}
-                            </td>
-                            <td className="p-4 text-neutral-600">{r.city || 'Delhi NCR'}</td>
-                            <td className="p-4">
-                              <select
-                                value={r.status}
-                                onChange={(e) => handleUpdateRequirementStatus(r.id, e.target.value)}
-                                className="text-[11px] font-bold px-2 py-1 rounded-lg border border-neutral-200 bg-neutral-50 focus:outline-none cursor-pointer"
-                              >
-                                <option value="OPEN">OPEN</option>
-                                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                                <option value="CLOSED">CLOSED</option>
-                                <option value="CANCELLED">CANCELLED</option>
-                              </select>
-                            </td>
-                          </tr>
-                        ))}
+                        {filteredRequirements.map((r) => {
+                          const isSelected = selectedRequirementIds.includes(r.id);
+                          return (
+                            <tr key={r.id} className={`hover:bg-neutral-50/60 transition ${isSelected ? 'bg-emerald-50/40' : ''}`}>
+                              <td className="p-4 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleRequirementSelection(r.id)}
+                                  className="w-4 h-4 rounded text-[#108a00] focus:ring-[#108a00] border-neutral-300 cursor-pointer"
+                                />
+                              </td>
+                              <td className="p-4 max-w-xs">
+                                <div className="font-bold text-neutral-900 truncate">{r.title}</div>
+                                <div className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">{r.description}</div>
+                              </td>
+                              <td className="p-4">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-[#108a00]">
+                                  {r.category?.name || 'General'}
+                                </span>
+                              </td>
+                              <td className="p-4 text-neutral-700">
+                                {r.client?.firstName} {r.client?.lastName}
+                              </td>
+                              <td className="p-4 font-bold text-neutral-900">
+                                ₹{r.budgetMin || 0} - ₹{r.budgetMax || 'Negotiable'}
+                              </td>
+                              <td className="p-4 text-neutral-600">{r.city || 'Delhi NCR'}</td>
+                              <td className="p-4">
+                                <select
+                                  value={r.status}
+                                  onChange={(e) => handleUpdateRequirementStatus(r.id, e.target.value)}
+                                  className="text-[11px] font-bold px-2 py-1 rounded-lg border border-neutral-200 bg-neutral-50 focus:outline-none cursor-pointer"
+                                >
+                                  <option value="OPEN">OPEN</option>
+                                  <option value="IN_PROGRESS">IN_PROGRESS</option>
+                                  <option value="CLOSED">CLOSED</option>
+                                  <option value="CANCELLED">CANCELLED</option>
+                                </select>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1560,6 +2114,15 @@ export const AdminDashboardPage: React.FC = () => {
                     <table className="w-full text-left text-xs">
                       <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-400 uppercase font-black tracking-wider text-[10px]">
                         <tr>
+                          <th className="p-4 w-10 text-center">
+                            <input
+                              type="checkbox"
+                              checked={filteredJobs.length > 0 && filteredJobs.every((j) => selectedJobIds.includes(j.id))}
+                              onChange={toggleAllJobsSelection}
+                              className="w-4 h-4 rounded text-[#108a00] focus:ring-[#108a00] border-neutral-300 cursor-pointer"
+                              title="Select all visible job contracts"
+                            />
+                          </th>
                           <th className="p-4">Job Contract ID</th>
                           <th className="p-4">Client</th>
                           <th className="p-4">Professional</th>
@@ -1569,49 +2132,60 @@ export const AdminDashboardPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-neutral-100">
-                        {filteredJobs.map((j) => (
-                          <tr key={j.id} className="hover:bg-neutral-50/60 transition">
-                            <td className="p-4 font-mono text-[11px] text-neutral-600">
-                              #{j.id.substring(0, 10)}
-                            </td>
-                            <td className="p-4 font-semibold text-neutral-900">
-                              {j.client?.firstName} {j.client?.lastName}
-                            </td>
-                            <td className="p-4 font-semibold text-neutral-900">
-                              {j.professional?.user?.firstName} {j.professional?.user?.lastName}
-                            </td>
-                            <td className="p-4 font-black text-neutral-900">
-                              ₹{j.agreedAmount || j.quotation?.priceInr || 0}
-                            </td>
-                            <td className="p-4">
-                              <span
-                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                  j.status === 'PAYMENT_RELEASED'
-                                    ? 'bg-emerald-100 text-emerald-800'
-                                    : j.status === 'DISPUTED'
-                                    ? 'bg-red-100 text-red-800'
-                                    : 'bg-amber-100 text-amber-800'
-                                }`}
-                              >
-                                {j.status}
-                              </span>
-                            </td>
-                            <td className="p-4 text-right">
-                              <select
-                                value={j.status}
-                                onChange={(e) => handleUpdateJobStatus(j.id, e.target.value)}
-                                className="text-[11px] font-bold px-2 py-1 rounded-lg border border-neutral-200 bg-neutral-50 focus:outline-none cursor-pointer"
-                              >
-                                <option value="HIRED">HIRED (Escrow)</option>
-                                <option value="SERVICE_STARTED">STARTED</option>
-                                <option value="SERVICE_COMPLETED">COMPLETED</option>
-                                <option value="PAYMENT_RELEASED">PAYMENT_RELEASED</option>
-                                <option value="DISPUTED">DISPUTED</option>
-                                <option value="CLOSED">CLOSED</option>
-                              </select>
-                            </td>
-                          </tr>
-                        ))}
+                        {filteredJobs.map((j) => {
+                          const isSelected = selectedJobIds.includes(j.id);
+                          return (
+                            <tr key={j.id} className={`hover:bg-neutral-50/60 transition ${isSelected ? 'bg-emerald-50/40' : ''}`}>
+                              <td className="p-4 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleJobSelection(j.id)}
+                                  className="w-4 h-4 rounded text-[#108a00] focus:ring-[#108a00] border-neutral-300 cursor-pointer"
+                                />
+                              </td>
+                              <td className="p-4 font-mono text-[11px] text-neutral-600">
+                                #{j.id.substring(0, 10)}
+                              </td>
+                              <td className="p-4 font-semibold text-neutral-900">
+                                {j.client?.firstName} {j.client?.lastName}
+                              </td>
+                              <td className="p-4 font-semibold text-neutral-900">
+                                {j.professional?.user?.firstName} {j.professional?.user?.lastName}
+                              </td>
+                              <td className="p-4 font-black text-neutral-900">
+                                ₹{j.agreedAmount || j.quotation?.priceInr || 0}
+                              </td>
+                              <td className="p-4">
+                                <span
+                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                    j.status === 'PAYMENT_RELEASED'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : j.status === 'DISPUTED'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-amber-100 text-amber-800'
+                                  }`}
+                                >
+                                  {j.status}
+                                </span>
+                              </td>
+                              <td className="p-4 text-right">
+                                <select
+                                  value={j.status}
+                                  onChange={(e) => handleUpdateJobStatus(j.id, e.target.value)}
+                                  className="text-[11px] font-bold px-2 py-1 rounded-lg border border-neutral-200 bg-neutral-50 focus:outline-none cursor-pointer"
+                                >
+                                  <option value="HIRED">HIRED (Escrow)</option>
+                                  <option value="SERVICE_STARTED">STARTED</option>
+                                  <option value="SERVICE_COMPLETED">COMPLETED</option>
+                                  <option value="PAYMENT_RELEASED">PAYMENT_RELEASED</option>
+                                  <option value="DISPUTED">DISPUTED</option>
+                                  <option value="CLOSED">CLOSED</option>
+                                </select>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1648,6 +2222,40 @@ export const AdminDashboardPage: React.FC = () => {
                   <option value="REJECTED">Rejected</option>
                   <option value="IN_REVIEW">In Review</option>
                 </select>
+
+                <button
+                  type="button"
+                  onClick={toggleAllVerificationsSelection}
+                  className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
+                  title="Toggle select all visible verification submissions"
+                >
+                  <CheckSquare className="w-3.5 h-3.5" />
+                  <span>
+                    {filteredVerifications.length > 0 &&
+                    filteredVerifications.every((v) => selectedVerificationIds.includes(v.id))
+                      ? 'Deselect All'
+                      : 'Select All'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleExportVerificationsExcel(selectedVerificationIds.length > 0)}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                  title="Export to Microsoft Excel (.xlsx)"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Excel{selectedVerificationIds.length > 0 ? ` (${selectedVerificationIds.length})` : ''}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExportVerifications}
+                  className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">CSV</span>
+                </button>
               </div>
             </div>
 
@@ -1656,15 +2264,24 @@ export const AdminDashboardPage: React.FC = () => {
               {filteredVerifications.map((v) => {
                 const pro = v.professional?.user;
                 const isPending = v.status === 'PENDING';
+                const isSelected = selectedVerificationIds.includes(v.id);
 
                 return (
                   <div
                     key={v.id}
-                    className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-2xs hover:shadow-md transition flex flex-col justify-between"
+                    className={`bg-white rounded-2xl border ${
+                      isSelected ? 'border-[#108a00] ring-2 ring-emerald-500/20 bg-emerald-50/15' : 'border-neutral-200/90'
+                    } p-5 shadow-2xs hover:shadow-md transition flex flex-col justify-between`}
                   >
                     <div>
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleVerificationSelection(v.id)}
+                            className="w-4 h-4 rounded text-[#108a00] focus:ring-[#108a00] border-neutral-300 cursor-pointer shrink-0"
+                          />
                           <div className="w-10 h-10 rounded-full bg-neutral-900 text-white flex items-center justify-center font-bold text-sm shrink-0">
                             {(pro?.firstName?.[0] || 'P').toUpperCase()}
                           </div>
@@ -1755,21 +2372,33 @@ export const AdminDashboardPage: React.FC = () => {
                 <p className="text-xs text-neutral-500">Configure marketplace domains and pricing hint thresholds.</p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingCategory(null);
-                  setCatName('');
-                  setCatSlug('');
-                  setCatDesc('');
-                  setCatIcon('Sparkles');
-                  setCategoryModalOpen(true);
-                }}
-                className="px-4 py-2 bg-[#108a00] hover:bg-[#14a800] text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Category</span>
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportCategoriesExcel}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer"
+                  title="Export categories taxonomy to Excel"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Export Excel</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingCategory(null);
+                    setCatName('');
+                    setCatSlug('');
+                    setCatDesc('');
+                    setCatIcon('Sparkles');
+                    setCategoryModalOpen(true);
+                  }}
+                  className="px-4 py-2 bg-[#108a00] hover:bg-[#14a800] text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Add Category</span>
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -1826,6 +2455,16 @@ export const AdminDashboardPage: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportPlansExcel}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer"
+                  title="Export credit plans to Excel"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Export Excel</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={handleTriggerExpiredBatches}
@@ -1918,15 +2557,41 @@ export const AdminDashboardPage: React.FC = () => {
                 <p className="text-xs text-neutral-500">Arbitrate flagged communications, escrow issues, and user reports.</p>
               </div>
 
-              <select
-                value={reportStatusFilter}
-                onChange={(e) => setReportStatusFilter(e.target.value)}
-                className="text-xs font-bold text-neutral-700 bg-white border border-neutral-200 rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer"
-              >
-                <option value="ALL">All Reports</option>
-                <option value="PENDING">Pending Action</option>
-                <option value="RESOLVED">Resolved</option>
-              </select>
+              <div className="flex items-center gap-2">
+                <select
+                  value={reportStatusFilter}
+                  onChange={(e) => setReportStatusFilter(e.target.value)}
+                  className="text-xs font-bold text-neutral-700 bg-white border border-neutral-200 rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">All Reports</option>
+                  <option value="PENDING">Pending Action</option>
+                  <option value="RESOLVED">Resolved</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={toggleAllReportsSelection}
+                  className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
+                  title="Toggle select all reports"
+                >
+                  <CheckSquare className="w-3.5 h-3.5" />
+                  <span>
+                    {reports.length > 0 && reports.every((r) => selectedReportIds.includes(r.id))
+                      ? 'Deselect All'
+                      : 'Select All'}
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleExportReportsExcel(selectedReportIds.length > 0)}
+                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer"
+                  title="Export reports to Excel (.xlsx)"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Excel{selectedReportIds.length > 0 ? ` (${selectedReportIds.length})` : ''}</span>
+                </button>
+              </div>
             </div>
 
             {reports.length === 0 ? (
@@ -1938,38 +2603,54 @@ export const AdminDashboardPage: React.FC = () => {
             ) : (
               <div className="bg-white rounded-3xl border border-neutral-200 overflow-hidden shadow-2xs">
                 <div className="divide-y divide-neutral-100">
-                  {reports.map((r) => (
-                    <div key={r.id} className="p-5 flex items-start justify-between gap-4 hover:bg-neutral-50/60 transition">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-neutral-900">{r.reason || 'Flagged Message'}</span>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              r.status === 'RESOLVED' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
-                            }`}
-                          >
-                            {r.status || 'PENDING'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-neutral-600 leading-relaxed">{r.description || 'No description provided.'}</p>
-                        <div className="text-[11px] text-neutral-400">
-                          Reported: {r.createdAt ? new Date(r.createdAt).toLocaleString() : 'Recent'}
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setResolveReportModalCase(r);
-                          setResolveReportOutcome('RESOLVED');
-                          setResolveReportNotes('');
-                        }}
-                        className="px-3.5 py-1.5 rounded-xl bg-neutral-900 hover:bg-black text-white text-xs font-bold transition shrink-0 cursor-pointer"
+                  {reports.map((r) => {
+                    const isSelected = selectedReportIds.includes(r.id);
+                    return (
+                      <div
+                        key={r.id}
+                        className={`p-5 flex items-start justify-between gap-4 transition ${
+                          isSelected ? 'bg-emerald-50/40' : 'hover:bg-neutral-50/60'
+                        }`}
                       >
-                        Arbitrate & Resolve
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleReportSelection(r.id)}
+                            className="w-4 h-4 rounded text-[#108a00] focus:ring-[#108a00] border-neutral-300 cursor-pointer mt-1 shrink-0"
+                          />
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm text-neutral-900">{r.reason || 'Flagged Message'}</span>
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  r.status === 'RESOLVED' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                                }`}
+                              >
+                                {r.status || 'PENDING'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-neutral-600 leading-relaxed">{r.description || 'No description provided.'}</p>
+                            <div className="text-[11px] text-neutral-400">
+                              Reported: {r.createdAt ? new Date(r.createdAt).toLocaleString() : 'Recent'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setResolveReportModalCase(r);
+                            setResolveReportOutcome('RESOLVED');
+                            setResolveReportNotes('');
+                          }}
+                          className="px-3.5 py-1.5 rounded-xl bg-neutral-900 hover:bg-black text-white text-xs font-bold transition shrink-0 cursor-pointer"
+                        >
+                          Arbitrate & Resolve
+                        </button>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -2002,6 +2683,16 @@ export const AdminDashboardPage: React.FC = () => {
                   <option value="COMPLETED">Released to Pro</option>
                   <option value="REFUNDED">Refunded</option>
                 </select>
+
+                <button
+                  type="button"
+                  onClick={handleExportPaymentsExcel}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-xs transition cursor-pointer"
+                  title="Export payments ledger to Excel (.xlsx)"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Excel</span>
+                </button>
 
                 <button
                   type="button"
@@ -2814,6 +3505,411 @@ export const AdminDashboardPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* FLOATING BULK SELECTION ACTION BAR                                    */}
+      {/* ===================================================================== */}
+      {(selectedUserIds.length > 0 ||
+        selectedVerificationIds.length > 0 ||
+        selectedRequirementIds.length > 0 ||
+        selectedJobIds.length > 0 ||
+        selectedReportIds.length > 0) && (
+        <div className="fixed bottom-6 inset-x-0 z-40 flex justify-center px-4 pointer-events-none animate-in slide-in-from-bottom-5 duration-200">
+          <div className="pointer-events-auto bg-neutral-900/95 backdrop-blur-md text-white border border-neutral-700 shadow-2xl rounded-2xl px-5 py-3.5 flex flex-wrap items-center gap-3 md:gap-4 max-w-5xl w-full">
+            {/* Users Multi-select */}
+            {selectedUserIds.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mr-auto">
+                  <span className="font-bold text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-500/30">
+                    {selectedUserIds.length} Users Selected
+                  </span>
+                </div>
+
+                <div className="flex items-center flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleExportUsersExcel(true)}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                    title="Export selected users to Excel"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    <span>Export Excel</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={handleBulkUsersVerify}
+                    className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Verify</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={() => handleBulkUsersStatus('ACTIVE')}
+                    className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-emerald-400 text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                  >
+                    Activate
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={() => handleBulkUsersStatus('SUSPENDED')}
+                    className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-amber-400 text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                  >
+                    Suspend
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={() =>
+                      setConfirmModal({
+                        isOpen: true,
+                        title: 'Bulk Delete Users',
+                        message: `Are you sure you want to deactivate and remove ${selectedUserIds.length} selected users? This action is irreversible.`,
+                        actionLabel: `Delete ${selectedUserIds.length} Users`,
+                        isDanger: true,
+                        onConfirm: handleBulkUsersDelete,
+                      })
+                    }
+                    className="px-3 py-1.5 rounded-xl bg-red-600/90 hover:bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedUserIds([])}
+                    className="px-2 py-1.5 text-xs text-neutral-400 hover:text-white transition cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Verifications Multi-select */}
+            {selectedVerificationIds.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mr-auto">
+                  <span className="font-bold text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-500/30">
+                    {selectedVerificationIds.length} Verifications Selected
+                  </span>
+                </div>
+
+                <div className="flex items-center flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleExportVerificationsExcel(true)}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    <span>Export Excel</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={handleBulkVerificationsApprove}
+                    className="px-3 py-1.5 rounded-xl bg-[#108a00] hover:bg-[#14a800] text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Approve & Verify</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={handleBulkVerificationsReset}
+                    className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                  >
+                    Reset to Pending
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={() =>
+                      setConfirmModal({
+                        isOpen: true,
+                        title: 'Bulk Reject Verifications',
+                        message: `Are you sure you want to reject ${selectedVerificationIds.length} verification submissions?`,
+                        actionLabel: `Reject ${selectedVerificationIds.length} Submissions`,
+                        isDanger: true,
+                        onConfirm: () => handleBulkVerificationsReject(),
+                      })
+                    }
+                    className="px-3 py-1.5 rounded-xl bg-red-600/90 hover:bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Reject</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedVerificationIds([])}
+                    className="px-2 py-1.5 text-xs text-neutral-400 hover:text-white transition cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Requirements Multi-select */}
+            {selectedRequirementIds.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mr-auto">
+                  <span className="font-bold text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-500/30">
+                    {selectedRequirementIds.length} Requirements Selected
+                  </span>
+                </div>
+
+                <div className="flex items-center flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleExportRequirementsExcel(true)}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    <span>Export Excel</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={() => handleBulkRequirementsStatus('OPEN')}
+                    className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-emerald-400 text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                  >
+                    Mark Open
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={() => handleBulkRequirementsStatus('CLOSED')}
+                    className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                  >
+                    Mark Closed
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={() =>
+                      setConfirmModal({
+                        isOpen: true,
+                        title: 'Bulk Delete Requirements',
+                        message: `Are you sure you want to permanently delete ${selectedRequirementIds.length} requirements and any linked quotes?`,
+                        actionLabel: `Delete ${selectedRequirementIds.length} Requirements`,
+                        isDanger: true,
+                        onConfirm: handleBulkRequirementsDelete,
+                      })
+                    }
+                    className="px-3 py-1.5 rounded-xl bg-red-600/90 hover:bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRequirementIds([])}
+                    className="px-2 py-1.5 text-xs text-neutral-400 hover:text-white transition cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Jobs Multi-select */}
+            {selectedJobIds.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mr-auto">
+                  <span className="font-bold text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-500/30">
+                    {selectedJobIds.length} Jobs Selected
+                  </span>
+                </div>
+
+                <div className="flex items-center flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleExportJobsExcel(true)}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    <span>Export Excel</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={() => handleBulkJobsStatus('PAYMENT_RELEASED')}
+                    className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-emerald-400 text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                  >
+                    Release Payment
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={() => handleBulkJobsStatus('CLOSED')}
+                    className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                  >
+                    Mark Closed
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={() =>
+                      setConfirmModal({
+                        isOpen: true,
+                        title: 'Bulk Delete Jobs',
+                        message: `Are you sure you want to permanently delete ${selectedJobIds.length} job contract records?`,
+                        actionLabel: `Delete ${selectedJobIds.length} Jobs`,
+                        isDanger: true,
+                        onConfirm: handleBulkJobsDelete,
+                      })
+                    }
+                    className="px-3 py-1.5 rounded-xl bg-red-600/90 hover:bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedJobIds([])}
+                    className="px-2 py-1.5 text-xs text-neutral-400 hover:text-white transition cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Reports Multi-select */}
+            {selectedReportIds.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mr-auto">
+                  <span className="font-bold text-xs bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-500/30">
+                    {selectedReportIds.length} Reports Selected
+                  </span>
+                </div>
+
+                <div className="flex items-center flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleExportReportsExcel(true)}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
+                    <span>Export Excel</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={() => handleBulkReportsAction('RESOLVE')}
+                    className="px-3 py-1.5 rounded-xl bg-[#108a00] hover:bg-[#14a800] text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Resolve</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={() => handleBulkReportsAction('DISMISS')}
+                    className="px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-bold transition cursor-pointer disabled:opacity-50"
+                  >
+                    Dismiss
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={bulkActionLoading}
+                    onClick={() =>
+                      setConfirmModal({
+                        isOpen: true,
+                        title: 'Bulk Delete Reports',
+                        message: `Are you sure you want to permanently delete ${selectedReportIds.length} reports?`,
+                        actionLabel: `Delete ${selectedReportIds.length} Reports`,
+                        isDanger: true,
+                        onConfirm: () => handleBulkReportsAction('DELETE'),
+                      })
+                    }
+                    className="px-3 py-1.5 rounded-xl bg-red-600/90 hover:bg-red-600 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedReportIds([])}
+                    className="px-2 py-1.5 text-xs text-neutral-400 hover:text-white transition cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 9: GENERIC CONFIRMATION MODAL                                   */}
+      {/* ===================================================================== */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-neutral-200">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-neutral-100">
+              <h3 className="font-extrabold text-sm text-neutral-900">{confirmModal.title}</h3>
+              <button
+                type="button"
+                onClick={() => setConfirmModal(null)}
+                className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-neutral-600 leading-relaxed mb-6">{confirmModal.message}</p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(null)}
+                className="px-4 py-2 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={bulkActionLoading}
+                onClick={async () => {
+                  await confirmModal.onConfirm();
+                }}
+                className={`px-5 py-2 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50 ${
+                  confirmModal.isDanger
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-[#108a00] hover:bg-[#14a800]'
+                }`}
+              >
+                {bulkActionLoading ? 'Processing...' : confirmModal.actionLabel}
+              </button>
+            </div>
           </div>
         </div>
       )}
