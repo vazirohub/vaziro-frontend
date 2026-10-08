@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -37,6 +37,16 @@ import {
   Activity,
   ArrowRight,
   Loader2,
+  Download,
+  ExternalLink,
+  Filter,
+  Package,
+  Tag,
+  Flag,
+  Eye,
+  ChevronDown,
+  Zap,
+  Sparkles,
 } from 'lucide-react';
 
 const defaultAdminLocations = [
@@ -75,10 +85,23 @@ const defaultAdminLocations = [
   },
 ];
 
+type TabType =
+  | 'metrics'
+  | 'users'
+  | 'marketplace'
+  | 'verifications'
+  | 'categories'
+  | 'plans'
+  | 'disputes'
+  | 'payments'
+  | 'locations'
+  | 'settings';
+
 export const AdminDashboardPage: React.FC = () => {
   const { user, isAuthenticated, isLoading: isAuthLoading, openAuthModal } = useAuth();
   const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
 
+  // Platform Data States
   const [metrics, setMetrics] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [requirements, setRequirements] = useState<any[]>([]);
@@ -87,21 +110,38 @@ export const AdminDashboardPage: React.FC = () => {
   const [settings, setSettings] = useState<any[]>([]);
   const [states, setStates] = useState<any[]>(defaultAdminLocations);
   const [payments, setPayments] = useState<any[]>([]);
-  const [paymentFilterStatus, setPaymentFilterStatus] = useState<string>('ALL');
-  const [paymentSearch, setPaymentSearch] = useState<string>('');
+  const [categories, setCategories] = useState<any[]>([]);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [boostPackages, setBoostPackages] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
+
+  // Navigation & View States
+  const [activeTab, setActiveTab] = useState<TabType>('metrics');
+  const [marketplaceSubTab, setMarketplaceSubTab] = useState<'requirements' | 'jobs'>('requirements');
+  const [plansSubTab, setPlansSubTab] = useState<'plans' | 'boost'>('plans');
+
+  // Loading & Feedback
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [savingActionKey, setSavingActionKey] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'metrics' | 'users' | 'marketplace' | 'verifications' | 'locations' | 'settings' | 'payments'>('metrics');
-  const [marketplaceSubTab, setMarketplaceSubTab] = useState<'requirements' | 'jobs'>('requirements');
 
-  // Filter & Search states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState('ALL');
+  // Global & Tab Filter States
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('ALL');
+  const [userStatusFilter, setUserStatusFilter] = useState('ALL');
+  const [reqSearch, setReqSearch] = useState('');
+  const [reqStatusFilter, setReqStatusFilter] = useState('ALL');
+  const [jobStatusFilter, setJobStatusFilter] = useState('ALL');
+  const [verificationFilterStatus, setVerificationFilterStatus] = useState<string>('ALL');
+  const [verificationSearch, setVerificationSearch] = useState<string>('');
+  const [paymentFilterStatus, setPaymentFilterStatus] = useState<string>('ALL');
+  const [paymentSearch, setPaymentSearch] = useState<string>('');
+  const [reportStatusFilter, setReportStatusFilter] = useState<string>('ALL');
 
-  // Setting edit state
+  // Settings State
   const [editingSettings, setEditingSettings] = useState<Record<string, string>>({});
   const [savingKey, setSavingKey] = useState<string | null>(null);
 
@@ -128,9 +168,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [submittingPassword, setSubmittingPassword] = useState(false);
 
-  // Professional Verification Queue States
-  const [verificationFilterStatus, setVerificationFilterStatus] = useState<string>('ALL');
-  const [verificationSearch, setVerificationSearch] = useState<string>('');
+  // Verification Review & Override Modals
   const [overrideModalCase, setOverrideModalCase] = useState<any | null>(null);
   const [overrideAction, setOverrideAction] = useState<'APPROVE' | 'REJECT'>('APPROVE');
   const [overrideReason, setOverrideReason] = useState<string>('');
@@ -140,12 +178,51 @@ export const AdminDashboardPage: React.FC = () => {
   const [submittingReview, setSubmittingReview] = useState<boolean>(false);
   const [viewDetailsModalCase, setViewDetailsModalCase] = useState<any | null>(null);
 
+  // Category & Subcategory Modals
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<any | null>(null);
+  const [catName, setCatName] = useState('');
+  const [catSlug, setCatSlug] = useState('');
+  const [catDesc, setCatDesc] = useState('');
+  const [catIcon, setCatIcon] = useState('Sparkles');
+  const [submittingCat, setSubmittingCat] = useState(false);
+
+  // Plan Modals
+  const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<any | null>(null);
+  const [planName, setPlanName] = useState('');
+  const [planCredits, setPlanCredits] = useState(20);
+  const [planPrice, setPlanPrice] = useState(799);
+  const [planDiscount, setPlanDiscount] = useState('');
+  const [submittingPlan, setSubmittingPlan] = useState(false);
+
+  // Dispute / Report Resolve Modal
+  const [resolveReportModalCase, setResolveReportModalCase] = useState<any | null>(null);
+  const [resolveReportOutcome, setResolveReportOutcome] = useState('RESOLVED');
+  const [resolveReportNotes, setResolveReportNotes] = useState('');
+  const [submittingResolveReport, setSubmittingResolveReport] = useState(false);
+
+  // Fetch all admin data
   const fetchAdminData = async (silent = false) => {
     try {
       if (silent) setRefreshing(true);
       else setLoading(true);
       setLoadError(null);
-      const [mRes, uRes, reqRes, jobsRes, vRes, sRes, statesRes, payRes] = await Promise.all([
+
+      const [
+        mRes,
+        uRes,
+        reqRes,
+        jobsRes,
+        vRes,
+        sRes,
+        statesRes,
+        payRes,
+        catRes,
+        plansRes,
+        boostRes,
+        repRes,
+      ] = await Promise.all([
         api.getAdminMetrics().catch(() => null),
         api.getAdminUsers().catch(() => null),
         api.getAdminRequirements().catch(() => null),
@@ -154,10 +231,11 @@ export const AdminDashboardPage: React.FC = () => {
         api.getAdminSettings().catch(() => null),
         api.getAdminLocations().catch(() => null),
         api.getPaymentTransactions().catch(() => null),
+        api.getCategories().catch(() => null),
+        api.getAdminPlans().catch(() => null),
+        api.getAdminBoostPackages().catch(() => null),
+        api.getAdminReports().catch(() => null),
       ]);
-
-      const hasPartialFailure = [mRes, uRes, reqRes, jobsRes, vRes, sRes, statesRes, payRes].some((result) => result === null);
-      if (hasPartialFailure) setLoadError('Some admin data could not be refreshed. Retry to load the latest platform information.');
 
       if (mRes?.data?.data) setMetrics(mRes.data.data);
       if (uRes?.data?.data) setUsers(uRes.data.data);
@@ -165,6 +243,13 @@ export const AdminDashboardPage: React.FC = () => {
       if (jobsRes?.data?.data) setJobs(jobsRes.data.data);
       if (vRes?.data?.data) setVerifications(vRes.data.data);
       if (payRes?.data?.data?.payments) setPayments(payRes.data.data.payments);
+      if (catRes?.data?.data) setCategories(catRes.data.data);
+      if (plansRes?.data?.data) setPlans(plansRes.data.data);
+      if (boostRes?.data?.data) setBoostPackages(boostRes.data.data);
+      if (repRes?.data?.data) {
+        setReports(repRes.data.data.reports || repRes.data.data || []);
+      }
+
       if (sRes?.data?.data) {
         setSettings(sRes.data.data);
         const map: Record<string, string> = {};
@@ -173,13 +258,14 @@ export const AdminDashboardPage: React.FC = () => {
         });
         setEditingSettings(map);
       }
+
       if (statesRes?.data?.data && statesRes.data.data.length > 0) {
         setStates(statesRes.data.data);
       } else {
         setStates(defaultAdminLocations);
       }
     } catch (err) {
-      setLoadError('Admin data could not be loaded. Check your connection and retry.');
+      setLoadError('Some admin data could not be refreshed. Check network connectivity.');
     } finally {
       if (silent) setRefreshing(false);
       else setLoading(false);
@@ -188,7 +274,7 @@ export const AdminDashboardPage: React.FC = () => {
 
   useEffect(() => {
     if (!feedback) return;
-    const timeout = window.setTimeout(() => setFeedback(null), 6500);
+    const timeout = window.setTimeout(() => setFeedback(null), 6000);
     return () => window.clearTimeout(timeout);
   }, [feedback]);
 
@@ -202,15 +288,85 @@ export const AdminDashboardPage: React.FC = () => {
     }
   }, [isAuthenticated, isAdmin, isAuthLoading]);
 
-  // Open Credit Modal
-  const openCreditModal = (u: any) => {
-    setCreditModalUser(u);
-    setCreditMode('ADD');
-    setCreditAmount(20);
-    setCreditNotes('');
+  // CSV Exporter Helper
+  const exportToCSV = (filename: string, headers: string[], rows: (string | number)[][]) => {
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), ...rows.map((e) => e.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))].join(
+        '\n'
+      );
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `${filename}-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setFeedback({ type: 'success', message: `Exported ${filename} successfully.` });
   };
 
-  // Handle Credit Adjustment
+  // Export Users CSV
+  const handleExportUsers = () => {
+    const headers = ['User ID', 'First Name', 'Last Name', 'Email', 'Phone', 'Roles', 'Status', 'Verified', 'Credits', 'Created At'];
+    const rows = users.map((u) => [
+      u.id,
+      u.firstName || '',
+      u.lastName || '',
+      u.email || '',
+      u.phone || '',
+      u.roles?.map((r: any) => r.role?.name || r.name).join('; ') || '',
+      u.status || 'ACTIVE',
+      u.professionalProfile?.isVerified ? 'YES' : 'NO',
+      u.professionalProfile?.creditWallet?.balance ?? 0,
+      u.createdAt || '',
+    ]);
+    exportToCSV('vaziro-users', headers, rows);
+  };
+
+  // Export Payments CSV
+  const handleExportPayments = () => {
+    const headers = ['Payment ID', 'Order ID', 'Job ID', 'Amount (INR)', 'Status', 'Method', 'Created At'];
+    const rows = payments.map((p) => [
+      p.id,
+      p.orderId || p.razorpayOrderId || '',
+      p.jobId || '',
+      p.amount || 0,
+      p.status || '',
+      p.paymentMethod || 'Razorpay',
+      p.createdAt || '',
+    ]);
+    exportToCSV('vaziro-payments', headers, rows);
+  };
+
+  // Export Marketplace CSV
+  const handleExportMarketplace = () => {
+    const headers = ['Type', 'ID', 'Title / Client', 'Category / Pro', 'Status', 'Budget / Amount', 'City', 'Created At'];
+    const rows = [
+      ...requirements.map((r) => [
+        'REQUIREMENT',
+        r.id,
+        r.title || '',
+        r.category?.name || '',
+        r.status || '',
+        r.budgetMin ? `INR ${r.budgetMin}-${r.budgetMax || ''}` : '',
+        r.city || '',
+        r.createdAt || '',
+      ]),
+      ...jobs.map((j) => [
+        'JOB_CONTRACT',
+        j.id,
+        j.client?.firstName || '',
+        j.professional?.user?.firstName || '',
+        j.status || '',
+        j.agreedAmount || '',
+        j.location || '',
+        j.createdAt || '',
+      ]),
+    ];
+    exportToCSV('vaziro-marketplace', headers, rows);
+  };
+
+  // User Actions Handlers
   const handleAdjustCredits = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!creditModalUser) return;
@@ -234,20 +390,6 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
 
-  // Open Edit User Modal
-  const openEditModal = (u: any) => {
-    setEditModalUser(u);
-    setEditFirstName(u.firstName || '');
-    setEditLastName(u.lastName || '');
-    setEditEmail(u.email || '');
-    setEditPhone(u.phone || '');
-    setEditStatus(u.status || 'ACTIVE');
-    const existingRoles = u.roles?.map((r: any) => r.role?.name || r.name || '') || ['CUSTOMER'];
-    setEditRoles(existingRoles);
-    setEditIsVerified(Boolean(u.professionalProfile?.isVerified));
-  };
-
-  // Handle Update User
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editModalUser) return;
@@ -269,19 +411,12 @@ export const AdminDashboardPage: React.FC = () => {
         await fetchAdminData(true);
       }
     } catch (err: any) {
-      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Could not update the user.' });
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Could not update user.' });
     } finally {
       setSubmittingEdit(false);
     }
   };
 
-  // Open Password Reset Modal
-  const openPasswordModal = (u: any) => {
-    setPasswordModalUser(u);
-    setNewPassword('');
-  };
-
-  // Handle Password Reset
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwordModalUser) return;
@@ -296,253 +431,354 @@ export const AdminDashboardPage: React.FC = () => {
         setPasswordModalUser(null);
       }
     } catch (err: any) {
-      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Could not reset the password.' });
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Could not reset password.' });
     } finally {
       setSubmittingPassword(false);
     }
   };
 
-  // Delete User
-  const handleDeleteUser = async (u: any) => {
-    const confirmDelete = window.confirm(
-      `Are you sure you want to permanently delete user ${u.firstName} ${u.lastName}? This action cannot be undone.`
-    );
-    if (!confirmDelete) return;
-
+  const handleToggleUserStatus = async (userId: string, currentStatus: string) => {
     try {
-      const res = await api.deleteAdminUser(u.id);
+      const newStatus = currentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+      setSavingActionKey(`status-${userId}`);
+      const res = await api.updateUserStatus(userId, newStatus);
       if (res.data?.success) {
-        setFeedback({ type: 'success', message: res.data.message || 'User deleted successfully.' });
+        setFeedback({ type: 'success', message: `User status changed to ${newStatus}.` });
         await fetchAdminData(true);
       }
     } catch (err: any) {
-      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Could not delete the user.' });
-    }
-  };
-
-  const handleToggleUserStatus = async (userId: string, currentStatus: string) => {
-    const nextStatus = currentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
-    if (nextStatus === 'SUSPENDED' && !window.confirm('Suspend this account? The user will lose access until an administrator reactivates it.')) return;
-    try {
-      await api.updateUserStatus(userId, nextStatus);
-      setFeedback({ type: 'success', message: `User ${nextStatus === 'ACTIVE' ? 'activated' : 'suspended'}.` });
-      await fetchAdminData(true);
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: 'Failed to update user status: ' + err.message });
-    }
-  };
-
-  const handleReviewVerification = async (id: string, status: 'VERIFIED' | 'FAILED') => {
-    try {
-      await api.reviewVerification(id, status);
-      setFeedback({ type: 'success', message: `Verification marked ${status.toLowerCase()}.` });
-      await fetchAdminData(true);
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: 'Failed to update verification: ' + err.message });
-    }
-  };
-
-  const handleMarkReviewSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reviewModalCase) return;
-    try {
-      setSubmittingReview(true);
-      await api.markAdminVerificationReview(reviewModalCase.id, reviewReasonInput || 'Flagged for compliance review');
-      setFeedback({ type: 'success', message: 'Verification case marked for review.' });
-      setReviewModalCase(null);
-      setReviewReasonInput('');
-       await fetchAdminData(true);
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: 'Failed to mark for review: ' + (err.response?.data?.error?.message || err.message) });
-    } finally {
-      setSubmittingReview(false);
-    }
-  };
-
-  const handleOverrideSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!overrideModalCase) return;
-    if (!overrideReason.trim()) {
-      setFeedback({ type: 'error', message: 'Enter an audit reason before submitting an override.' });
-      return;
-    }
-    try {
-      setSubmittingOverride(true);
-      await api.adminVerificationOverride(overrideModalCase.id, overrideAction, overrideReason.trim());
-      setFeedback({ type: 'success', message: `Verification override ${overrideAction === 'APPROVE' ? 'approved' : 'rejected'}.` });
-      setOverrideModalCase(null);
-      setOverrideReason('');
-       await fetchAdminData(true);
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: 'Failed to process override: ' + (err.response?.data?.error?.message || err.message) });
-    } finally {
-      setSubmittingOverride(false);
-    }
-  };
-
-  const handleSaveSetting = async (key: string) => {
-    try {
-      setSavingKey(key);
-      const val = editingSettings[key];
-      await api.updateAdminSetting(key, val);
-      setFeedback({ type: 'success', message: `Updated ${key}.` });
-      await fetchAdminData(true);
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: 'Failed to update setting: ' + err.message });
-    } finally {
-      setSavingKey(null);
-    }
-  };
-
-  const handleToggleLocation = async (type: string, id: string, currentActive: boolean) => {
-    const key = `${type}:${id}`;
-    setSavingActionKey(key);
-    setStates((prev) =>
-      prev.map((st) => {
-        if (type === 'state' && st.id === id) {
-          return { ...st, isActive: !currentActive };
-        }
-        if (type === 'city' && st.cities) {
-          return {
-            ...st,
-            cities: st.cities.map((ct: any) =>
-              ct.id === id ? { ...ct, isActive: !currentActive } : ct
-            ),
-          };
-        }
-        return st;
-      })
-    );
-
-    try {
-      await api.toggleAdminLocation(type, id, !currentActive);
-      setFeedback({ type: 'success', message: `${type === 'state' ? 'State' : 'City'} ${!currentActive ? 'activated' : 'paused'}.` });
-    } catch (err: any) {
-      setStates((prev) => prev.map((state) => {
-        if (type === 'state' && state.id === id) return { ...state, isActive: currentActive };
-        if (type === 'city' && state.cities) return { ...state, cities: state.cities.map((city: any) => city.id === id ? { ...city, isActive: currentActive } : city) };
-        return state;
-      }));
-      setFeedback({ type: 'error', message: `Could not update this ${type}. The previous status was restored.` });
+      setFeedback({ type: 'error', message: 'Failed to update user status.' });
     } finally {
       setSavingActionKey(null);
     }
   };
 
-  const handleUpdateRequirementStatus = async (id: string, newStatus: string) => {
-    if (newStatus === 'CLOSED' && !window.confirm('Close this customer request? Professionals will no longer be able to submit proposals.')) return;
+  const handleDeleteUser = async (userId: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to deactivate and delete user "${name}"? This action is irreversible.`)) return;
     try {
-      setSavingActionKey(`requirement:${id}`);
-      await api.updateAdminRequirementStatus(id, newStatus);
-      setFeedback({ type: 'success', message: `Request ${newStatus.toLowerCase()}.` });
+      setSavingActionKey(`delete-${userId}`);
+      const res = await api.deleteAdminUser(userId);
+      if (res.data?.success) {
+        setFeedback({ type: 'success', message: `User "${name}" deactivated successfully.` });
+        await fetchAdminData(true);
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: 'Failed to delete user.' });
+    } finally {
+      setSavingActionKey(null);
+    }
+  };
+
+  // Verification Review Handlers
+  const handleReviewVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewModalCase) return;
+    try {
+      setSubmittingReview(true);
+      await api.markAdminVerificationReview(reviewModalCase.id, reviewReasonInput || 'Flagged for compliance review');
+      setFeedback({ type: 'success', message: 'Case marked for in-depth review.' });
+      setReviewModalCase(null);
       await fetchAdminData(true);
     } catch (err: any) {
-      setFeedback({ type: 'error', message: 'Failed to update request: ' + err.message });
+      setFeedback({ type: 'error', message: 'Failed to update review status.' });
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const handleAdminOverride = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!overrideModalCase) return;
+    try {
+      setSubmittingOverride(true);
+      await api.adminVerificationOverride(overrideModalCase.id, overrideAction, overrideReason.trim() || 'Admin verification decision');
+      setFeedback({ type: 'success', message: `Case ${overrideAction.toLowerCase()}d successfully.` });
+      setOverrideModalCase(null);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: 'Failed to process override decision.' });
+    } finally {
+      setSubmittingOverride(false);
+    }
+  };
+
+  // Quick 1-Click Verification Approval
+  const handleQuickApproveVerification = async (caseId: string, profName: string) => {
+    try {
+      setSavingActionKey(`approve-${caseId}`);
+      await api.adminVerificationOverride(caseId, 'APPROVE', 'One-click admin verified via DigiLocker credential confirmation');
+      setFeedback({ type: 'success', message: `Verified badge granted to ${profName}.` });
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: 'Failed to approve verification.' });
+    } finally {
+      setSavingActionKey(null);
+    }
+  };
+
+  // Requirement & Job Status Updates
+  const handleUpdateRequirementStatus = async (id: string, newStatus: string) => {
+    try {
+      setSavingActionKey(`req-${id}`);
+      await api.updateAdminRequirementStatus(id, newStatus);
+      setFeedback({ type: 'success', message: `Requirement status updated to ${newStatus}.` });
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: 'Failed to update requirement status.' });
     } finally {
       setSavingActionKey(null);
     }
   };
 
   const handleUpdateJobStatus = async (id: string, newStatus: string) => {
-    const confirmMessage = newStatus === 'PAYMENT_RELEASED'
-      ? 'Release payment for this job? This payout action may be irreversible.'
-      : 'Force close this job? The service workflow will be stopped.';
-    if (!window.confirm(confirmMessage)) return;
     try {
-      setSavingActionKey(`job:${id}`);
-      await api.updateAdminJobStatus(id, newStatus, 'Admin manual override');
-      setFeedback({ type: 'success', message: `Job status changed to ${newStatus.toLowerCase()}.` });
+      setSavingActionKey(`job-${id}`);
+      await api.updateAdminJobStatus(id, newStatus, 'Admin contract management');
+      setFeedback({ type: 'success', message: `Job contract status updated to ${newStatus}.` });
       await fetchAdminData(true);
     } catch (err: any) {
-      setFeedback({ type: 'error', message: 'Failed to update job status: ' + err.message });
+      setFeedback({ type: 'error', message: 'Failed to update job status.' });
     } finally {
       setSavingActionKey(null);
     }
   };
 
-  // Filtered Users
-  const filteredUsers = users.filter((u) => {
-    const fullName = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase();
-    const email = (u.email || '').toLowerCase();
-    const phone = (u.phone || '').toLowerCase();
-    const matchesSearch =
-      fullName.includes(searchQuery.toLowerCase()) ||
-      email.includes(searchQuery.toLowerCase()) ||
-      phone.includes(searchQuery.toLowerCase());
-
-    if (!matchesSearch) return false;
-
-    if (roleFilter === 'ALL') return true;
-    const userRoleNames = u.roles?.map((r: any) => r.role?.name || r.name) || [];
-    return userRoleNames.includes(roleFilter);
-  });
-
-  const pendingVerificationCount = verifications.filter((item) => ['PENDING', 'REVIEW_REQUIRED'].includes((item.status || '').toUpperCase())).length;
-  const openRequirementCount = requirements.filter((item) => item.status === 'ACTIVE').length;
-  const activeJobCount = jobs.filter((item) => !['COMPLETED', 'CLOSED', 'PAYMENT_RELEASED'].includes((item.status || '').toUpperCase())).length;
-  const pendingPaymentCount = payments.filter((item) => ['CREATED', 'PENDING', 'FAILED'].includes((item.status || '').toUpperCase())).length;
-  const filteredPayments = payments.filter((payment) => {
-    if (paymentFilterStatus === 'NEEDS_REVIEW') {
-      if (!['CREATED', 'PENDING', 'FAILED'].includes((payment.status || '').toUpperCase())) return false;
-    } else if (paymentFilterStatus !== 'ALL') {
-      if (paymentFilterStatus === 'CAPTURED') {
-        if (!['CAPTURED', 'SECURED', 'PAID', 'RELEASED'].includes(payment.status)) return false;
-      } else if (payment.status !== paymentFilterStatus) return false;
+  // Category & Subcategory Handlers
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!catName.trim() || !catSlug.trim()) return;
+    try {
+      setSubmittingCat(true);
+      if (editingCategory) {
+        await api.updateAdminCategory(editingCategory.id, {
+          name: catName,
+          slug: catSlug,
+          description: catDesc,
+        });
+        setFeedback({ type: 'success', message: 'Category updated successfully.' });
+      } else {
+        await api.createAdminCategory({
+          name: catName,
+          slug: catSlug,
+          description: catDesc,
+          icon: catIcon,
+        });
+        setFeedback({ type: 'success', message: 'New category created successfully.' });
+      }
+      setCategoryModalOpen(false);
+      setEditingCategory(null);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || 'Could not save category.' });
+    } finally {
+      setSubmittingCat(false);
     }
-    const term = paymentSearch.trim().toLowerCase();
-    if (!term) return true;
-    return Boolean(
-      payment.orderId?.toLowerCase().includes(term) ||
-      payment.razorpayOrderId?.toLowerCase().includes(term) ||
-      payment.razorpayPaymentId?.toLowerCase().includes(term) ||
-      `${payment.user?.firstName || ''} ${payment.user?.lastName || ''}`.toLowerCase().includes(term) ||
-      payment.contact?.includes(term) || payment.email?.toLowerCase().includes(term)
-    );
-  });
-  const adminPageTitles: Record<typeof activeTab, string> = {
-    metrics: 'Operations overview',
-    users: 'People & accounts',
-    marketplace: 'Marketplace operations',
-    verifications: 'Verification review',
-    locations: 'Service areas',
-    settings: 'Platform settings',
-    payments: 'Payments & ledger',
   };
 
-  if (isAuthLoading || (loading && isAuthenticated && isAdmin)) {
+  // Credit Plan Save Handler
+  const handleSavePlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!planName.trim()) return;
+    try {
+      setSubmittingPlan(true);
+      if (editingPlan) {
+        await api.updateAdminPlan(editingPlan.id, {
+          name: planName,
+          credits: Number(planCredits),
+          priceInr: Number(planPrice),
+          badge: planDiscount,
+        });
+        setFeedback({ type: 'success', message: 'Credit plan updated successfully.' });
+      } else {
+        await api.createAdminPlan({
+          name: planName,
+          credits: Number(planCredits),
+          priceInr: Number(planPrice),
+          badge: planDiscount,
+        });
+        setFeedback({ type: 'success', message: 'New credit plan created successfully.' });
+      }
+      setPlanModalOpen(false);
+      setEditingPlan(null);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: 'Could not save credit plan.' });
+    } finally {
+      setSubmittingPlan(false);
+    }
+  };
+
+  // Report Resolution Handler
+  const handleResolveReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resolveReportModalCase) return;
+    try {
+      setSubmittingResolveReport(true);
+      await api.resolveAdminReport(resolveReportModalCase.id, {
+        status: resolveReportOutcome,
+        adminNotes: resolveReportNotes,
+      });
+      setFeedback({ type: 'success', message: 'Report resolved and archived.' });
+      setResolveReportModalCase(null);
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: 'Failed to resolve report.' });
+    } finally {
+      setSubmittingResolveReport(false);
+    }
+  };
+
+  // Trigger Expired Credit Batches
+  const handleTriggerExpiredBatches = async () => {
+    try {
+      setSavingActionKey('expire-batches');
+      await api.triggerBatchExpiry();
+      setFeedback({ type: 'success', message: 'Expired credit batches processed successfully.' });
+      await fetchAdminData(true);
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: 'Failed to process expired batches.' });
+    } finally {
+      setSavingActionKey(null);
+    }
+  };
+
+  // Location Toggle
+  const handleToggleLocation = async (type: 'state' | 'city', id: string, currentStatus: boolean) => {
+    try {
+      setSavingActionKey(`loc-${id}`);
+      await api.toggleAdminLocation(type, id, !currentStatus);
+      setStates((prev) =>
+        prev.map((s) => {
+          if (type === 'state' && s.id === id) return { ...s, isActive: !currentStatus };
+          if (type === 'city') {
+            return {
+              ...s,
+              cities: s.cities.map((c: any) => (c.id === id ? { ...c, isActive: !currentStatus } : c)),
+            };
+          }
+          return s;
+        })
+      );
+      setFeedback({ type: 'success', message: 'Location status updated.' });
+    } catch (err) {
+      setFeedback({ type: 'error', message: 'Failed to update location status.' });
+    } finally {
+      setSavingActionKey(null);
+    }
+  };
+
+  // Settings Save
+  const handleSaveSetting = async (key: string) => {
+    try {
+      setSavingKey(key);
+      await api.updateAdminSetting(key, editingSettings[key]);
+      setFeedback({ type: 'success', message: `Setting "${key}" updated.` });
+      await fetchAdminData(true);
+    } catch (err) {
+      setFeedback({ type: 'error', message: 'Failed to save setting.' });
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  // Filtered Users
+  const filteredUsers = useMemo(() => {
+    return users.filter((u) => {
+      const q = userSearch.toLowerCase();
+      const matchQuery =
+        !q ||
+        u.firstName?.toLowerCase().includes(q) ||
+        u.lastName?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.phone?.toLowerCase().includes(q) ||
+        u.id?.toLowerCase().includes(q);
+
+      const roles = u.roles?.map((r: any) => r.role?.name || r.name) || ['CUSTOMER'];
+      const matchRole = userRoleFilter === 'ALL' || roles.includes(userRoleFilter);
+      const matchStatus = userStatusFilter === 'ALL' || u.status === userStatusFilter;
+
+      return matchQuery && matchRole && matchStatus;
+    });
+  }, [users, userSearch, userRoleFilter, userStatusFilter]);
+
+  // Filtered Requirements
+  const filteredRequirements = useMemo(() => {
+    return requirements.filter((r) => {
+      const q = reqSearch.toLowerCase();
+      const matchQ =
+        !q ||
+        r.title?.toLowerCase().includes(q) ||
+        r.client?.firstName?.toLowerCase().includes(q) ||
+        r.city?.toLowerCase().includes(q);
+      const matchStatus = reqStatusFilter === 'ALL' || r.status === reqStatusFilter;
+      return matchQ && matchStatus;
+    });
+  }, [requirements, reqSearch, reqStatusFilter]);
+
+  // Filtered Jobs
+  const filteredJobs = useMemo(() => {
+    return jobs.filter((j) => {
+      return jobStatusFilter === 'ALL' || j.status === jobStatusFilter;
+    });
+  }, [jobs, jobStatusFilter]);
+
+  // Filtered Verifications
+  const filteredVerifications = useMemo(() => {
+    return verifications.filter((v) => {
+      const q = verificationSearch.toLowerCase();
+      const matchQ =
+        !q ||
+        v.professional?.user?.firstName?.toLowerCase().includes(q) ||
+        v.professional?.user?.lastName?.toLowerCase().includes(q) ||
+        v.professional?.user?.phone?.toLowerCase().includes(q) ||
+        v.id?.toLowerCase().includes(q);
+      const matchStatus = verificationFilterStatus === 'ALL' || v.status === verificationFilterStatus;
+      return matchQ && matchStatus;
+    });
+  }, [verifications, verificationSearch, verificationFilterStatus]);
+
+  // Filtered Payments
+  const filteredPayments = useMemo(() => {
+    return payments.filter((p) => {
+      const q = paymentSearch.toLowerCase();
+      const matchQ = !q || p.id?.toLowerCase().includes(q) || p.orderId?.toLowerCase().includes(q);
+      const matchStatus = paymentFilterStatus === 'ALL' || p.status === paymentFilterStatus;
+      return matchQ && matchStatus;
+    });
+  }, [payments, paymentSearch, paymentFilterStatus]);
+
+  const pendingVerificationCount = verifications.filter((v) => v.status === 'PENDING').length;
+  const pendingReportsCount = reports.filter((r) => r.status === 'PENDING').length;
+
+  if (loading) {
     return (
-      <div className="max-w-6xl mx-auto py-24 px-4 text-center">
-        <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-emerald-600 border-t-transparent"></div>
-        <p className="mt-4 text-sm text-neutral-500 font-medium">Verifying administrator authorization...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#fcfbf8]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 text-[#108a00] animate-spin" />
+          <p className="text-sm font-bold text-neutral-600">Loading Vaziro Admin Command Center...</p>
+        </div>
       </div>
     );
   }
 
-  // Strict public lockout
   if (!isAuthenticated || !isAdmin) {
     return (
-      <div className="min-h-[75vh] flex items-center justify-center p-4 bg-neutral-50">
-        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-neutral-200 shadow-xl text-center space-y-5">
-          <div className="w-16 h-16 rounded-2xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center mx-auto shadow-sm">
-            <Lock className="w-8 h-8" />
+      <div className="min-h-[70vh] flex items-center justify-center bg-[#fcfbf8] px-4">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-neutral-200 text-center shadow-xl">
+          <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-7 h-7" />
           </div>
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-wider text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-200">
-              Restricted Area
-            </span>
-            <h1 className="text-2xl font-black text-black tracking-tight mt-3">
-              Administrator Access Required
-            </h1>
-            <p className="text-xs text-neutral-500 mt-1.5 leading-relaxed font-medium">
-              This administrative console is strictly private and restricted to authorized Vaziro operators. Please sign in with administrator credentials.
-            </p>
-          </div>
+          <h2 className="text-xl font-black text-neutral-900">Restricted Administration Access</h2>
+          <p className="text-xs text-neutral-500 mt-2 leading-relaxed">
+            You must be signed in with an authorized <span className="font-bold text-neutral-800">ADMIN</span> or{' '}
+            <span className="font-bold text-neutral-800">SUPER_ADMIN</span> account to inspect governance dashboards.
+          </p>
           <button
             type="button"
             onClick={() => openAuthModal('CUSTOMER')}
-            className="w-full bg-black hover:bg-neutral-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-wider shadow-md transition cursor-pointer"
+            className="mt-6 w-full py-3 bg-[#108a00] hover:bg-[#14a800] text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
           >
-            Sign In as Administrator
+            Sign in as Administrator
           </button>
         </div>
       </div>
@@ -550,1360 +786,1493 @@ export const AdminDashboardPage: React.FC = () => {
   }
 
   return (
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 border-b border-[#e7e8df] pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#718044]">
-              Vaziro operations
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#dce8ce] bg-[#f1f4e9] px-2.5 py-1 text-xs font-semibold text-[#48633e]">
-              <ShieldCheck className="h-3.5 w-3.5" /> Admin session
-            </span>
-          </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#24352b] sm:text-3xl">
-            {adminPageTitles[activeTab]}
-          </h1>
-          <p className="mt-1 max-w-2xl text-sm leading-5 text-[#68716b]">
-            Review platform activity, process queues and manage operational settings.
-          </p>
-        </div>
+    <div className="min-h-screen bg-[#fcfbf8] pb-16">
+      {/* ===================================================================== */}
+      {/* TOP COMMAND BAR: EXECUTIVE HEADER & SYSTEM STATUS                     */}
+      {/* ===================================================================== */}
+      <div className="bg-white border-b border-neutral-200/90 shadow-2xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            {/* Left: Title & System Pills */}
+            <div>
+              <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                <span className="text-[10px] font-black uppercase tracking-[1.8px] text-[#108a00]">
+                  Vaziro Command Center
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-[#108a00]">
+                  <span className="w-2 h-2 rounded-full bg-[#108a00] animate-pulse" />
+                  <span>Platform Live</span>
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-[11px] font-bold text-neutral-700">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#108a00]" />
+                  <span>Escrow Active</span>
+                </span>
+              </div>
 
-        <button
-          type="button"
-          onClick={() => fetchAdminData(true)}
-          disabled={refreshing}
-          className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-md border border-[#d8ddd3] bg-white px-4 text-sm font-semibold text-[#40583d] shadow-sm transition hover:bg-[#f7f7f1] disabled:cursor-wait disabled:opacity-60 sm:self-auto"
-        >
-          {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          {refreshing ? 'Refreshing...' : 'Refresh data'}
-        </button>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-neutral-900 tracking-tight">
+                Governance, Marketplace & Escrow Vault
+              </h1>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                Oversee verified professionals, dispute arbitration, payment milestones, and city expansion.
+              </p>
+            </div>
+
+            {/* Right: Actions (Refresh, Export, Admin Avatar) */}
+            <div className="flex items-center gap-2.5 self-start md:self-auto">
+              <button
+                type="button"
+                onClick={() => fetchAdminData(true)}
+                disabled={refreshing}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-neutral-300 hover:bg-neutral-50 text-xs font-bold text-neutral-800 transition cursor-pointer disabled:opacity-50"
+                title="Refresh live metrics"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-[#108a00]' : ''}`} />
+                <span>{refreshing ? 'Refreshing...' : 'Sync Data'}</span>
+              </button>
+
+              <div className="relative group">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neutral-900 hover:bg-black text-xs font-bold text-white transition shadow-xs cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Export CSV</span>
+                  <ChevronDown className="w-3 h-3 text-neutral-400" />
+                </button>
+                <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-neutral-200 py-1 hidden group-hover:block z-50 animate-in fade-in zoom-in-95 duration-100">
+                  <button
+                    type="button"
+                    onClick={handleExportUsers}
+                    className="w-full text-left px-3.5 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 flex items-center gap-2"
+                  >
+                    <Users className="w-3.5 h-3.5 text-neutral-400" /> Users Database
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportPayments}
+                    className="w-full text-left px-3.5 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 flex items-center gap-2"
+                  >
+                    <CreditCard className="w-3.5 h-3.5 text-neutral-400" /> Escrow Vault
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportMarketplace}
+                    className="w-full text-left px-3.5 py-2 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 flex items-center gap-2"
+                  >
+                    <Layers className="w-3.5 h-3.5 text-neutral-400" /> Marketplace
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {(loadError || feedback) && <div className={`mb-5 flex flex-col gap-3 rounded-lg border p-4 text-sm sm:flex-row sm:items-center sm:justify-between ${loadError || feedback?.type === 'error' ? 'border-red-200 bg-red-50 text-red-900' : 'border-[#dce8ce] bg-[#f1f4e9] text-[#40583d]'}`} role={loadError || feedback?.type === 'error' ? 'alert' : 'status'}>
-        <span>{loadError || feedback?.message}</span>
-        <div className="flex shrink-0 items-center gap-3">
-          {loadError && <button type="button" onClick={() => fetchAdminData(true)} disabled={refreshing} className="min-h-10 font-bold underline">Retry</button>}
-          {feedback && <button type="button" onClick={() => setFeedback(null)} aria-label="Dismiss notification" className="flex h-10 w-10 items-center justify-center rounded-md hover:bg-black/5"><X className="h-4 w-4" /></button>}
-        </div>
-      </div>}
-
-      {/* Tabs */}
-      <nav aria-label="Admin sections" className="mb-6 flex items-center gap-1 overflow-x-auto rounded-lg border border-[#e7e8df] bg-white p-1.5 shadow-sm">
-        <button
-          type="button"
-          onClick={() => setActiveTab('users')}
-          aria-current={activeTab === 'users' ? 'page' : undefined}
-          className={`min-h-10 rounded-md px-3 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-            activeTab === 'users'
-              ? 'bg-[#203c32] text-white shadow-sm'
-              : 'text-[#647067] hover:bg-[#f1f2e9] hover:text-[#203c32]'
-          }`}
-        >
-          <Users className="w-4 h-4" /> People <span className="hidden sm:inline">({users.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('marketplace')}
-          type="button"
-          aria-current={activeTab === 'marketplace' ? 'page' : undefined}
-          className={`min-h-10 rounded-md px-3 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-            activeTab === 'marketplace'
-              ? 'bg-[#203c32] text-white shadow-sm'
-              : 'text-[#647067] hover:bg-[#f1f2e9] hover:text-[#203c32]'
-          }`}
-        >
-          <Layers className="w-4 h-4" /> Marketplace
-        </button>
-
-        <button
-          onClick={() => setActiveTab('metrics')}
-          type="button"
-          aria-current={activeTab === 'metrics' ? 'page' : undefined}
-          className={`min-h-10 rounded-md px-3 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-            activeTab === 'metrics'
-              ? 'bg-[#203c32] text-white shadow-sm'
-              : 'text-[#647067] hover:bg-[#f1f2e9] hover:text-[#203c32]'
-          }`}
-        >
-          <Home className="w-4 h-4" /> Overview
-        </button>
-
-        <button
-          onClick={() => setActiveTab('verifications')}
-          type="button"
-          aria-current={activeTab === 'verifications' ? 'page' : undefined}
-          className={`min-h-10 rounded-md px-3 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-            activeTab === 'verifications'
-              ? 'bg-[#203c32] text-white shadow-sm'
-              : 'text-[#647067] hover:bg-[#f1f2e9] hover:text-[#203c32]'
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4" /> Verify <span className="hidden sm:inline">({pendingVerificationCount})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('locations')}
-          type="button"
-          aria-current={activeTab === 'locations' ? 'page' : undefined}
-          className={`min-h-10 rounded-md px-3 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-            activeTab === 'locations'
-              ? 'bg-[#203c32] text-white shadow-sm'
-              : 'text-[#647067] hover:bg-[#f1f2e9] hover:text-[#203c32]'
-          }`}
-        >
-          <MapPin className="w-4 h-4" /> Locations
-        </button>
-
-        <button
-          onClick={() => setActiveTab('settings')}
-          type="button"
-          aria-current={activeTab === 'settings' ? 'page' : undefined}
-          className={`min-h-10 rounded-md px-3 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-            activeTab === 'settings'
-              ? 'bg-[#203c32] text-white shadow-sm'
-              : 'text-[#647067] hover:bg-[#f1f2e9] hover:text-[#203c32]'
-          }`}
-        >
-          <Settings className="w-4 h-4" /> Settings
-        </button>
-
-        <button
-          onClick={() => setActiveTab('payments')}
-          type="button"
-          aria-current={activeTab === 'payments' ? 'page' : undefined}
-          className={`min-h-10 rounded-md px-3 text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-            activeTab === 'payments'
-              ? 'bg-[#203c32] text-white shadow-sm'
-              : 'text-[#647067] hover:bg-[#f1f2e9] hover:text-[#203c32]'
-          }`}
-        >
-          <CreditCard className="w-4 h-4" /> Payments <span className="hidden sm:inline">({payments.length})</span>
-        </button>
-      </nav>
-
-      {/* TAB 1: USERS & CREDITS HUB */}
-      {activeTab === 'users' && (
-        <div className="space-y-6">
-          {/* Action and Search Toolbar */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex-1 w-full sm:w-auto relative">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search by name, email, or mobile..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="min-h-11 w-full pl-10 pr-4 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
-              />
+      {/* Main Container */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+        
+        {/* Alerts & Notifications */}
+        {(loadError || feedback) && (
+          <div
+            className={`mb-5 p-4 rounded-2xl border text-xs sm:text-sm font-semibold flex items-center justify-between gap-3 animate-in fade-in duration-200 ${
+              loadError || feedback?.type === 'error'
+                ? 'bg-red-50 border-red-200 text-red-900'
+                : 'bg-emerald-50 border-emerald-200 text-[#108a00]'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              {loadError || feedback?.type === 'error' ? (
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-[#108a00]" />
+              )}
+              <span>{loadError || feedback?.message}</span>
             </div>
-
-            <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-              <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Role:</span>
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="min-h-11 bg-gray-50 border border-gray-200 rounded-xl px-3 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            {feedback && (
+              <button
+                type="button"
+                onClick={() => setFeedback(null)}
+                className="p-1 hover:bg-black/5 rounded-lg cursor-pointer"
               >
-                <option value="ALL">All Roles ({users.length})</option>
-                <option value="CUSTOMER">Customers</option>
-                <option value="PROFESSIONAL">Professionals</option>
-                <option value="ADMIN">Admins</option>
-              </select>
-            </div>
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
+        )}
 
-          {/* User Directory Table */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-5 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h3 className="font-black text-gray-900 text-sm">Platform User Directory ({filteredUsers.length})</h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Full control over user accounts, role assignments, password resets, and credit balances.
+        {/* =================================================================== */}
+        {/* NAVIGATION TABS WITH LIVE COUNTER BADGES                            */}
+        {/* =================================================================== */}
+        <nav
+          aria-label="Admin Navigation"
+          className="mb-7 flex items-center gap-1.5 overflow-x-auto no-scrollbar rounded-2xl bg-white p-1.5 border border-neutral-200/90 shadow-2xs"
+        >
+          <button
+            type="button"
+            onClick={() => setActiveTab('metrics')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+              activeTab === 'metrics'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
+          >
+            <Home className="w-4 h-4" />
+            <span>Overview</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('users')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+              activeTab === 'users'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Users & Credits</span>
+            <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
+              {users.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('marketplace')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+              activeTab === 'marketplace'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Marketplace</span>
+            <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
+              {requirements.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('verifications')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+              activeTab === 'verifications'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Verification Queue</span>
+            {pendingVerificationCount > 0 && (
+              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-amber-400 text-neutral-950">
+                {pendingVerificationCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('categories')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+              activeTab === 'categories'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
+          >
+            <Tag className="w-4 h-4" />
+            <span>Categories</span>
+            <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
+              {categories.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('plans')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+              activeTab === 'plans'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
+          >
+            <Package className="w-4 h-4" />
+            <span>Credit Packs</span>
+            <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
+              {plans.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('disputes')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+              activeTab === 'disputes'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
+          >
+            <Flag className="w-4 h-4" />
+            <span>Disputes & Reports</span>
+            {pendingReportsCount > 0 && (
+              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-red-500 text-white">
+                {pendingReportsCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('payments')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+              activeTab === 'payments'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
+          >
+            <CreditCard className="w-4 h-4" />
+            <span>Escrow Vault</span>
+            <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
+              {payments.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('locations')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+              activeTab === 'locations'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
+          >
+            <MapPin className="w-4 h-4" />
+            <span>Locations</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('settings')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+              activeTab === 'settings'
+                ? 'bg-neutral-900 text-white shadow-xs'
+                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            <span>Settings</span>
+          </button>
+        </nav>
+
+        {/* =================================================================== */}
+        {/* TAB 1: OVERVIEW & REAL-TIME KPIS                                    */}
+        {/* =================================================================== */}
+        {activeTab === 'metrics' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Top 4 KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div className="bg-white p-5 rounded-2xl border border-neutral-200/90 shadow-2xs">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-extrabold uppercase text-neutral-400 tracking-wider">Gross Volume (₹)</span>
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#108a00] flex items-center justify-center">
+                    <IndianRupee className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-neutral-900">
+                  ₹{(metrics?.financials?.totalGmvInr || 0).toLocaleString('en-IN')}
+                </div>
+                <p className="text-[11px] text-neutral-500 mt-1">Escrow orders & completed contracts</p>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-neutral-200/90 shadow-2xs">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-extrabold uppercase text-neutral-400 tracking-wider">Total Users</span>
+                  <div className="w-9 h-9 rounded-xl bg-neutral-100 text-neutral-800 flex items-center justify-center">
+                    <Users className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-neutral-900">
+                  {metrics?.users?.total || users.length}
+                </div>
+                <div className="flex items-center gap-2 text-[11px] text-neutral-500 mt-1">
+                  <span>{metrics?.users?.customers || 0} Customers</span>
+                  <span>•</span>
+                  <span>{metrics?.users?.professionals || 0} Pros</span>
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-neutral-200/90 shadow-2xs">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-extrabold uppercase text-neutral-400 tracking-wider">Verified Pros</span>
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 text-[#108a00] flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-neutral-900">
+                  {metrics?.users?.verifiedProfessionals || 0}
+                </div>
+                <p className="text-[11px] text-neutral-500 mt-1">
+                  {pendingVerificationCount > 0 ? `${pendingVerificationCount} pending review` : 'All submissions clear'}
+                </p>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl border border-neutral-200/90 shadow-2xs">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-extrabold uppercase text-neutral-400 tracking-wider">Active Jobs</span>
+                  <div className="w-9 h-9 rounded-xl bg-neutral-100 text-neutral-800 flex items-center justify-center">
+                    <Briefcase className="w-5 h-5" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-neutral-900">
+                  {metrics?.marketplace?.activeJobs || jobs.filter((j) => j.status === 'HIRED').length}
+                </div>
+                <p className="text-[11px] text-neutral-500 mt-1">
+                  {metrics?.marketplace?.completedJobs || 0} successfully closed
                 </p>
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50 text-gray-500 font-bold border-b border-gray-200 uppercase tracking-wider text-[10px]">
-                  <tr>
-                    <th className="p-4">User Details</th>
-                    <th className="p-4">Contact Info</th>
-                    <th className="p-4">Assigned Roles</th>
-                    <th className="p-4">Status & KYC</th>
-                    <th className="p-4">Wallet Balance</th>
-                    <th className="p-4 text-right">Admin Controls</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredUsers.map((u) => {
-                    const wallet = u.professionalProfile?.creditWallet;
-                    const balance = wallet?.balance ?? 0;
-                    const isVerified = Boolean(u.professionalProfile?.isVerified);
+            {/* Quick Command Shortcuts */}
+            <div className="bg-white p-6 rounded-3xl border border-neutral-200/90 shadow-2xs">
+              <h3 className="font-extrabold text-sm text-neutral-900 mb-4">Operational Shortcuts</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('verifications')}
+                  className="p-3.5 rounded-2xl bg-neutral-50 hover:bg-emerald-50/70 border border-neutral-200 hover:border-emerald-300 text-left transition cursor-pointer"
+                >
+                  <ShieldCheck className="w-5 h-5 text-[#108a00] mb-2" />
+                  <div className="font-bold text-xs text-neutral-900">Process Verifications</div>
+                  <div className="text-[11px] text-neutral-500 mt-0.5">{pendingVerificationCount} awaiting review</div>
+                </button>
 
-                    return (
-                      <tr key={u.id} className="hover:bg-gray-50/60 transition">
-                        {/* Name & ID */}
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-black text-white font-black text-xs flex items-center justify-center shrink-0">
-                              {(u.firstName?.[0] || 'U').toUpperCase()}
-                            </div>
-                            <div>
-                              <div className="font-bold text-gray-900 flex items-center gap-1.5">
-                                <span>{u.firstName} {u.lastName}</span>
-                                {isVerified && (
-                                  <span title="Verified Partner">
-                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                                  </span>
-                                )}
-                              </div>
-                              <span className="text-[10px] text-gray-400 font-mono">
-                                ID: #{u.id.substring(0, 8)}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('users')}
+                  className="p-3.5 rounded-2xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-left transition cursor-pointer"
+                >
+                  <Coins className="w-5 h-5 text-amber-600 mb-2" />
+                  <div className="font-bold text-xs text-neutral-900">Manage Proposal Credits</div>
+                  <div className="text-[11px] text-neutral-500 mt-0.5">Top-up, deduct & inspect ledger</div>
+                </button>
 
-                        {/* Contact */}
-                        <td className="p-4">
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-1 text-gray-700 font-medium">
-                              <Phone className="w-3 h-3 text-gray-400" />
-                              <span>{u.phone || 'N/A'}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-gray-500 text-[11px]">
-                              <Mail className="w-3 h-3 text-gray-400" />
-                              <span>{u.email || 'N/A'}</span>
-                            </div>
-                          </div>
-                        </td>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('payments')}
+                  className="p-3.5 rounded-2xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-left transition cursor-pointer"
+                >
+                  <CreditCard className="w-5 h-5 text-neutral-700 mb-2" />
+                  <div className="font-bold text-xs text-neutral-900">Inspect Escrow Vault</div>
+                  <div className="text-[11px] text-neutral-500 mt-0.5">{payments.length} transactions recorded</div>
+                </button>
 
-                        {/* Roles */}
-                        <td className="p-4">
-                          <div className="flex flex-wrap gap-1">
-                            {u.roles?.map((r: any) => {
-                              const rName = r.role?.name || r.name;
-                              return (
-                                <span
-                                  key={r.id || rName}
-                                  className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
-                                    rName === 'ADMIN' || rName === 'SUPER_ADMIN'
-                                      ? 'bg-purple-100 text-purple-800'
-                                      : rName === 'PROFESSIONAL'
-                                      ? 'bg-emerald-100 text-emerald-800'
-                                      : 'bg-blue-100 text-blue-800'
-                                  }`}
-                                >
-                                  {rName}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        </td>
-
-                        {/* Status & Verification */}
-                        <td className="p-4">
-                          <div className="space-y-1">
-                            <span
-                              className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-black ${
-                                u.status === 'ACTIVE'
-                                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                  : 'bg-red-50 text-red-800 border border-red-200'
-                              }`}
-                            >
-                              {u.status}
-                            </span>
-                            {u.professionalProfile && (
-                              <div className="text-[10px] font-medium text-gray-500">
-                                KYC: {u.professionalProfile.verification?.status || 'NONE'}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Credit Balance & Allotment */}
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <div className="bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-1 text-amber-950">
-                              <div className="text-[10px] font-bold uppercase text-amber-700 flex items-center gap-1">
-                                <Coins className="w-3 h-3 text-amber-600" /> Balance
-                              </div>
-                              <div className="text-sm font-black mt-0.5">
-                                {balance} <span className="text-[10px] font-bold text-amber-700">cr</span>
-                              </div>
-                            </div>
-
-                            <button
-                              onClick={() => openCreditModal(u)}
-                              className="px-2.5 py-1.5 bg-black hover:bg-neutral-800 text-white rounded-lg text-[11px] font-bold shadow-sm transition flex items-center gap-1 cursor-pointer"
-                              title="Allot or Adjust Credits"
-                            >
-                              <Coins className="w-3 h-3 text-amber-400" />
-                              <span>Adjust</span>
-                            </button>
-                          </div>
-                        </td>
-
-                        {/* Action Buttons */}
-                        <td className="p-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => openEditModal(u)}
-                              aria-label={`Edit ${u.firstName || 'user'} profile`}
-                              className="flex h-11 w-11 items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
-                              title="Edit User Profile & Roles"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => openPasswordModal(u)}
-                              aria-label={`Reset ${u.firstName || 'user'} password`}
-                              className="flex h-11 w-11 items-center justify-center bg-gray-100 hover:bg-gray-200 text-blue-700 rounded-lg transition"
-                              title="Force Reset Password"
-                            >
-                              <Key className="w-3.5 h-3.5" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleToggleUserStatus(u.id, u.status)}
-                              className={`min-h-11 px-2 rounded-lg text-[11px] font-bold transition ${
-                                u.status === 'ACTIVE'
-                                  ? 'bg-amber-50 text-amber-800 hover:bg-amber-100'
-                                  : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                              }`}
-                            >
-                              {u.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteUser(u)}
-                              aria-label={`Delete ${u.firstName || 'user'}`}
-                              className="flex h-11 w-11 items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition"
-                              title="Permanently Delete User"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {filteredUsers.length === 0 && (
-                    <tr><td colSpan={6} className="px-5 py-12 text-center">
-                      <Search className="mx-auto h-7 w-7 text-[#8a948b]" />
-                      <p className="mt-2 text-sm font-semibold text-[#344137]">No matching accounts</p>
-                      <p className="mt-1 text-xs text-neutral-500">Try another name, email, phone number or role.</p>
-                      {(searchQuery || roleFilter !== 'ALL') && <button type="button" onClick={() => { setSearchQuery(''); setRoleFilter('ALL'); }} className="mt-3 min-h-10 text-xs font-semibold text-emerald-800 hover:underline">Clear filters</button>}
-                    </td></tr>
-                  )}
-                </tbody>
-              </table>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('categories')}
+                  className="p-3.5 rounded-2xl bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-left transition cursor-pointer"
+                >
+                  <Tag className="w-5 h-5 text-neutral-700 mb-2" />
+                  <div className="font-bold text-xs text-neutral-900">Service Taxonomy</div>
+                  <div className="text-[11px] text-neutral-500 mt-0.5">{categories.length} active categories</div>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* TAB 2: MARKETPLACE REQUIREMENTS & JOBS CONTROL */}
-      {activeTab === 'marketplace' && (
-        <div className="space-y-6">
-          <div className="flex items-center gap-2 border-b border-gray-200 pb-3">
-            <button
-              onClick={() => setMarketplaceSubTab('requirements')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-                marketplaceSubTab === 'requirements'
-                  ? 'bg-black text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Posted Requirements ({requirements.length})
-            </button>
-            <button
-              onClick={() => setMarketplaceSubTab('jobs')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-                marketplaceSubTab === 'jobs'
-                  ? 'bg-black text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Active Jobs & Escrow Contracts ({jobs.length})
-            </button>
-          </div>
-
-          {/* Sub-tab: Requirements */}
-          {marketplaceSubTab === 'requirements' && (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="p-5 border-b border-gray-200">
-                <h3 className="font-bold text-gray-900 text-sm">All Customer Quote Requests</h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Browse and moderate posted service requirements across Delhi NCR zones.
-                </p>
+        {/* =================================================================== */}
+        {/* TAB 2: USERS & CREDITS DIRECTORY                                    */}
+        {/* =================================================================== */}
+        {activeTab === 'users' && (
+          <div className="space-y-5 animate-in fade-in duration-200">
+            {/* Search & Filters */}
+            <div className="bg-white p-4 rounded-2xl border border-neutral-200/90 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="relative flex-1 w-full sm:w-auto">
+                <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search user by name, email, phone, or ID..."
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-neutral-50 border border-neutral-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#108a00]"
+                />
               </div>
 
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <select
+                  value={userRoleFilter}
+                  onChange={(e) => setUserRoleFilter(e.target.value)}
+                  className="text-xs font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">All Roles</option>
+                  <option value="CUSTOMER">Customers</option>
+                  <option value="PROFESSIONAL">Professionals</option>
+                  <option value="ADMIN">Admins</option>
+                </select>
+
+                <select
+                  value={userStatusFilter}
+                  onChange={(e) => setUserStatusFilter(e.target.value)}
+                  className="text-xs font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="SUSPENDED">Suspended</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={handleExportUsers}
+                  className="px-3 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
+                  title="Export filtered users to CSV"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">CSV</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Users Table */}
+            <div className="bg-white rounded-3xl border border-neutral-200/90 shadow-2xs overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-50 text-gray-500 font-bold border-b border-gray-200 uppercase tracking-wider text-[10px]">
+                  <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-400 uppercase font-black tracking-wider text-[10px]">
                     <tr>
-                      <th className="p-4">Requirement Title</th>
-                      <th className="p-4">Customer</th>
-                      <th className="p-4">Category / Zone</th>
-                      <th className="p-4">Budget Range</th>
-                      <th className="p-4">Proposals</th>
+                      <th className="p-4">User</th>
+                      <th className="p-4">Contact</th>
+                      <th className="p-4">Role & KYC</th>
+                      <th className="p-4">Credits</th>
                       <th className="p-4">Status</th>
-                      <th className="p-4 text-right">Moderation Action</th>
+                      <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {requirements.map((req) => (
-                      <tr key={req.id} className="hover:bg-gray-50/50">
-                        <td className="p-4 font-bold text-gray-900 max-w-xs truncate">
-                          {req.title}
-                          <span className="block text-[10px] text-gray-400 font-mono mt-0.5">
-                            ID: #{req.id.substring(0, 8)}
-                          </span>
-                        </td>
-                        <td className="p-4 text-gray-600">
-                          {req.customer?.user ? `${req.customer.user.firstName} ${req.customer.user.lastName}` : 'Customer'}
-                        </td>
-                        <td className="p-4 text-gray-600">
-                          <span className="font-bold text-gray-800">{req.category?.name}</span>
-                          <span className="block text-[10px] text-gray-400">{req.city?.name || 'NCR'}</span>
-                        </td>
-                        <td className="p-4 font-bold text-emerald-800">
-                          ₹{req.budgetMin?.toLocaleString('en-IN')}{req.budgetMax ? ` - ₹${req.budgetMax.toLocaleString('en-IN')}` : ''}
-                        </td>
-                        <td className="p-4">
-                          <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-[10px] font-bold">
-                            {req._count?.quotations || 0} Quotes
-                          </span>
-                        </td>
-                        <td className="p-4">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            req.status === 'ACTIVE'
-                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {req.status}
-                          </span>
-                        </td>
-                        <td className="p-4 text-right">
-                          {req.status === 'ACTIVE' ? (
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateRequirementStatus(req.id, 'CLOSED')}
-                              disabled={savingActionKey === `requirement:${req.id}`}
-                              className="min-h-10 text-xs font-bold text-red-600 hover:underline disabled:opacity-50 cursor-pointer"
-                            >
-                              {savingActionKey === `requirement:${req.id}` ? 'Updating...' : 'Close'}
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateRequirementStatus(req.id, 'ACTIVE')}
-                              disabled={savingActionKey === `requirement:${req.id}`}
-                              className="min-h-10 text-xs font-bold text-emerald-600 hover:underline disabled:opacity-50 cursor-pointer"
-                            >
-                              Reopen
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                    {requirements.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-neutral-500">No customer requests are available yet.</td></tr>}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Sub-tab: Jobs */}
-          {marketplaceSubTab === 'jobs' && (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="p-5 border-b border-gray-200">
-                <h3 className="font-bold text-gray-900 text-sm">Service Jobs & Escrow Protection Orders</h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Monitor service agreements, escrow locks, milestone completions, and payment payouts.
-                </p>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-50 text-gray-500 font-bold border-b border-gray-200 uppercase tracking-wider text-[10px]">
-                    <tr>
-                      <th className="p-4">Job Order</th>
-                      <th className="p-4">Customer</th>
-                      <th className="p-4">Professional</th>
-                      <th className="p-4">Agreed Price</th>
-                      <th className="p-4">Escrow Status</th>
-                      <th className="p-4">Job Lifecycle</th>
-                      <th className="p-4 text-right">Admin Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {jobs.map((job) => {
-                      const isEscrowSecured = job.paymentProtection?.status === 'HELD' || job.payments?.some((p: any) => p.status === 'SECURED');
+                  <tbody className="divide-y divide-neutral-100">
+                    {filteredUsers.map((u) => {
+                      const roles = u.roles?.map((r: any) => r.role?.name || r.name) || ['CUSTOMER'];
+                      const isPro = roles.includes('PROFESSIONAL');
+                      const wallet = u.professionalProfile?.creditWallet;
+                      const balance = wallet?.balance ?? 0;
+                      const isVerified = Boolean(u.professionalProfile?.isVerified);
 
                       return (
-                        <tr key={job.id} className="hover:bg-gray-50/50">
-                          <td className="p-4 font-bold text-gray-900">
-                            #{job.id.substring(0, 8).toUpperCase()}
-                            <span className="block text-[10px] text-gray-400 font-normal mt-0.5">
-                              {job.requirement?.title || 'Job Contract'}
-                            </span>
-                          </td>
-                          <td className="p-4 text-gray-700 font-medium">
-                            {job.customer?.user ? `${job.customer.user.firstName} ${job.customer.user.lastName}` : 'Customer'}
-                          </td>
-                          <td className="p-4 text-gray-700 font-medium">
-                            {job.professional?.user ? `${job.professional.user.firstName} ${job.professional.user.lastName}` : 'Partner'}
-                          </td>
-                          <td className="p-4 font-black text-gray-900 text-sm">
-                            ₹{job.agreedPrice?.toLocaleString('en-IN')}
-                          </td>
+                        <tr key={u.id} className="hover:bg-neutral-50/60 transition">
                           <td className="p-4">
-                            {isEscrowSecured ? (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                                <ShieldCheck className="w-3 h-3 text-emerald-600" /> ₹{job.agreedPrice} Held in Escrow
-                              </span>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-neutral-900 text-white flex items-center justify-center font-black text-xs shrink-0">
+                                {(u.firstName?.[0] || 'U').toUpperCase()}
+                              </div>
+                              <div>
+                                <div className="font-extrabold text-neutral-900 flex items-center gap-1.5">
+                                  <span>{u.firstName} {u.lastName}</span>
+                                  {isVerified && (
+                                    <span title="DigiLocker Verified">
+                                      <ShieldCheck className="w-3.5 h-3.5 text-[#108a00]" />
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-neutral-400 font-mono">#{u.id.substring(0, 8)}</div>
+                              </div>
+                            </div>
+                          </td>
+
+                          <td className="p-4 text-neutral-600">
+                            <div>{u.email || '—'}</div>
+                            <div className="text-[11px] text-neutral-400 mt-0.5">{u.phone || '—'}</div>
+                          </td>
+
+                          <td className="p-4">
+                            <div className="flex flex-wrap gap-1">
+                              {roles.map((r: string) => (
+                                <span
+                                  key={r}
+                                  className={`text-[9px] font-black px-2 py-0.5 rounded-full ${
+                                    r === 'PROFESSIONAL'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : r === 'ADMIN'
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : 'bg-neutral-100 text-neutral-800'
+                                  }`}
+                                >
+                                  {r}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+
+                          <td className="p-4">
+                            {isPro ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCreditModalUser(u);
+                                  setCreditMode('ADD');
+                                  setCreditAmount(20);
+                                  setCreditNotes('');
+                                }}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold border border-amber-200 transition cursor-pointer"
+                                title="Click to adjust credits"
+                              >
+                                <Zap className="w-3 h-3 text-amber-600" />
+                                <span>{balance} Cr</span>
+                              </button>
                             ) : (
-                              <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                                Escrow Pending
-                              </span>
+                              <span className="text-neutral-400">—</span>
                             )}
                           </td>
+
                           <td className="p-4">
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 text-neutral-800">
-                              {job.status}
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                u.status === 'ACTIVE'
+                                  ? 'bg-emerald-50 text-[#108a00]'
+                                  : 'bg-red-50 text-red-700'
+                              }`}
+                            >
+                              {u.status || 'ACTIVE'}
                             </span>
                           </td>
+
                           <td className="p-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {job.status !== 'PAYMENT_RELEASED' && (
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Adjust Credits Button */}
+                              {isPro && (
                                 <button
                                   type="button"
-                                  onClick={() => handleUpdateJobStatus(job.id, 'PAYMENT_RELEASED')}
-                                  disabled={savingActionKey === `job:${job.id}`}
-                                  className="min-h-10 text-[11px] font-bold text-emerald-700 hover:underline disabled:opacity-50 cursor-pointer"
+                                  onClick={() => {
+                                    setCreditModalUser(u);
+                                    setCreditMode('ADD');
+                                    setCreditAmount(20);
+                                    setCreditNotes('');
+                                  }}
+                                  className="p-1.5 text-neutral-600 hover:text-amber-800 hover:bg-amber-50 rounded-lg transition cursor-pointer"
+                                  title="Adjust Credits"
                                 >
-                                  {savingActionKey === `job:${job.id}` ? 'Updating...' : 'Release payout'}
+                                  <Coins className="w-4 h-4" />
                                 </button>
                               )}
-                              {job.status !== 'CLOSED' && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateJobStatus(job.id, 'CLOSED')}
-                                  disabled={savingActionKey === `job:${job.id}`}
-                                  className="min-h-10 text-[11px] font-bold text-red-600 hover:underline disabled:opacity-50 cursor-pointer"
-                                >
-                                  Force Close
-                                </button>
-                              )}
+
+                              {/* Edit Profile */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditModalUser(u);
+                                  setEditFirstName(u.firstName || '');
+                                  setEditLastName(u.lastName || '');
+                                  setEditEmail(u.email || '');
+                                  setEditPhone(u.phone || '');
+                                  setEditStatus(u.status || 'ACTIVE');
+                                  setEditRoles(roles);
+                                  setEditIsVerified(Boolean(u.professionalProfile?.isVerified));
+                                }}
+                                className="p-1.5 text-neutral-600 hover:text-black hover:bg-neutral-100 rounded-lg transition cursor-pointer"
+                                title="Edit User"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+
+                              {/* Reset Password */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPasswordModalUser(u);
+                                  setNewPassword('');
+                                }}
+                                className="p-1.5 text-neutral-600 hover:text-black hover:bg-neutral-100 rounded-lg transition cursor-pointer"
+                                title="Reset Password"
+                              >
+                                <Key className="w-4 h-4" />
+                              </button>
+
+                              {/* Toggle Status */}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleUserStatus(u.id, u.status || 'ACTIVE')}
+                                className="p-1.5 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition cursor-pointer"
+                                title={u.status === 'ACTIVE' ? 'Suspend User' : 'Activate User'}
+                              >
+                                {u.status === 'ACTIVE' ? (
+                                  <ToggleRight className="w-4 h-4 text-[#108a00]" />
+                                ) : (
+                                  <ToggleLeft className="w-4 h-4 text-neutral-400" />
+                                )}
+                              </button>
+
+                              {/* Delete User */}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteUser(u.id, `${u.firstName} ${u.lastName}`)}
+                                className="p-1.5 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                                title="Delete User"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           </td>
                         </tr>
                       );
                     })}
-                    {jobs.length === 0 && <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-neutral-500">No service jobs are available yet.</td></tr>}
                   </tbody>
                 </table>
               </div>
             </div>
-          )}
-        </div>
-      )}
-
-      {/* TAB 3: METRICS */}
-      {activeTab === 'metrics' && (
-        <div className="space-y-6">
-          <section aria-labelledby="admin-queues-title">
-            <div className="mb-3">
-              <p className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#718044]">Action queues</p>
-              <h2 id="admin-queues-title" className="mt-1 text-lg font-semibold text-[#29382e]">Work that may need review</h2>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <button type="button" onClick={() => { setVerificationFilterStatus('PENDING_REVIEW'); setActiveTab('verifications'); }} className="group rounded-lg border border-[#e7e8df] bg-white p-4 text-left transition hover:border-[#c5d5a8] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#78935f]">
-                <span className="flex items-center justify-between gap-2 text-xs font-semibold text-[#657168]"><span>Pending verification</span><ShieldCheck className="h-4 w-4 text-[#668044]" /></span>
-                <span className="mt-2 block text-2xl font-semibold text-[#29382e]">{pendingVerificationCount}</span>
-                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#506e40]">Open queue <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" /></span>
-              </button>
-              <button type="button" onClick={() => { setMarketplaceSubTab('requirements'); setActiveTab('marketplace'); }} className="group rounded-lg border border-[#e7e8df] bg-white p-4 text-left transition hover:border-[#c5d5a8] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#78935f]">
-                <span className="flex items-center justify-between gap-2 text-xs font-semibold text-[#657168]"><span>Open customer requests</span><FileText className="h-4 w-4 text-[#668044]" /></span>
-                <span className="mt-2 block text-2xl font-semibold text-[#29382e]">{openRequirementCount}</span>
-                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#506e40]">Moderate requests <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" /></span>
-              </button>
-              <button type="button" onClick={() => { setMarketplaceSubTab('jobs'); setActiveTab('marketplace'); }} className="group rounded-lg border border-[#e7e8df] bg-white p-4 text-left transition hover:border-[#c5d5a8] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#78935f]">
-                <span className="flex items-center justify-between gap-2 text-xs font-semibold text-[#657168]"><span>In-progress jobs</span><Briefcase className="h-4 w-4 text-[#668044]" /></span>
-                <span className="mt-2 block text-2xl font-semibold text-[#29382e]">{activeJobCount}</span>
-                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#506e40]">Review jobs <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" /></span>
-              </button>
-              <button type="button" onClick={() => { setPaymentFilterStatus('NEEDS_REVIEW'); setActiveTab('payments'); }} className="group rounded-lg border border-[#e7e8df] bg-white p-4 text-left transition hover:border-[#c5d5a8] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#78935f]">
-                <span className="flex items-center justify-between gap-2 text-xs font-semibold text-[#657168]"><span>Pending or failed payments</span><CreditCard className="h-4 w-4 text-[#668044]" /></span>
-                <span className="mt-2 block text-2xl font-semibold text-[#29382e]">{pendingPaymentCount}</span>
-                <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-[#506e40]">Open ledger <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" /></span>
-              </button>
-            </div>
-          </section>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-              <span className="text-gray-400 text-xs font-bold uppercase">Total Users</span>
-              <div className="text-3xl font-extrabold text-gray-900 mt-1">
-                {metrics?.users?.total ?? '—'}
-              </div>
-              <p className="text-[11px] text-gray-500 mt-1">
-                {metrics?.users ? `${metrics.users.customers ?? 0} Customers • ${metrics.users.professionals ?? 0} Professionals` : 'Metrics unavailable'}
-              </p>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-              <span className="text-gray-400 text-xs font-bold uppercase">Verified professional profiles</span>
-              <div className="text-3xl font-extrabold text-emerald-700 mt-1">
-                {metrics?.users?.verifiedProfessionals ?? '—'}
-              </div>
-              <p className="text-[11px] text-emerald-600 mt-1">Marked verified in profile records</p>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-              <span className="text-gray-400 text-xs font-bold uppercase">Active Jobs</span>
-              <div className="text-3xl font-extrabold text-blue-700 mt-1">
-                {metrics?.marketplace?.activeJobs ?? '—'}
-              </div>
-              <p className="text-[11px] text-gray-500 mt-1">
-                {metrics?.marketplace ? `${metrics.marketplace.completedJobs ?? 0} Completed` : 'Metrics unavailable'}
-              </p>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm">
-              <span className="text-gray-400 text-xs font-bold uppercase">Credits Deducted</span>
-              <div className="text-3xl font-extrabold text-amber-600 mt-1">
-                {metrics?.financials?.totalCreditsDeducted ?? '—'} <span className="text-xs font-normal">cr</span>
-              </div>
-              <p className="text-[11px] text-gray-500 mt-1">Application revenue ledger</p>
-            </div>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-              <h3 className="font-bold text-gray-900 text-sm mb-4 uppercase tracking-wider">
-                Marketplace Liquidity
-              </h3>
-              <div className="space-y-3 text-xs">
-                <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-500">Total Requirements Posted:</span>
-                  <span className="font-bold text-gray-900">{metrics?.marketplace?.totalRequirements ?? '—'}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-500">Active Service Orders:</span>
-                  <span className="font-bold text-gray-900">{metrics?.marketplace?.activeJobs ?? '—'}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-500">Open Arbitration Disputes:</span>
-                  <span className="font-bold text-red-600">{metrics?.marketplace?.openDisputes ?? '—'}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-              <h3 className="font-bold text-gray-900 text-sm mb-4 uppercase tracking-wider">
-                Financial Gross Merchandise Value
-              </h3>
-              <div className="space-y-3 text-xs">
-                <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-500">Gross Contract Volume (GMV):</span>
-                  <span className="font-black text-emerald-800 text-base">
-                    {metrics?.financials?.totalGmvInr === undefined ? '—' : `₹${metrics.financials.totalGmvInr.toLocaleString('en-IN')}`}
-                  </span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-500">Payments recorded:</span>
-                  <span className="font-bold text-gray-900">
-                    {payments.length}
-                  </span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-500">Default Currency:</span>
-                  <span className="font-bold text-gray-900">INR (₹)</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 4: VERIFICATIONS */}
-      {activeTab === 'verifications' && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h3 className="font-bold text-gray-900 text-base">Professional Verification Queue</h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Review government Aadhaar / DigiLocker credentials and manage compliance verification workflows.
-                </p>
-              </div>
-
-              {/* Status Filters */}
-              <div className="flex flex-wrap items-center gap-1.5 bg-neutral-100 p-1 rounded-xl">
-                {['ALL', 'PENDING_REVIEW', 'PENDING', 'VERIFIED', 'FAILED', 'REVIEW_REQUIRED', 'EXPIRED'].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setVerificationFilterStatus(st)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                      verificationFilterStatus === st
-                        ? 'bg-white text-black shadow-sm'
-                        : 'text-neutral-600 hover:text-black'
-                    }`}
-                  >
-                    {st === 'ALL' ? 'All' : st === 'PENDING_REVIEW' ? 'Needs review' : st.replace('_', ' ')}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Search Bar */}
-            <div className="mt-4">
-              <div className="relative">
-                <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-3" />
-                <input
-                  type="text"
-                  placeholder="Search by professional name, phone, email, reference ID, or professional ID..."
-                  value={verificationSearch}
-                  onChange={(e) => setVerificationSearch(e.target.value)}
-                  className="min-h-11 w-full pl-10 pr-4 bg-neutral-50 border border-neutral-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-black focus:bg-white"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="divide-y divide-gray-100">
-            {verifications.filter((v) => {
-              const verificationStatus = (v.status || 'NOT_STARTED').toUpperCase();
-              const matchesStatus = verificationFilterStatus === 'ALL' || (verificationFilterStatus === 'PENDING_REVIEW'
-                ? ['PENDING', 'REVIEW_REQUIRED'].includes(verificationStatus)
-                : verificationStatus === verificationFilterStatus);
-
-              const q = verificationSearch.toLowerCase().trim();
-              if (!q) return matchesStatus;
-
-              const name = `${v.professional?.user?.firstName || ''} ${v.professional?.user?.lastName || ''}`.toLowerCase();
-              const phone = (v.professional?.user?.phone || '').toLowerCase();
-              const email = (v.professional?.user?.email || '').toLowerCase();
-              const refId = (v.referenceId || '').toLowerCase();
-              const profId = (v.professionalProfileId || v.professional?.id || '').toLowerCase();
-              const reqId = (v.requestId || '').toLowerCase();
-
-              const matchesSearch =
-                name.includes(q) ||
-                phone.includes(q) ||
-                email.includes(q) ||
-                refId.includes(q) ||
-                profId.includes(q) ||
-                reqId.includes(q);
-
-              return matchesStatus && matchesSearch;
-            }).length === 0 ? (
-              <div className="p-8 text-center text-xs text-gray-500">
-                No verifications matching your filter criteria.
-              </div>
-            ) : (
-              verifications
-                .filter((v) => {
-                  const verificationStatus = (v.status || 'NOT_STARTED').toUpperCase();
-                  const matchesStatus = verificationFilterStatus === 'ALL' || (verificationFilterStatus === 'PENDING_REVIEW'
-                    ? ['PENDING', 'REVIEW_REQUIRED'].includes(verificationStatus)
-                    : verificationStatus === verificationFilterStatus);
-
-                  const q = verificationSearch.toLowerCase().trim();
-                  if (!q) return matchesStatus;
-
-                  const name = `${v.professional?.user?.firstName || ''} ${v.professional?.user?.lastName || ''}`.toLowerCase();
-                  const phone = (v.professional?.user?.phone || '').toLowerCase();
-                  const email = (v.professional?.user?.email || '').toLowerCase();
-                  const refId = (v.referenceId || '').toLowerCase();
-                  const profId = (v.professionalProfileId || v.professional?.id || '').toLowerCase();
-                  const reqId = (v.requestId || '').toLowerCase();
-
-                  return (
-                    matchesStatus &&
-                    (name.includes(q) ||
-                      phone.includes(q) ||
-                      email.includes(q) ||
-                      refId.includes(q) ||
-                      profId.includes(q) ||
-                      reqId.includes(q))
-                  );
-                })
-                .map((v) => (
-                  <div key={v.id} className="p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="space-y-1.5 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-gray-900 text-sm">
-                          {v.professional?.user?.firstName} {v.professional?.user?.lastName}
-                        </span>
-                        <span className="text-xs text-gray-400">({v.professional?.user?.phone || 'No phone'})</span>
-                        <span className="text-xs text-gray-400">• {v.professional?.user?.email || 'No email'}</span>
-                        <span className="text-[10px] bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded font-mono">
-                          ID: {v.professionalProfileId?.slice(0, 8) || v.id.slice(0, 8)}...
-                        </span>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                        <span>Provider: <strong className="text-gray-700">{v.provider}</strong></span>
-                        <span>•</span>
-                        <span>
-                          Ref ID: <span className="font-mono text-gray-700">{v.referenceId || 'N/A'}</span>
-                        </span>
-                        {v.requestId && (
-                          <>
-                            <span>•</span>
-                            <span>Req ID: <span className="font-mono text-gray-700">{v.requestId.slice(0, 8)}...</span></span>
-                          </>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            v.status === 'VERIFIED'
-                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                              : v.status === 'FAILED'
-                              ? 'bg-red-50 text-red-800 border border-red-200'
-                              : v.status === 'REVIEW_REQUIRED'
-                              ? 'bg-blue-50 text-blue-800 border border-blue-200'
-                              : v.status === 'PENDING'
-                              ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                              : 'bg-neutral-100 text-neutral-700 border border-neutral-200'
-                          }`}
-                        >
-                          {v.status === 'VERIFIED' ? '✓ VERIFIED VIA DIGILOCKER' : v.status}
-                        </span>
-
-                        {v.nameMatchStatus && (
-                          <span
-                            className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
-                              v.nameMatchStatus === 'MATCH'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : v.nameMatchStatus === 'PARTIAL'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}
-                          >
-                            Name Match: {v.nameMatchStatus}
-                          </span>
-                        )}
-
-                        {v.verifiedAt && (
-                          <span className="text-[10px] text-gray-400">
-                            Verified on: {new Date(v.verifiedAt).toLocaleDateString('en-IN')}
-                          </span>
-                        )}
-                      </div>
-
-                      {v.failureReason && (
-                        <p className="text-xs text-red-600 bg-red-50/70 p-2 rounded-xl mt-1">
-                          Failure Reason: {v.failureReason}
-                        </p>
-                      )}
-
-                      {v.reviewReason && (
-                        <p className="text-xs text-blue-700 bg-blue-50/70 p-2 rounded-xl mt-1">
-                          Review Reason: {v.reviewReason}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex flex-wrap items-center gap-2 self-start lg:self-center">
-                      <button
-                        onClick={() => {
-                          setReviewModalCase(v);
-                          setReviewReasonInput(v.reviewReason || '');
-                        }}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-xl text-xs font-bold transition cursor-pointer"
-                      >
-                        <Clock className="w-3.5 h-3.5" /> Mark for Review
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setOverrideModalCase(v);
-                          setOverrideAction('APPROVE');
-                          setOverrideReason('');
-                        }}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-neutral-900 hover:bg-black text-white rounded-xl text-xs font-bold shadow-sm transition cursor-pointer"
-                      >
-                        <ShieldCheck className="w-3.5 h-3.5" /> Administrative Override
-                      </button>
-                    </div>
-                  </div>
-                ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 5: LOCATION SWITCHBOARD */}
-      {activeTab === 'locations' && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-neutral-200 p-6 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                  Geographic Coverage Controls
-                </span>
-                <h3 className="font-black text-gray-900 text-xl mt-1.5">Indian Location Switchboard</h3>
-                <p className="text-xs text-gray-500 mt-1 max-w-2xl leading-relaxed">
-                  Turn entire States or individual Cities <strong>ON</strong> or <strong>OFF</strong> with a single click. 
-                  Active cities are immediately live for customer quote requests and service partner matching in Delhi NCR.
-                </p>
-              </div>
-              <div className="text-right">
-                <span className="text-xs font-bold text-gray-400 block">Primary Footprint</span>
-                <span className="text-sm font-black text-black">Delhi NCR (5 Hubs)</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            {states.map((st) => {
-              const totalCities = st.cities?.length || 0;
-              const activeCities = st.cities?.filter((c: any) => c.isActive).length || 0;
-
-              return (
-                <div
-                  key={st.id}
-                  className={`rounded-2xl border transition p-5 ${
-                    st.isActive ? 'border-neutral-200 bg-neutral-50/50' : 'border-neutral-200 bg-neutral-100/60 opacity-80'
+        {/* =================================================================== */}
+        {/* TAB 3: MARKETPLACE REQUIREMENTS & JOBS                              */}
+        {/* =================================================================== */}
+        {activeTab === 'marketplace' && (
+          <div className="space-y-5 animate-in fade-in duration-200">
+            {/* Sub-tab Switcher */}
+            <div className="flex items-center justify-between">
+              <div className="inline-flex rounded-xl bg-white border border-neutral-200 p-1">
+                <button
+                  type="button"
+                  onClick={() => setMarketplaceSubTab('requirements')}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    marketplaceSubTab === 'requirements'
+                      ? 'bg-neutral-900 text-white'
+                      : 'text-neutral-600 hover:text-neutral-900'
                   }`}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-neutral-200">
-                    <div className="flex items-center gap-2.5">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs ${
-                        st.isActive ? 'bg-black text-white' : 'bg-neutral-300 text-neutral-600'
-                      }`}>
-                        {st.code || st.name.substring(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <span className="font-black text-base text-gray-900 block">{st.name}</span>
-                        <span className="text-xs text-gray-500 font-medium">
-                          {activeCities} of {totalCities} cities active
+                  Service Requirements ({requirements.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMarketplaceSubTab('jobs')}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                    marketplaceSubTab === 'jobs'
+                      ? 'bg-neutral-900 text-white'
+                      : 'text-neutral-600 hover:text-neutral-900'
+                  }`}
+                >
+                  Job Contracts ({jobs.length})
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleExportMarketplace}
+                className="px-3.5 py-1.5 bg-white border border-neutral-200 rounded-xl text-xs font-bold text-neutral-700 flex items-center gap-1.5 hover:bg-neutral-50 transition cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export Marketplace CSV</span>
+              </button>
+            </div>
+
+            {/* Requirements Sub-Tab */}
+            {marketplaceSubTab === 'requirements' && (
+              <div className="space-y-4">
+                <div className="bg-white p-3.5 rounded-2xl border border-neutral-200 flex items-center justify-between gap-3">
+                  <input
+                    type="text"
+                    placeholder="Search requirements by title, client, or city..."
+                    value={reqSearch}
+                    onChange={(e) => setReqSearch(e.target.value)}
+                    className="flex-1 px-3 py-1.5 text-xs font-semibold bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:bg-white"
+                  />
+                  <select
+                    value={reqStatusFilter}
+                    onChange={(e) => setReqStatusFilter(e.target.value)}
+                    className="text-xs font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer"
+                  >
+                    <option value="ALL">All Statuses</option>
+                    <option value="OPEN">Open</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="CLOSED">Closed</option>
+                    <option value="CANCELLED">Cancelled</option>
+                  </select>
+                </div>
+
+                <div className="bg-white rounded-3xl border border-neutral-200/90 shadow-2xs overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-400 uppercase font-black tracking-wider text-[10px]">
+                        <tr>
+                          <th className="p-4">Title & Description</th>
+                          <th className="p-4">Category</th>
+                          <th className="p-4">Client</th>
+                          <th className="p-4">Budget</th>
+                          <th className="p-4">City</th>
+                          <th className="p-4">Status & Control</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-100">
+                        {filteredRequirements.map((r) => (
+                          <tr key={r.id} className="hover:bg-neutral-50/60 transition">
+                            <td className="p-4 max-w-xs">
+                              <div className="font-bold text-neutral-900 truncate">{r.title}</div>
+                              <div className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">{r.description}</div>
+                            </td>
+                            <td className="p-4">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-[#108a00]">
+                                {r.category?.name || 'General'}
+                              </span>
+                            </td>
+                            <td className="p-4 text-neutral-700">
+                              {r.client?.firstName} {r.client?.lastName}
+                            </td>
+                            <td className="p-4 font-bold text-neutral-900">
+                              ₹{r.budgetMin || 0} - ₹{r.budgetMax || 'Negotiable'}
+                            </td>
+                            <td className="p-4 text-neutral-600">{r.city || 'Delhi NCR'}</td>
+                            <td className="p-4">
+                              <select
+                                value={r.status}
+                                onChange={(e) => handleUpdateRequirementStatus(r.id, e.target.value)}
+                                className="text-[11px] font-bold px-2 py-1 rounded-lg border border-neutral-200 bg-neutral-50 focus:outline-none cursor-pointer"
+                              >
+                                <option value="OPEN">OPEN</option>
+                                <option value="IN_PROGRESS">IN_PROGRESS</option>
+                                <option value="CLOSED">CLOSED</option>
+                                <option value="CANCELLED">CANCELLED</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Jobs Sub-Tab */}
+            {marketplaceSubTab === 'jobs' && (
+              <div className="space-y-4">
+                <div className="bg-white p-3.5 rounded-2xl border border-neutral-200 flex items-center justify-between">
+                  <div className="text-xs font-bold text-neutral-700">Contract Status:</div>
+                  <select
+                    value={jobStatusFilter}
+                    onChange={(e) => setJobStatusFilter(e.target.value)}
+                    className="text-xs font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer"
+                  >
+                    <option value="ALL">All Statuses</option>
+                    <option value="HIRED">HIRED / ESCROW_HELD</option>
+                    <option value="SERVICE_STARTED">SERVICE_STARTED</option>
+                    <option value="SERVICE_COMPLETED">SERVICE_COMPLETED</option>
+                    <option value="PAYMENT_RELEASED">PAYMENT_RELEASED</option>
+                    <option value="DISPUTED">DISPUTED</option>
+                  </select>
+                </div>
+
+                <div className="bg-white rounded-3xl border border-neutral-200/90 shadow-2xs overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-400 uppercase font-black tracking-wider text-[10px]">
+                        <tr>
+                          <th className="p-4">Job Contract ID</th>
+                          <th className="p-4">Client</th>
+                          <th className="p-4">Professional</th>
+                          <th className="p-4">Agreed Amount</th>
+                          <th className="p-4">Escrow Status</th>
+                          <th className="p-4 text-right">Admin Override</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-neutral-100">
+                        {filteredJobs.map((j) => (
+                          <tr key={j.id} className="hover:bg-neutral-50/60 transition">
+                            <td className="p-4 font-mono text-[11px] text-neutral-600">
+                              #{j.id.substring(0, 10)}
+                            </td>
+                            <td className="p-4 font-semibold text-neutral-900">
+                              {j.client?.firstName} {j.client?.lastName}
+                            </td>
+                            <td className="p-4 font-semibold text-neutral-900">
+                              {j.professional?.user?.firstName} {j.professional?.user?.lastName}
+                            </td>
+                            <td className="p-4 font-black text-neutral-900">
+                              ₹{j.agreedAmount || j.quotation?.priceInr || 0}
+                            </td>
+                            <td className="p-4">
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  j.status === 'PAYMENT_RELEASED'
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : j.status === 'DISPUTED'
+                                    ? 'bg-red-100 text-red-800'
+                                    : 'bg-amber-100 text-amber-800'
+                                }`}
+                              >
+                                {j.status}
+                              </span>
+                            </td>
+                            <td className="p-4 text-right">
+                              <select
+                                value={j.status}
+                                onChange={(e) => handleUpdateJobStatus(j.id, e.target.value)}
+                                className="text-[11px] font-bold px-2 py-1 rounded-lg border border-neutral-200 bg-neutral-50 focus:outline-none cursor-pointer"
+                              >
+                                <option value="HIRED">HIRED (Escrow)</option>
+                                <option value="SERVICE_STARTED">STARTED</option>
+                                <option value="SERVICE_COMPLETED">COMPLETED</option>
+                                <option value="PAYMENT_RELEASED">PAYMENT_RELEASED</option>
+                                <option value="DISPUTED">DISPUTED</option>
+                                <option value="CLOSED">CLOSED</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* =================================================================== */}
+        {/* TAB 4: VERIFICATION WORKBENCH QUEUE                                 */}
+        {/* =================================================================== */}
+        {activeTab === 'verifications' && (
+          <div className="space-y-5 animate-in fade-in duration-200">
+            {/* Search and Filters */}
+            <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <input
+                type="text"
+                placeholder="Search verification submissions by pro name, phone, or Aadhaar ref..."
+                value={verificationSearch}
+                onChange={(e) => setVerificationSearch(e.target.value)}
+                className="flex-1 w-full sm:w-auto px-3.5 py-2 text-xs font-semibold bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:bg-white"
+              />
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={verificationFilterStatus}
+                  onChange={(e) => setVerificationFilterStatus(e.target.value)}
+                  className="text-xs font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">All Cases ({verifications.length})</option>
+                  <option value="PENDING">Pending Review ({pendingVerificationCount})</option>
+                  <option value="APPROVED">Approved</option>
+                  <option value="REJECTED">Rejected</option>
+                  <option value="IN_REVIEW">In Review</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Cases List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredVerifications.map((v) => {
+                const pro = v.professional?.user;
+                const isPending = v.status === 'PENDING';
+
+                return (
+                  <div
+                    key={v.id}
+                    className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-2xs hover:shadow-md transition flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-neutral-900 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                            {(pro?.firstName?.[0] || 'P').toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-extrabold text-sm text-neutral-900">
+                              {pro?.firstName} {pro?.lastName}
+                            </div>
+                            <div className="text-xs text-neutral-500">{pro?.phone || pro?.email}</div>
+                          </div>
+                        </div>
+
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            v.status === 'APPROVED'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : v.status === 'PENDING'
+                              ? 'bg-amber-100 text-amber-900'
+                              : 'bg-red-100 text-red-800'
+                          }`}
+                        >
+                          {v.status}
                         </span>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleLocation('state', st.id, st.isActive)}
-                        disabled={savingActionKey === `state:${st.id}`}
-                        className={`min-h-10 px-3 py-1.5 rounded-xl text-xs font-black flex items-center gap-1.5 transition shadow-sm disabled:opacity-50 cursor-pointer ${
-                          st.isActive
-                            ? 'text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300'
-                            : 'text-neutral-600 bg-neutral-200 hover:bg-neutral-300 border border-neutral-300'
-                        }`}
-                      >
-                        {st.isActive ? (
-                          <>
-                            <ToggleRight className="w-4 h-4 text-emerald-700" /> State Active
-                          </>
-                        ) : (
-                          <>
-                            <ToggleLeft className="w-4 h-4 text-neutral-500" /> State Inactive
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {st.cities && st.cities.length > 0 ? (
-                    <div className="mt-4">
-                      <h4 className="text-[11px] font-black uppercase tracking-wider text-neutral-400 mb-2.5">
-                        Operational Cities / Zones
-                      </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                        {st.cities.map((ct: any) => (
-                          <div
-                            key={ct.id}
-                            className={`p-3 rounded-xl border flex items-center justify-between transition ${
-                              ct.isActive && st.isActive
-                                ? 'bg-white border-neutral-200 shadow-sm'
-                                : 'bg-neutral-100 border-dashed border-neutral-300'
-                            }`}
-                          >
-                            <div>
-                              <span className="font-bold text-xs text-neutral-900 block">{ct.name}</span>
-                              <span className="text-[10px] text-neutral-400 font-medium">
-                                {ct.isActive && st.isActive ? 'Live for quotes' : 'Paused / Offline'}
-                              </span>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => handleToggleLocation('city', ct.id, ct.isActive)}
-                              disabled={savingActionKey === `city:${ct.id}`}
-                              className={`min-h-10 min-w-10 p-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1 disabled:opacity-50 cursor-pointer ${
-                                ct.isActive
-                                  ? 'text-emerald-700 hover:bg-emerald-50'
-                                  : 'text-neutral-400 hover:bg-neutral-200'
-                              }`}
-                              title={ct.isActive ? 'Click to Pause' : 'Click to Activate'}
-                            >
-                              {ct.isActive ? (
-                                <ToggleRight className="w-5 h-5 text-emerald-600" />
-                              ) : (
-                                <ToggleLeft className="w-5 h-5 text-neutral-400" />
-                              )}
-                            </button>
-                          </div>
-                        ))}
+                      <div className="p-3 rounded-xl bg-neutral-50 space-y-1.5 text-xs">
+                        <div className="flex items-center justify-between text-neutral-600">
+                          <span>Provider:</span>
+                          <span className="font-bold text-neutral-900">{v.provider || 'DigiLocker / Aadhaar'}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-neutral-600">
+                          <span>Ref ID:</span>
+                          <span className="font-mono text-[11px]">{v.referenceId ? v.referenceId.slice(0, 16) : 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-neutral-600">
+                          <span>Submitted:</span>
+                          <span>{v.createdAt ? new Date(v.createdAt).toLocaleDateString() : 'Recent'}</span>
+                        </div>
                       </div>
                     </div>
-                  ) : (
-                    <p className="mt-3 text-xs text-neutral-400 italic">No specific cities configured yet.</p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
-      {/* TAB 6: SETTINGS */}
-      {activeTab === 'settings' && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h3 className="font-bold text-gray-900 text-sm">Dynamic Marketplace Rules & Fees</h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Live marketplace variables saved in database. Changes apply immediately across customer fees and credit deduct logic.
-            </p>
-          </div>
+                    <div className="mt-4 pt-3 border-t border-neutral-100 flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setViewDetailsModalCase(v)}
+                        className="text-xs font-bold text-neutral-600 hover:text-black hover:underline cursor-pointer"
+                      >
+                        View Full Details
+                      </button>
 
-          <div className="p-6 space-y-4 max-w-2xl">
-            {settings.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-[#d8ddd3] bg-[#f8f9f5] p-8 text-center">
-                <Settings className="mx-auto h-6 w-6 text-[#7c887d]" />
-                <p className="mt-2 text-sm font-semibold text-[#344137]">No configurable settings returned</p>
-                <p className="mt-1 text-xs text-neutral-500">If settings should be available, refresh the admin data or check the settings service.</p>
+                      <div className="flex items-center gap-1.5">
+                        {isPending && (
+                          <button
+                            type="button"
+                            onClick={() => handleQuickApproveVerification(v.id, `${pro?.firstName} ${pro?.lastName}`)}
+                            className="px-3 py-1.5 rounded-lg bg-[#108a00] hover:bg-[#14a800] text-white font-bold text-xs shadow-xs transition cursor-pointer"
+                          >
+                            Approve
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOverrideModalCase(v);
+                            setOverrideAction('APPROVE');
+                            setOverrideReason('');
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg border border-neutral-300 hover:bg-neutral-50 text-neutral-800 font-semibold text-xs transition cursor-pointer"
+                        >
+                          Override
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* =================================================================== */}
+        {/* TAB 5: CATEGORIES & SERVICE TAXONOMY (NEW!)                        */}
+        {/* =================================================================== */}
+        {activeTab === 'categories' && (
+          <div className="space-y-5 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-extrabold text-base text-neutral-900">Service Categories Taxonomy</h3>
+                <p className="text-xs text-neutral-500">Configure marketplace domains and pricing hint thresholds.</p>
               </div>
-            ) : (
-              settings.map((s) => (
-                <div key={s.id || s.key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingCategory(null);
+                  setCatName('');
+                  setCatSlug('');
+                  setCatDesc('');
+                  setCatIcon('Sparkles');
+                  setCategoryModalOpen(true);
+                }}
+                className="px-4 py-2 bg-[#108a00] hover:bg-[#14a800] text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Category</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+              {categories.map((cat) => (
+                <div
+                  key={cat.id || cat.slug}
+                  className="bg-white rounded-2xl border border-neutral-200/90 p-5 shadow-2xs hover:shadow-md transition flex flex-col justify-between"
+                >
                   <div>
-                    <span className="font-mono font-bold text-xs text-gray-900 block">{s.key}</span>
-                    <span className="text-[11px] text-gray-500">{s.description || 'System marketplace rule'}</span>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md font-mono">
+                        {cat.slug}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingCategory(cat);
+                          setCatName(cat.name);
+                          setCatSlug(cat.slug);
+                          setCatDesc(cat.description || '');
+                          setCategoryModalOpen(true);
+                        }}
+                        className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500 cursor-pointer"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <h4 className="font-extrabold text-base text-neutral-900">{cat.name}</h4>
+                    <p className="text-xs text-neutral-500 mt-1 line-clamp-2">
+                      {cat.description || 'Verified independent professionals category.'}
+                    </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={editingSettings[s.key] !== undefined ? editingSettings[s.key] : s.value}
-                      onChange={(e) =>
-                        setEditingSettings({ ...editingSettings, [s.key]: e.target.value })
-                      }
-                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-semibold w-28 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
+                  <div className="mt-4 pt-3 border-t border-neutral-100 flex items-center justify-between text-xs text-neutral-400">
+                    <span>{cat.subcategories?.length || 0} subcategories</span>
+                    <span className="text-[#108a00] font-bold">Active in NCR</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* =================================================================== */}
+        {/* TAB 6: CREDIT PACKS & BOOST PACKAGES (NEW!)                         */}
+        {/* =================================================================== */}
+        {activeTab === 'plans' && (
+          <div className="space-y-5 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-extrabold text-base text-neutral-900">Proposal Credit Packs Governance</h3>
+                <p className="text-xs text-neutral-500">Manage package prices, credit quantities, and volume discounts.</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleTriggerExpiredBatches}
+                  className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs rounded-xl flex items-center gap-1.5 transition cursor-pointer"
+                  title="Purge expired credit batches"
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Process Expired Batches</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingPlan(null);
+                    setPlanName('');
+                    setPlanCredits(20);
+                    setPlanPrice(799);
+                    setPlanDiscount('');
+                    setPlanModalOpen(true);
+                  }}
+                  className="px-4 py-2 bg-[#108a00] hover:bg-[#14a800] text-white font-bold text-xs rounded-xl shadow-xs flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Create Credit Pack</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Credit Packs Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {plans.map((p) => (
+                <div
+                  key={p.id}
+                  className="bg-white rounded-3xl border border-neutral-200/90 p-6 shadow-2xs hover:shadow-md transition flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-extrabold text-sm text-neutral-900">{p.name}</span>
+                      {p.badge && (
+                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                          {p.badge}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-baseline gap-1 my-3">
+                      <span className="text-3xl font-black text-neutral-900">₹{p.priceInr}</span>
+                      <span className="text-xs text-neutral-500">/ pack</span>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-amber-50/70 border border-amber-200/60 flex items-center justify-between">
+                      <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                        <Zap className="w-4 h-4 text-amber-600" />
+                        <span>Credits Granted:</span>
+                      </span>
+                      <span className="font-black text-sm text-amber-950">{p.credits} Credits</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 pt-3 border-t border-neutral-100 flex items-center justify-end">
                     <button
-                      onClick={() => handleSaveSetting(s.key)}
-                      disabled={savingKey === s.key}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-black hover:bg-neutral-800 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                      type="button"
+                      onClick={() => {
+                        setEditingPlan(p);
+                        setPlanName(p.name);
+                        setPlanCredits(p.credits);
+                        setPlanPrice(p.priceInr);
+                        setPlanDiscount(p.badge || '');
+                        setPlanModalOpen(true);
+                      }}
+                      className="text-xs font-bold text-[#108a00] hover:underline cursor-pointer"
                     >
-                      <Save className="w-3.5 h-3.5 text-emerald-400" />
-                      {savingKey === s.key ? 'Saving...' : 'Save'}
+                      Edit Package &rarr;
                     </button>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 7: RAZORPAY PAYMENTS & TRANSACTIONS */}
-      {activeTab === 'payments' && (
-        <div className="space-y-6">
-          {/* Overview Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Total Transactions</span>
-              <p className="text-2xl font-black text-gray-900 mt-1">{payments.length}</p>
-              <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">Recorded in Ledger</span>
-            </div>
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Captured / Paid</span>
-              <p className="text-2xl font-black text-emerald-600 mt-1">
-                {payments.filter((p) => ['CAPTURED', 'SECURED', 'PAID', 'RELEASED'].includes(p.status)).length}
-              </p>
-              <span className="text-[11px] text-gray-500 font-medium mt-1 block">Verified Server-Side</span>
-            </div>
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Total Amount Captured</span>
-              <p className="text-2xl font-black text-gray-900 mt-1">
-                ₹{payments
-                  .filter((p) => ['CAPTURED', 'SECURED', 'PAID', 'RELEASED'].includes(p.status))
-                  .reduce((acc, curr) => acc + (curr.amount || 0), 0)
-                  .toLocaleString('en-IN')}
-              </p>
-              <span className="text-[11px] text-emerald-600 font-semibold mt-1 block">Processed via Razorpay</span>
-            </div>
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">Failed / Incomplete</span>
-              <p className="text-2xl font-black text-rose-600 mt-1">
-                {payments.filter((p) => p.status === 'FAILED').length}
-              </p>
-              <span className="text-[11px] text-gray-400 font-medium mt-1 block">Logged with Failure Code</span>
+              ))}
             </div>
           </div>
+        )}
 
-          {/* Search & Status Toolbar */}
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex-1 w-full sm:w-auto relative">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search by Order ID, Razorpay Payment ID, Customer name or contact..."
-                value={paymentSearch}
-                onChange={(e) => setPaymentSearch(e.target.value)}
-                 className="min-h-11 w-full pl-9 pr-4 border border-gray-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-gray-50"
-              />
-            </div>
+        {/* =================================================================== */}
+        {/* TAB 7: DISPUTES & COMMUNICATION MODERATION (NEW!)                   */}
+        {/* =================================================================== */}
+        {activeTab === 'disputes' && (
+          <div className="space-y-5 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-extrabold text-base text-neutral-900">Disputes & Incident Desk</h3>
+                <p className="text-xs text-neutral-500">Arbitrate flagged communications, escrow issues, and user reports.</p>
+              </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
               <select
-                value={paymentFilterStatus}
-                onChange={(e) => setPaymentFilterStatus(e.target.value)}
-                className="min-h-11 px-3 border border-gray-200 rounded-xl text-sm font-bold text-gray-700 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                value={reportStatusFilter}
+                onChange={(e) => setReportStatusFilter(e.target.value)}
+                className="text-xs font-bold text-neutral-700 bg-white border border-neutral-200 rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer"
               >
-                <option value="ALL">All Statuses</option>
-                <option value="CAPTURED">CAPTURED / SECURED</option>
-                <option value="CREATED">CREATED / PENDING</option>
-                <option value="NEEDS_REVIEW">Pending / failed</option>
-                <option value="FAILED">FAILED</option>
-                <option value="RELEASED">RELEASED</option>
+                <option value="ALL">All Reports</option>
+                <option value="PENDING">Pending Action</option>
+                <option value="RESOLVED">Resolved</option>
               </select>
             </div>
-          </div>
 
-          {/* Payments Table */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50 text-gray-500 font-bold border-b border-gray-200">
-                  <tr>
-                    <th className="py-3.5 px-4">Order Reference</th>
-                    <th className="py-3.5 px-4">Customer / User</th>
-                    <th className="py-3.5 px-4">Amount (₹)</th>
-                    <th className="py-3.5 px-4">Razorpay Identifiers</th>
-                    <th className="py-3.5 px-4">Payment Method</th>
-                    <th className="py-3.5 px-4">Status</th>
-                    <th className="py-3.5 px-4">Timestamp</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
-                  {filteredPayments.map((p) => (
-                      <tr key={p.id} className="hover:bg-gray-50/80 transition">
-                        <td className="py-3 px-4">
-                          <span className="font-mono font-bold text-gray-900 block">{p.orderId || p.id.substring(0, 8)}</span>
-                          <span className="text-[10px] text-gray-400 capitalize">{p.description || 'Marketplace Service'}</span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="font-bold text-gray-900 block">
-                            {p.user ? `${p.user.firstName} ${p.user.lastName}` : (p.email || 'Direct User')}
-                          </span>
-                          <span className="text-[11px] text-gray-400 block">{p.contact || p.user?.phone || '—'}</span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="font-black text-gray-900 text-sm">₹{p.amount?.toLocaleString('en-IN')}</span>
-                          <span className="text-[10px] text-gray-400 block">INR</span>
-                        </td>
-                        <td className="py-3 px-4 font-mono text-[11px]">
-                          <span className="text-gray-900 block font-semibold select-all">
-                            {p.razorpayPaymentId || '—'}
-                          </span>
-                          <span className="text-[10px] text-gray-400 select-all">{p.razorpayOrderId || '—'}</span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className="inline-flex items-center gap-1 font-bold text-gray-800">
-                            <CreditCard className="w-3.5 h-3.5 text-gray-400" />
-                            {p.paymentMethod || 'Razorpay'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
+            {reports.length === 0 ? (
+              <div className="bg-white rounded-3xl p-12 text-center border border-neutral-200">
+                <CheckCircle2 className="w-12 h-12 text-[#108a00] mx-auto mb-3" />
+                <h4 className="font-bold text-sm text-neutral-900">No Open Disputes</h4>
+                <p className="text-xs text-neutral-500 mt-1">Platform moderation queues and communication logs are clean.</p>
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl border border-neutral-200 overflow-hidden shadow-2xs">
+                <div className="divide-y divide-neutral-100">
+                  {reports.map((r) => (
+                    <div key={r.id} className="p-5 flex items-start justify-between gap-4 hover:bg-neutral-50/60 transition">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-neutral-900">{r.reason || 'Flagged Message'}</span>
                           <span
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                              ['CAPTURED', 'SECURED', 'PAID', 'RELEASED'].includes(p.status)
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : p.status === 'FAILED'
-                                ? 'bg-rose-100 text-rose-800'
-                                : 'bg-amber-100 text-amber-800'
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              r.status === 'RESOLVED' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
                             }`}
                           >
-                            {['CAPTURED', 'SECURED', 'PAID', 'RELEASED'].includes(p.status) ? (
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            ) : p.status === 'FAILED' ? (
-                              <AlertCircle className="w-3 h-3 text-rose-600" />
-                            ) : (
-                              <Clock className="w-3 h-3 text-amber-600" />
-                            )}
-                            {p.status}
+                            {r.status || 'PENDING'}
                           </span>
-                          {p.failureReason && (
-                            <span className="text-[10px] text-rose-600 block mt-0.5 max-w-xs truncate">
-                              {p.failureReason}
-                            </span>
-                          )}
+                        </div>
+                        <p className="text-xs text-neutral-600 leading-relaxed">{r.description || 'No description provided.'}</p>
+                        <div className="text-[11px] text-neutral-400">
+                          Reported: {r.createdAt ? new Date(r.createdAt).toLocaleString() : 'Recent'}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setResolveReportModalCase(r);
+                          setResolveReportOutcome('RESOLVED');
+                          setResolveReportNotes('');
+                        }}
+                        className="px-3.5 py-1.5 rounded-xl bg-neutral-900 hover:bg-black text-white text-xs font-bold transition shrink-0 cursor-pointer"
+                      >
+                        Arbitrate & Resolve
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* =================================================================== */}
+        {/* TAB 8: PAYMENTS & ESCROW VAULT                                      */}
+        {/* =================================================================== */}
+        {activeTab === 'payments' && (
+          <div className="space-y-5 animate-in fade-in duration-200">
+            {/* Search & Export Toolbar */}
+            <div className="bg-white p-4 rounded-2xl border border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <input
+                type="text"
+                placeholder="Search payments by Order ID, Razorpay Ref, or Job ID..."
+                value={paymentSearch}
+                onChange={(e) => setPaymentSearch(e.target.value)}
+                className="flex-1 w-full sm:w-auto px-3.5 py-2 text-xs font-semibold bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:bg-white"
+              />
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={paymentFilterStatus}
+                  onChange={(e) => setPaymentFilterStatus(e.target.value)}
+                  className="text-xs font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2 focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">All Transactions ({payments.length})</option>
+                  <option value="SECURED">Secured in Escrow</option>
+                  <option value="COMPLETED">Released to Pro</option>
+                  <option value="REFUNDED">Refunded</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={handleExportPayments}
+                  className="px-3.5 py-2 bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>CSV</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Payments Ledger Table */}
+            <div className="bg-white rounded-3xl border border-neutral-200/90 shadow-2xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-neutral-50 border-b border-neutral-200 text-neutral-400 uppercase font-black tracking-wider text-[10px]">
+                    <tr>
+                      <th className="p-4">Payment Ref</th>
+                      <th className="p-4">Job Contract</th>
+                      <th className="p-4">Amount</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4">Method</th>
+                      <th className="p-4">Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100">
+                    {filteredPayments.map((p) => (
+                      <tr key={p.id} className="hover:bg-neutral-50/60 transition">
+                        <td className="p-4 font-mono font-bold text-neutral-900">
+                          #{p.id.substring(0, 14)}
                         </td>
-                        <td className="py-3 px-4 text-[11px] text-gray-500 whitespace-nowrap">
-                          {new Date(p.createdAt).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                        <td className="p-4 text-neutral-600 font-mono text-[11px]">
+                          {p.jobId ? `#${p.jobId.substring(0, 10)}` : 'Credit Pack / Boost'}
+                        </td>
+                        <td className="p-4 font-black text-neutral-900 text-sm">
+                          ₹{p.amount?.toLocaleString('en-IN') || 0}
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              p.status === 'COMPLETED'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : p.status === 'SECURED'
+                                ? 'bg-indigo-100 text-indigo-800'
+                                : 'bg-neutral-100 text-neutral-800'
+                            }`}
+                          >
+                            {p.status || 'CAPTURED'}
+                          </span>
+                        </td>
+                        <td className="p-4 text-neutral-600">{p.paymentMethod || 'Razorpay Gateway'}</td>
+                        <td className="p-4 text-neutral-400 text-[11px]">
+                          {p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'Recent'}
                         </td>
                       </tr>
                     ))}
-                  {filteredPayments.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-400 text-xs">
-                        {payments.length === 0 ? 'No payment transactions are available yet.' : 'No transactions match these filters.'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ================= MODALS ================= */}
+        {/* =================================================================== */}
+        {/* TAB 9: LOCATIONS MATRIX                                             */}
+        {/* =================================================================== */}
+        {activeTab === 'locations' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <div>
+              <h3 className="font-extrabold text-base text-neutral-900">Service Locations Governance</h3>
+              <p className="text-xs text-neutral-500">Toggle operational availability for Delhi NCR cities.</p>
+            </div>
 
-      {/* 1. CREDIT ALLOTMENT & ADJUSTMENT MODAL */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {states.map((st) => (
+                <div key={st.id} className="bg-white rounded-3xl border border-neutral-200/90 p-5 shadow-2xs">
+                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-neutral-100">
+                    <div>
+                      <h4 className="font-black text-sm text-neutral-900">{st.name}</h4>
+                      <span className="text-[10px] font-mono text-neutral-400">{st.code}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleToggleLocation('state', st.id, st.isActive)}
+                      className="cursor-pointer"
+                    >
+                      {st.isActive ? (
+                        <ToggleRight className="w-6 h-6 text-[#108a00]" />
+                      ) : (
+                        <ToggleLeft className="w-6 h-6 text-neutral-300" />
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {st.cities?.map((ct: any) => (
+                      <div
+                        key={ct.id}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-50 text-xs font-semibold text-neutral-800"
+                      >
+                        <span>{ct.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleLocation('city', ct.id, ct.isActive)}
+                          className="cursor-pointer"
+                        >
+                          {ct.isActive ? (
+                            <ToggleRight className="w-5 h-5 text-[#108a00]" />
+                          ) : (
+                            <ToggleLeft className="w-5 h-5 text-neutral-300" />
+                          )}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* =================================================================== */}
+        {/* TAB 10: SETTINGS & PLATFORM CONFIGURATION                           */}
+        {/* =================================================================== */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <div>
+              <h3 className="font-extrabold text-base text-neutral-900">Platform Settings & Fee Matrix</h3>
+              <p className="text-xs text-neutral-500">Live operational constants, commission rates, and lead costs.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {settings.map((item) => {
+                const isSaving = savingKey === item.key;
+
+                return (
+                  <div key={item.key} className="bg-white p-5 rounded-3xl border border-neutral-200/90 shadow-2xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-extrabold text-xs text-neutral-900 font-mono">{item.key}</span>
+                      <span className="text-[10px] text-neutral-400">Live Config</span>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={editingSettings[item.key] ?? item.value}
+                      onChange={(e) => setEditingSettings({ ...editingSettings, [item.key]: e.target.value })}
+                      className="w-full px-3.5 py-2 text-xs font-bold bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#108a00]"
+                    />
+
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveSetting(item.key)}
+                        disabled={isSaving}
+                        className="px-3.5 py-1.5 rounded-xl bg-neutral-900 hover:bg-black text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>{isSaving ? 'Saving...' : 'Save'}</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* ===================================================================== */}
+      {/* MODAL 1: ADJUST CREDITS MODAL                                         */}
+      {/* ===================================================================== */}
       {creditModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-lg border border-[#e7e8df] bg-[#fffefa] p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200 sm:p-6">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
-                  <Coins className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-gray-900 text-sm">Allot / Adjust Credits</h3>
-                  <span className="text-[11px] text-gray-500">
-                    {creditModalUser.firstName} {creditModalUser.lastName}
-                  </span>
-                </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-neutral-200">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-neutral-100">
+              <div className="flex items-center gap-2">
+                <Coins className="w-5 h-5 text-amber-500" />
+                <h3 className="font-extrabold text-sm text-neutral-900">Adjust Proposal Credits</h3>
               </div>
               <button
                 type="button"
                 onClick={() => setCreditModalUser(null)}
-                aria-label="Close credit adjustment"
-                className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 cursor-pointer"
+                className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleAdjustCredits} className="mt-5 space-y-4">
-              <div className="bg-neutral-50 rounded-2xl p-3 border border-neutral-200 flex items-center justify-between">
-                <span className="text-xs text-neutral-500 font-bold uppercase tracking-wider">Current Balance:</span>
-                <span className="text-base font-black text-neutral-900">
-                  {creditModalUser.professionalProfile?.creditWallet?.balance ?? 0} Credits
-                </span>
+            <form onSubmit={handleAdjustCredits} className="space-y-4">
+              <div className="p-3 bg-neutral-50 rounded-2xl text-xs space-y-1">
+                <div className="text-neutral-500">Recipient:</div>
+                <div className="font-extrabold text-neutral-900">{creditModalUser.firstName} {creditModalUser.lastName}</div>
+                <div className="text-neutral-500">
+                  Current Balance: <span className="font-bold text-amber-900">{creditModalUser.professionalProfile?.creditWallet?.balance ?? 0} Cr</span>
+                </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1.5">Adjustment Mode</label>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Adjustment Action</label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => setCreditMode('ADD')}
-                    aria-pressed={creditMode === 'ADD'}
-                    className={`min-h-11 px-2 sm:px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition cursor-pointer ${
-                      creditMode === 'ADD'
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      creditMode === 'ADD' ? 'bg-[#108a00] text-white border-[#108a00]' : 'border-neutral-200 hover:bg-neutral-50'
                     }`}
                   >
-                    <Plus className="w-3.5 h-3.5" /> Add
+                    + Add
                   </button>
                   <button
                     type="button"
                     onClick={() => setCreditMode('DEDUCT')}
-                    aria-pressed={creditMode === 'DEDUCT'}
-                    className={`min-h-11 px-2 sm:px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition cursor-pointer ${
-                      creditMode === 'DEDUCT'
-                        ? 'bg-amber-600 text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      creditMode === 'DEDUCT' ? 'bg-red-600 text-white border-red-600' : 'border-neutral-200 hover:bg-neutral-50'
                     }`}
                   >
-                    <Minus className="w-3.5 h-3.5" /> Deduct
+                    - Deduct
                   </button>
                   <button
                     type="button"
                     onClick={() => setCreditMode('SET')}
-                    aria-pressed={creditMode === 'SET'}
-                    className={`min-h-11 px-2 sm:px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1 transition cursor-pointer ${
-                      creditMode === 'SET'
-                        ? 'bg-black text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      creditMode === 'SET' ? 'bg-neutral-900 text-white border-neutral-900' : 'border-neutral-200 hover:bg-neutral-50'
                     }`}
                   >
-                    Set Exact
+                    = Set Exact
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">
-                  Credit Quantity
-                </label>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Credit Amount</label>
                 <input
                   type="number"
                   min="1"
-                  required
+                  max="1000"
                   value={creditAmount}
                   onChange={(e) => setCreditAmount(Number(e.target.value))}
-                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
-                  placeholder="e.g. 50"
+                  required
+                  className="w-full px-3.5 py-2 text-xs font-bold border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">
-                  Reason / Audit Note (Optional)
-                </label>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Audit Ledger Reason</label>
                 <input
                   type="text"
+                  placeholder="e.g. Welcome bonus, Dispute compensation, Manual adjustment"
                   value={creditNotes}
                   onChange={(e) => setCreditNotes(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
-                  placeholder="e.g. Welcome onboard promotional grant, dispute refund"
+                  className="w-full px-3.5 py-2 text-xs font-medium border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
                 />
               </div>
 
-              <div className="pt-3 flex gap-2">
+              <div className="pt-2 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setCreditModalUser(null)}
-                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                  className="px-4 py-2 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingCredit}
-                  className="flex-1 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-xl text-xs font-black shadow-md transition cursor-pointer"
+                  className="px-5 py-2 bg-[#108a00] hover:bg-[#14a800] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
                 >
-                  {submittingCredit ? 'Updating...' : 'Confirm Adjustment'}
+                  {submittingCredit ? 'Processing...' : 'Confirm Adjustment'}
                 </button>
               </div>
             </form>
@@ -1911,215 +2280,159 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* 2. EDIT USER PROFILE & ROLES MODAL */}
+      {/* ===================================================================== */}
+      {/* MODAL 2: USER EDIT MODAL                                              */}
+      {/* ===================================================================== */}
       {editModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-lg border border-[#e7e8df] bg-[#fffefa] p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200 sm:p-6">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center">
-                  <Edit2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-gray-900 text-sm">Edit User Profile & Roles</h3>
-                  <span className="text-[11px] text-gray-500">ID: #{editModalUser.id.substring(0, 8)}</span>
-                </div>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-neutral-200">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-neutral-100">
+              <h3 className="font-extrabold text-sm text-neutral-900">Edit User #{editModalUser.id.substring(0, 8)}</h3>
               <button
                 type="button"
                 onClick={() => setEditModalUser(null)}
-                aria-label="Close edit user form"
-                className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 cursor-pointer"
+                className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleUpdateUser} className="mt-5 space-y-4 text-xs">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <form onSubmit={handleUpdateUser} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">First Name</label>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">First Name</label>
                   <input
                     type="text"
-                    required
                     value={editFirstName}
                     onChange={(e) => setEditFirstName(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                    className="w-full px-3 py-2 text-xs font-bold border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
                   />
                 </div>
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">Last Name</label>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Last Name</label>
                   <input
                     type="text"
-                    required
                     value={editLastName}
                     onChange={(e) => setEditLastName(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 text-xs font-bold border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-gray-700 block mb-1">Mobile (+91)</label>
-                  <input
-                    type="text"
-                    value={editPhone}
-                    onChange={(e) => setEditPhone(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="font-bold text-gray-700 block mb-1">Email Address</label>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Email</label>
                   <input
                     type="email"
                     value={editEmail}
                     onChange={(e) => setEditEmail(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 text-xs font-semibold border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Phone</label>
+                  <input
+                    type="text"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-semibold border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="font-bold text-gray-700 block mb-1">Account Status</label>
-                  <select
-                    value={editStatus}
-                    onChange={(e) => setEditStatus(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="ACTIVE">ACTIVE</option>
-                    <option value="SUSPENDED">SUSPENDED</option>
-                    <option value="BANNED">BANNED</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Status</label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-bold border border-neutral-200 rounded-xl bg-neutral-50 focus:outline-none"
+                >
+                  <option value="ACTIVE">ACTIVE</option>
+                  <option value="SUSPENDED">SUSPENDED</option>
+                </select>
+              </div>
 
-                <div>
-                  <label className="font-bold text-gray-700 block mb-1">Partner Verification Badge</label>
+              <div className="pt-2 flex items-center justify-between border-t border-neutral-100">
+                <label className="flex items-center gap-2 text-xs font-bold text-neutral-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editIsVerified}
+                    onChange={(e) => setEditIsVerified(e.target.checked)}
+                    className="w-4 h-4 text-[#108a00] rounded-sm"
+                  />
+                  <span>DigiLocker Verified Badge</span>
+                </label>
+
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => setEditIsVerified(!editIsVerified)}
-                    className={`w-full py-2 px-3 rounded-xl font-black flex items-center justify-center gap-2 border transition cursor-pointer ${
-                      editIsVerified
-                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                        : 'bg-gray-50 text-gray-600 border-gray-200'
-                    }`}
+                    onClick={() => setEditModalUser(null)}
+                    className="px-4 py-2 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 cursor-pointer"
                   >
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    {editIsVerified ? 'Verified Partner ✓' : 'Unverified'}
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submittingEdit}
+                    className="px-5 py-2 bg-[#108a00] hover:bg-[#14a800] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
+                  >
+                    {submittingEdit ? 'Saving...' : 'Save User'}
                   </button>
                 </div>
-              </div>
-
-              <div>
-                <label className="font-bold text-gray-700 block mb-1.5">User Roles</label>
-                <div className="flex flex-wrap gap-2">
-                  {['CUSTOMER', 'PROFESSIONAL', 'ADMIN'].map((r) => {
-                    const isSelected = editRoles.includes(r);
-                    return (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            setEditRoles(editRoles.filter((x) => x !== r));
-                          } else {
-                            setEditRoles([...editRoles, r]);
-                          }
-                        }}
-                        className={`px-3 py-1.5 rounded-xl font-extrabold text-[11px] transition cursor-pointer ${
-                          isSelected
-                            ? 'bg-black text-white shadow-sm'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        {isSelected ? '✓ ' : '+ '} {r}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="pt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setEditModalUser(null)}
-                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submittingEdit}
-                  className="flex-1 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-xl text-xs font-black shadow-md transition cursor-pointer"
-                >
-                  {submittingEdit ? 'Saving...' : 'Save User Changes'}
-                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* 3. RESET PASSWORD MODAL */}
+      {/* ===================================================================== */}
+      {/* MODAL 3: PASSWORD RESET MODAL                                         */}
+      {/* ===================================================================== */}
       {passwordModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div role="dialog" aria-modal="true" className="max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-lg border border-[#e7e8df] bg-[#fffefa] p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-200 sm:p-6">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center">
-                  <Key className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-gray-900 text-sm">Reset Password</h3>
-                  <span className="text-[11px] text-gray-500">
-                    {passwordModalUser.firstName} {passwordModalUser.lastName}
-                  </span>
-                </div>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-neutral-200">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-neutral-100">
+              <h3 className="font-extrabold text-sm text-neutral-900">
+                Reset Password for {passwordModalUser.firstName}
+              </h3>
               <button
                 type="button"
                 onClick={() => setPasswordModalUser(null)}
-                aria-label="Close password reset"
-                className="flex h-11 w-11 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 cursor-pointer"
+                className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleResetPassword} className="mt-5 space-y-4">
+            <form onSubmit={handleResetPassword} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">
-                  New Temporary Password
-                </label>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">New Password</label>
                 <input
-                  type="password"
-                  required
-                  minLength={6}
+                  type="text"
+                  placeholder="Enter strong temporary password..."
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Min. 6 characters"
-                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white"
+                  required
+                  minLength={6}
+                  className="w-full px-3.5 py-2 text-xs font-mono font-bold border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
                 />
-                <p className="text-[10px] text-gray-400 mt-1">
-                  The user can immediately log in with this new password.
-                </p>
               </div>
 
-              <div className="pt-2 flex gap-2">
+              <div className="pt-2 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setPasswordModalUser(null)}
-                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                  className="px-4 py-2 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingPassword}
-                  className="flex-1 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-xl text-xs font-black shadow-md transition cursor-pointer"
+                  className="px-5 py-2 bg-neutral-900 hover:bg-black text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
                 >
-                  {submittingPassword ? 'Resetting...' : 'Set Password'}
+                  {submittingPassword ? 'Resetting...' : 'Confirm Reset'}
                 </button>
               </div>
             </form>
@@ -2127,100 +2440,138 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* 4. ADMINISTRATIVE VERIFICATION OVERRIDE MODAL */}
-      {overrideModalCase && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-200 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-gray-900 text-sm">Administrative Override</h3>
-                  <span className="text-[11px] text-gray-500">
-                    {overrideModalCase.professional?.user?.firstName} {overrideModalCase.professional?.user?.lastName}
-                  </span>
-                </div>
-              </div>
+      {/* ===================================================================== */}
+      {/* MODAL 4: VERIFICATION VIEW DETAILS MODAL                              */}
+      {/* ===================================================================== */}
+      {viewDetailsModalCase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-neutral-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
+              <h3 className="font-extrabold text-sm text-neutral-900">DigiLocker Verification Case Details</h3>
               <button
-                onClick={() => setOverrideModalCase(null)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                type="button"
+                onClick={() => setViewDetailsModalCase(null)}
+                className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="mt-4 p-3 bg-amber-50 rounded-2xl border border-amber-200 text-amber-800 text-xs">
-              <p className="font-bold mb-0.5">⚠️ Caution: Manual Compliance Override</p>
-              <p className="text-[11px] text-amber-700 leading-relaxed">
-                Administrative overrides must never silently bypass DigiLocker protocols without legitimate legal/support justification. This action and your explanation will be permanently recorded in the system audit logs.
-              </p>
+            <div className="space-y-3 text-xs">
+              <div className="p-3 bg-neutral-50 rounded-2xl space-y-1">
+                <div className="font-extrabold text-sm text-neutral-900">
+                  {viewDetailsModalCase.professional?.user?.firstName} {viewDetailsModalCase.professional?.user?.lastName}
+                </div>
+                <div className="text-neutral-500">
+                  Phone: {viewDetailsModalCase.professional?.user?.phone || 'N/A'} | Email:{' '}
+                  {viewDetailsModalCase.professional?.user?.email || 'N/A'}
+                </div>
+                <div className="text-neutral-500">
+                  Category: {viewDetailsModalCase.professional?.category?.name || 'General'}
+                </div>
+              </div>
+
+              <div className="p-3 border border-neutral-200 rounded-2xl space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Verification Status:</span>
+                  <span className="font-bold text-[#108a00]">{viewDetailsModalCase.status}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Provider:</span>
+                  <span className="font-bold text-neutral-900">{viewDetailsModalCase.provider || 'DigiLocker / Aadhaar'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Reference ID:</span>
+                  <span className="font-mono text-neutral-900">{viewDetailsModalCase.referenceId || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Consent Timestamp:</span>
+                  <span>{new Date(viewDetailsModalCase.createdAt).toLocaleString()}</span>
+                </div>
+              </div>
             </div>
 
-            <form onSubmit={handleOverrideSubmit} className="mt-4 space-y-4">
+            <div className="pt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setViewDetailsModalCase(null)}
+                className="px-5 py-2 bg-neutral-900 text-white rounded-xl text-xs font-bold cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 5: VERIFICATION OVERRIDE MODAL                                  */}
+      {/* ===================================================================== */}
+      {overrideModalCase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-neutral-200">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-neutral-100">
+              <h3 className="font-extrabold text-sm text-neutral-900">Admin Verification Decision</h3>
+              <button
+                type="button"
+                onClick={() => setOverrideModalCase(null)}
+                className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAdminOverride} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">
-                  Override Decision *
-                </label>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Decision Action</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setOverrideAction('APPROVE')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition border cursor-pointer ${
-                      overrideAction === 'APPROVE'
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                        : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:bg-neutral-100'
+                    className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      overrideAction === 'APPROVE' ? 'bg-[#108a00] text-white border-[#108a00]' : 'border-neutral-200'
                     }`}
                   >
-                    Approve (VERIFIED)
+                    Approve & Verify
                   </button>
                   <button
                     type="button"
                     onClick={() => setOverrideAction('REJECT')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition border cursor-pointer ${
-                      overrideAction === 'REJECT'
-                        ? 'bg-red-600 text-white border-red-600 shadow-sm'
-                        : 'bg-neutral-50 text-neutral-700 border-neutral-200 hover:bg-neutral-100'
+                    className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                      overrideAction === 'REJECT' ? 'bg-red-600 text-white border-red-600' : 'border-neutral-200'
                     }`}
                   >
-                    Reject (FAILED)
+                    Reject Submission
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">
-                  Audit Justification Reason * (Required)
-                </label>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Decision Rationale</label>
                 <textarea
-                  required
                   rows={3}
+                  placeholder="Enter audit notes or feedback sent to professional..."
                   value={overrideReason}
                   onChange={(e) => setOverrideReason(e.target.value)}
-                  placeholder="State the verifiable reason, verified document number, or support ticket reference..."
-                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-black focus:bg-white"
+                  required
+                  className="w-full px-3 py-2 text-xs font-medium border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
                 />
               </div>
 
-              <div className="pt-2 flex gap-2">
+              <div className="pt-2 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setOverrideModalCase(null)}
-                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                  className="px-4 py-2 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submittingOverride}
-                  className={`flex-1 py-2.5 text-white rounded-xl text-xs font-black shadow-md transition cursor-pointer ${
-                    overrideAction === 'APPROVE'
-                      ? 'bg-emerald-600 hover:bg-emerald-700'
-                      : 'bg-red-600 hover:bg-red-700'
-                  }`}
+                  className="px-5 py-2 bg-neutral-900 hover:bg-black text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
                 >
-                  {submittingOverride ? 'Recording...' : `Confirm ${overrideAction === 'APPROVE' ? 'Approval' : 'Rejection'}`}
+                  {submittingOverride ? 'Saving...' : 'Confirm Decision'}
                 </button>
               </div>
             </form>
@@ -2228,58 +2579,238 @@ export const AdminDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* 5. MARK FOR REVIEW MODAL */}
-      {reviewModalCase && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-gray-200 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center">
-                  <Clock className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-gray-900 text-sm">Flag for Manual Review</h3>
-                  <span className="text-[11px] text-gray-500">
-                    {reviewModalCase.professional?.user?.firstName} {reviewModalCase.professional?.user?.lastName}
-                  </span>
-                </div>
-              </div>
+      {/* ===================================================================== */}
+      {/* MODAL 6: CREATE / EDIT CATEGORY MODAL                                 */}
+      {/* ===================================================================== */}
+      {categoryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-neutral-200">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-neutral-100">
+              <h3 className="font-extrabold text-sm text-neutral-900">
+                {editingCategory ? 'Edit Category' : 'Create New Category'}
+              </h3>
               <button
-                onClick={() => setReviewModalCase(null)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition cursor-pointer"
+                type="button"
+                onClick={() => setCategoryModalOpen(false)}
+                className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleMarkReviewSubmit} className="mt-4 space-y-4">
+            <form onSubmit={handleSaveCategory} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">
-                  Reason for Review Flag
-                </label>
-                <textarea
-                  rows={3}
-                  value={reviewReasonInput}
-                  onChange={(e) => setReviewReasonInput(e.target.value)}
-                  placeholder="e.g. Identity discrepancy, name mismatch, manual Aadhaar document inspection needed..."
-                  className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Category Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Elderly Caregiver, Home Nurse"
+                  value={catName}
+                  onChange={(e) => {
+                    setCatName(e.target.value);
+                    if (!editingCategory) {
+                      setCatSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+                    }
+                  }}
+                  required
+                  className="w-full px-3 py-2 text-xs font-bold border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
                 />
               </div>
 
-              <div className="pt-2 flex gap-2">
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">URL Slug</label>
+                <input
+                  type="text"
+                  placeholder="e.g. elderly-caregiver"
+                  value={catSlug}
+                  onChange={(e) => setCatSlug(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 text-xs font-mono font-semibold border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="Short description of services included..."
+                  value={catDesc}
+                  onChange={(e) => setCatDesc(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-medium border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
                 <button
                   type="button"
-                  onClick={() => setReviewModalCase(null)}
-                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                  onClick={() => setCategoryModalOpen(false)}
+                  className="px-4 py-2 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={submittingReview}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black shadow-md transition cursor-pointer"
+                  disabled={submittingCat}
+                  className="px-5 py-2 bg-[#108a00] hover:bg-[#14a800] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
                 >
-                  {submittingReview ? 'Updating...' : 'Set Review Status'}
+                  {submittingCat ? 'Saving...' : 'Save Category'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 7: CREATE / EDIT CREDIT PLAN MODAL                              */}
+      {/* ===================================================================== */}
+      {planModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-neutral-200">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-neutral-100">
+              <h3 className="font-extrabold text-sm text-neutral-900">
+                {editingPlan ? 'Edit Credit Pack' : 'Create Credit Pack'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setPlanModalOpen(false)}
+                className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePlan} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Package Name</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Starter Pack, Pro Pack"
+                  value={planName}
+                  onChange={(e) => setPlanName(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 text-xs font-bold border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Credits Granted</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={planCredits}
+                    onChange={(e) => setPlanCredits(Number(e.target.value))}
+                    required
+                    className="w-full px-3 py-2 text-xs font-bold border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Price in INR (₹)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={planPrice}
+                    onChange={(e) => setPlanPrice(Number(e.target.value))}
+                    required
+                    className="w-full px-3 py-2 text-xs font-bold border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Discount Tag (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Save 20%, Best Value"
+                  value={planDiscount}
+                  onChange={(e) => setPlanDiscount(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-semibold border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPlanModalOpen(false)}
+                  className="px-4 py-2 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingPlan}
+                  className="px-5 py-2 bg-[#108a00] hover:bg-[#14a800] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {submittingPlan ? 'Saving...' : 'Save Plan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 8: DISPUTE & REPORT RESOLUTION MODAL                            */}
+      {/* ===================================================================== */}
+      {resolveReportModalCase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-neutral-200">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-neutral-100">
+              <h3 className="font-extrabold text-sm text-neutral-900">Arbitrate Dispute / Report</h3>
+              <button
+                type="button"
+                onClick={() => setResolveReportModalCase(null)}
+                className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleResolveReport} className="space-y-4">
+              <div className="p-3 bg-neutral-50 rounded-2xl text-xs space-y-1">
+                <div className="font-bold text-neutral-900">Issue: {resolveReportModalCase.reason}</div>
+                <p className="text-neutral-600">{resolveReportModalCase.description}</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Resolution Outcome</label>
+                <select
+                  value={resolveReportOutcome}
+                  onChange={(e) => setResolveReportOutcome(e.target.value)}
+                  className="w-full px-3 py-2 text-xs font-bold border border-neutral-200 rounded-xl bg-neutral-50 focus:outline-none"
+                >
+                  <option value="RESOLVED">RESOLVED (Warning Issued / Settlement Reached)</option>
+                  <option value="DISMISSED">DISMISSED (No Violation Found)</option>
+                  <option value="USER_SUSPENDED">USER_SUSPENDED (Account Penalized)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Admin Arbitration Notes</label>
+                <textarea
+                  rows={3}
+                  placeholder="Record summary of action taken..."
+                  value={resolveReportNotes}
+                  onChange={(e) => setResolveReportNotes(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 text-xs font-medium border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setResolveReportModalCase(null)}
+                  className="px-4 py-2 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingResolveReport}
+                  className="px-5 py-2 bg-neutral-900 hover:bg-black text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {submittingResolveReport ? 'Saving...' : 'Resolve Case'}
                 </button>
               </div>
             </form>

@@ -369,6 +369,10 @@ export const api = {
   createAdminSubcategory: (data: any) => apiClient.post<ApiResponse<any>>('/admin/subcategories', data),
   updateAdminSubcategory: (id: string, data: any) => apiClient.put<ApiResponse<any>>(`/admin/subcategories/${id}`, data),
   deleteAdminSubcategory: (id: string) => apiClient.delete<ApiResponse<any>>(`/admin/subcategories/${id}`),
+  getAdminReports: (params?: any) => apiClient.get<ApiResponse<any>>('/admin/reports', { params }),
+  getAdminReportById: (id: string) => apiClient.get<ApiResponse<any>>(`/admin/reports/${id}`),
+  resolveAdminReport: (id: string, data: { status: string; adminNotes?: string }) =>
+    apiClient.post<ApiResponse<any>>(`/admin/reports/${id}/resolve`, data),
 
   // Isha AI Assistant Endpoints
   aiChat: (message: string, history?: any[]) =>
