@@ -11,7 +11,6 @@ import {
   Briefcase,
   Sliders,
   ShieldCheck,
-  UserPlus,
   Bell,
   CheckCircle2,
   Menu,
@@ -29,21 +28,23 @@ import {
   Search,
   Home,
   UserCheck,
+  Shield,
+  HelpCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { NotificationItem } from '../types';
 
-// Curated Master Categories for Explore Navigation
+// Curated Master Categories for Upwork-style Sub-header and Mega Menus
 const MASTER_CATEGORIES = [
   { name: 'Elderly Caregiver', slug: 'elderly-caregiver', icon: HeartHandshake, desc: 'Verified senior care & companions' },
-  { name: 'Fitness Trainer', slug: 'fitness-trainer', icon: Dumbbell, desc: 'Personal home fitness & weight loss' },
-  { name: 'Home Cook / Chef', slug: 'home-cook-chef', icon: ChefHat, desc: 'Hygienic daily cooks & gourmet chefs' },
-  { name: 'Home Nurse', slug: 'home-nurse', icon: Cross, desc: 'Clinical care, injections & dressing' },
-  { name: 'Home Tutor', slug: 'home-tutor', icon: GraduationCap, desc: 'Academics, STEM & entrance prep' },
-  { name: 'Baby Caregiver / Japa', slug: 'baby-caregiver-japa-maid', icon: Baby, desc: 'Postpartum care & newborn specialists' },
   { name: 'Physiotherapist', slug: 'physiotherapist', icon: Activity, desc: 'Pain relief & neuro-rehab at home' },
+  { name: 'Home Nurse', slug: 'home-nurse', icon: Cross, desc: 'Clinical care, injections & dressing' },
+  { name: 'Home Cook / Chef', slug: 'home-cook-chef', icon: ChefHat, desc: 'Hygienic daily cooks & gourmet chefs' },
+  { name: 'Home Tutor', slug: 'home-tutor', icon: GraduationCap, desc: 'Academics, STEM & entrance prep' },
+  { name: 'Fitness Trainer', slug: 'fitness-trainer', icon: Dumbbell, desc: 'Personal home fitness & weight loss' },
   { name: 'Yoga Trainer', slug: 'yoga-trainer', icon: Sparkles, desc: 'Mindfulness, flexibility & wellness' },
+  { name: 'Baby Caregiver / Japa', slug: 'baby-caregiver-japa-maid', icon: Baby, desc: 'Postpartum care & newborn specialists' },
 ];
 
 export const Navbar: React.FC = () => {
@@ -51,68 +52,104 @@ export const Navbar: React.FC = () => {
   const location = useLocation();
   const { user, logout, openAuthModal } = useAuth();
 
-  // State Management
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  // Desktop Navigation Dropdowns
+  const [activeNavDropdown, setActiveNavDropdown] = useState<'PRO' | 'WORK' | 'WHY' | 'MORE' | null>(null);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [mobileCategoriesExpanded, setMobileCategoriesExpanded] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [proBalance, setProBalance] = useState<number | null>(null);
 
-  // Header Search State
+  // Search State (Header & Drawer)
   const [headerSearchQuery, setHeaderSearchQuery] = useState('');
   const [headerSearchMode, setHeaderSearchMode] = useState<'PROFESSIONAL' | 'JOBS'>('PROFESSIONAL');
   const [headerSearchDropdownOpen, setHeaderSearchDropdownOpen] = useState(false);
 
-  // Refs for click outside
-  const notificationRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const categoriesRef = useRef<HTMLDivElement>(null);
-  const headerSearchRef = useRef<HTMLDivElement>(null);
+  // Mobile State
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileActiveAccordion, setMobileActiveAccordion] = useState<string | null>(null);
 
-  const handleHeaderSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!headerSearchQuery.trim()) return;
-    if (headerSearchMode === 'PROFESSIONAL') {
-      navigate(`/professionals?q=${encodeURIComponent(headerSearchQuery.trim())}`);
-    } else {
-      navigate(`/requirements?q=${encodeURIComponent(headerSearchQuery.trim())}`);
-    }
-    setHeaderSearchQuery('');
-    setHeaderSearchDropdownOpen(false);
-    setMobileMenuOpen(false);
-  };
+  // Data & Notifications State
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [proBalance, setProBalance] = useState<number | null>(null);
+
+  // Refs for click outside
+  const headerSearchRef = useRef<HTMLDivElement>(null);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
+  const navContainerRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
   const isProfessional = user?.roles?.includes('PROFESSIONAL');
   const effectiveCredits = proBalance !== null ? proBalance : (user?.professionalProfile?.creditWallet?.balance ?? 10);
 
-  // Close menus on route change
-  useEffect(() => {
-    setDropdownOpen(false);
-    setCategoriesOpen(false);
-    setNotificationOpen(false);
-    setMobileMenuOpen(false);
-  }, [location.pathname]);
+  // Handle Search Submission
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!headerSearchQuery.trim()) return;
 
-  // Lock body scroll when mobile menu is open
+    if (headerSearchMode === 'PROFESSIONAL') {
+      navigate(`/professionals?q=${encodeURIComponent(headerSearchQuery.trim())}`);
+    } else {
+      navigate(`/requirements?q=${encodeURIComponent(headerSearchQuery.trim())}`);
+    }
+
+    setHeaderSearchQuery('');
+    setHeaderSearchDropdownOpen(false);
+    setMobileMenuOpen(false);
+    setMobileSearchOpen(false);
+  };
+
+  // Close all open menus on route change
+  useEffect(() => {
+    setActiveNavDropdown(null);
+    setProfileDropdownOpen(false);
+    setNotificationOpen(false);
+    setHeaderSearchDropdownOpen(false);
+    setMobileMenuOpen(false);
+    setMobileSearchOpen(false);
+  }, [location.pathname, location.search]);
+
+  // Lock body scroll when mobile drawer is open
   useEffect(() => {
     if (!mobileMenuOpen) return;
-    const originalOverflow = document.body.style.overflow;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMobileMenuOpen(false);
+    const prevOverflow = document.body.style.overflow;
+    const closeOnEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileMenuOpen(false);
     };
+
     document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', closeOnEscape);
+    window.addEventListener('keydown', closeOnEsc);
     return () => {
-      document.body.style.overflow = originalOverflow;
-      window.removeEventListener('keydown', closeOnEscape);
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', closeOnEsc);
     };
   }, [mobileMenuOpen]);
 
-  // Fetch Notifications & Professional Credit Balance
+  // Click outside listener for all desktop popovers
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (headerSearchRef.current && !headerSearchRef.current.contains(target)) {
+        setHeaderSearchDropdownOpen(false);
+      }
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(target)) {
+        setProfileDropdownOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(target)) {
+        setNotificationOpen(false);
+      }
+      if (navContainerRef.current && !navContainerRef.current.contains(target)) {
+        setActiveNavDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Notifications and Credit Polling
   useEffect(() => {
     if (!user) {
       setNotifications([]);
@@ -156,26 +193,7 @@ export const Navbar: React.FC = () => {
       fetchWallet();
     }, 45000);
 
-    const handleClickOutside = (event: MouseEvent) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
-        setNotificationOpen(false);
-      }
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
-      }
-      if (categoriesRef.current && !categoriesRef.current.contains(event.target as Node)) {
-        setCategoriesOpen(false);
-      }
-      if (headerSearchRef.current && !headerSearchRef.current.contains(event.target as Node)) {
-        setHeaderSearchDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => clearInterval(interval);
   }, [user, isProfessional]);
 
   const handleMarkAllAsRead = async () => {
@@ -200,6 +218,13 @@ export const Navbar: React.FC = () => {
     }
   };
 
+  const handleSignOut = () => {
+    setProfileDropdownOpen(false);
+    setMobileMenuOpen(false);
+    logout();
+    navigate('/');
+  };
+
   const formatRelativeTime = (dateStr: string) => {
     try {
       const diff = Date.now() - new Date(dateStr).getTime();
@@ -218,345 +243,480 @@ export const Navbar: React.FC = () => {
   const getNotificationIcon = (type: string) => {
     switch (type) {
       case 'PAYMENT':
-        return <Coins className="w-4 h-4 text-emerald-600" />;
+        return <Coins className="w-4 h-4 text-[#108a00]" />;
       case 'HIRE':
-        return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
+        return <CheckCircle2 className="w-4 h-4 text-[#108a00]" />;
       case 'JOB_STATUS':
-        return <Briefcase className="w-4 h-4 text-indigo-600" />;
+        return <Briefcase className="w-4 h-4 text-neutral-700" />;
       case 'QUOTATION':
-        return <MessageSquare className="w-4 h-4 text-purple-600" />;
+        return <MessageSquare className="w-4 h-4 text-emerald-600" />;
       default:
         return <Bell className="w-4 h-4 text-neutral-600" />;
     }
   };
 
-  const handleSignOut = () => {
-    setDropdownOpen(false);
-    setMobileMenuOpen(false);
-    logout();
-    navigate('/');
-  };
-
-  const isActive = (path: string, exact = false) => {
-    if (exact) {
-      return location.pathname === path;
-    }
-    return location.pathname.startsWith(path);
+  const toggleMobileAccordion = (key: string) => {
+    setMobileActiveAccordion((prev) => (prev === key ? null : key));
   };
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-[#eeeee8] bg-[#fffefa]/95 shadow-[0_1px_3px_rgba(0,0,0,0.025)] backdrop-blur-xl transition-all">
-        <div className="mx-auto max-w-[1320px] px-4 sm:px-7 lg:px-12">
-          <div className="flex h-16 items-center justify-between md:h-[82px]">
-            {/* Left: Brand Logo & Marketplace Badge */}
-            <div className="flex items-center gap-5">
-              <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+      <header className="sticky top-0 z-40 bg-white border-b border-neutral-200/90 shadow-2xs backdrop-blur-md">
+        {/* ==================================================================== */}
+        {/* 1. TOP HEADER ROW (Upwork Style)                                     */}
+        {/* ==================================================================== */}
+        <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 sm:h-[68px] items-center justify-between gap-3 lg:gap-6">
+            
+            {/* LEFT: Logo & Primary Desktop Dropdowns */}
+            <div className="flex items-center gap-6 xl:gap-8" ref={navContainerRef}>
+              {/* Brand Logo */}
+              <Link to="/" className="flex items-center shrink-0 group">
                 <img
                   src="/logo.png"
                   alt="Vaziro"
-                  className="h-8 w-auto object-contain transition-transform group-hover:scale-[1.02] sm:h-9 lg:h-10"
+                  className="h-7 sm:h-8 w-auto object-contain transition-transform group-hover:scale-[1.02]"
                 />
               </Link>
 
-            </div>
-
-            {/* Center: Desktop Navigation Links */}
-            <nav aria-label="Main navigation" className="hidden lg:flex h-full items-center gap-1 lg:gap-2 text-[13px] font-medium text-[#444d47]">
-              {/* Explore Categories Mega Dropdown */}
-              <div className="relative" ref={categoriesRef}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCategoriesOpen(!categoriesOpen);
-                    setDropdownOpen(false);
-                    setNotificationOpen(false);
-                  }}
-                  aria-expanded={categoriesOpen}
-                  className={`relative flex h-full items-center gap-1.5 border-b-2 px-3 transition-colors cursor-pointer ${
-                    categoriesOpen
-                      ? 'border-[#719453] text-[#355e3e] font-semibold'
-                      : 'border-transparent text-[#444d47] hover:text-[#578329]'
-                  }`}
-                >
-                  <Compass className="w-4 h-4 text-emerald-600" />
-                  <span>{isProfessional ? 'Find Work' : 'Explore Services'}</span>
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${
-                      categoriesOpen ? 'rotate-180 text-black' : ''
+              {/* Desktop Nav Links (Clean Upwork typography) */}
+              <nav aria-label="Primary navigation" className="hidden lg:flex items-center gap-1 text-[14px] font-medium text-neutral-800">
+                
+                {/* 1. Find Professionals ▾ */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setActiveNavDropdown((prev) => (prev === 'PRO' ? null : 'PRO'))}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                      activeNavDropdown === 'PRO'
+                        ? 'text-[#108a00] bg-neutral-100/70 font-semibold'
+                        : 'hover:text-[#108a00] hover:bg-neutral-50'
                     }`}
-                  />
-                </button>
+                  >
+                    <span>Find Professionals</span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${
+                        activeNavDropdown === 'PRO' ? 'rotate-180 text-[#108a00]' : ''
+                      }`}
+                    />
+                  </button>
 
-                {categoriesOpen && (
-                  <div className="absolute left-0 mt-2 w-[520px] bg-white rounded-2xl shadow-2xl border border-neutral-200/90 p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
-                    <div className="flex items-center justify-between pb-3 mb-2 border-b border-neutral-100">
-                      <div>
-                        <div className="text-xs font-black text-black uppercase tracking-wider">Top Service Domains</div>
-                        <div className="text-[11px] text-neutral-500">Hire pre-verified background checked professionals</div>
+                  {/* Find Professionals Dropdown Menu */}
+                  {activeNavDropdown === 'PRO' && (
+                    <div className="absolute left-0 mt-2 w-[480px] bg-white rounded-2xl shadow-xl border border-neutral-200/90 p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="grid grid-cols-2 gap-3 pb-3 border-b border-neutral-100">
+                        <Link
+                          to="/professionals"
+                          onClick={() => setActiveNavDropdown(null)}
+                          className="p-3 rounded-xl bg-neutral-50 hover:bg-emerald-50/60 border border-neutral-200/60 hover:border-emerald-300 transition group"
+                        >
+                          <div className="flex items-center gap-2 font-bold text-xs text-neutral-900 group-hover:text-[#108a00]">
+                            <UserCheck className="w-4 h-4 text-[#108a00]" />
+                            <span>Browse Professionals</span>
+                          </div>
+                          <p className="text-[11px] text-neutral-500 mt-1 line-clamp-2">
+                            Search and compare pre-verified independent experts in Delhi NCR.
+                          </p>
+                        </Link>
+
+                        <Link
+                          to="/post-requirement"
+                          onClick={() => setActiveNavDropdown(null)}
+                          className="p-3 rounded-xl bg-neutral-50 hover:bg-emerald-50/60 border border-neutral-200/60 hover:border-emerald-300 transition group"
+                        >
+                          <div className="flex items-center gap-2 font-bold text-xs text-neutral-900 group-hover:text-[#108a00]">
+                            <PlusCircle className="w-4 h-4 text-[#108a00]" />
+                            <span>Post a Requirement</span>
+                          </div>
+                          <p className="text-[11px] text-neutral-500 mt-1 line-clamp-2">
+                            Post your service needs and receive verified proposals in minutes.
+                          </p>
+                        </Link>
                       </div>
+
+                      {/* Featured Categories */}
+                      <div className="pt-3">
+                        <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-2 px-1">
+                          Popular Categories
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {MASTER_CATEGORIES.slice(0, 6).map((cat) => {
+                            const Icon = cat.icon;
+                            return (
+                              <Link
+                                key={cat.slug}
+                                to={`/professionals?category=${cat.slug}`}
+                                onClick={() => setActiveNavDropdown(null)}
+                                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-neutral-50 text-xs font-semibold text-neutral-700 hover:text-[#108a00] transition"
+                              >
+                                <Icon className="w-3.5 h-3.5 text-neutral-400" />
+                                <span className="truncate">{cat.name}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                        <div className="mt-3 pt-2 border-t border-neutral-100 flex items-center justify-between px-1">
+                          <Link
+                            to="/professionals"
+                            onClick={() => setActiveNavDropdown(null)}
+                            className="text-xs font-bold text-[#108a00] hover:underline flex items-center gap-1"
+                          >
+                            <span>View all verified professionals &rarr;</span>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Find Work ▾ */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setActiveNavDropdown((prev) => (prev === 'WORK' ? null : 'WORK'))}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                      activeNavDropdown === 'WORK'
+                        ? 'text-[#108a00] bg-neutral-100/70 font-semibold'
+                        : 'hover:text-[#108a00] hover:bg-neutral-50'
+                    }`}
+                  >
+                    <span>Find Work</span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${
+                        activeNavDropdown === 'WORK' ? 'rotate-180 text-[#108a00]' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {/* Find Work Dropdown Menu */}
+                  {activeNavDropdown === 'WORK' && (
+                    <div className="absolute left-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-neutral-200/90 p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
                       <Link
                         to="/requirements"
-                        onClick={() => setCategoriesOpen(false)}
-                        className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+                        onClick={() => setActiveNavDropdown(null)}
+                        className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-neutral-50 transition group"
                       >
-                        <span>Browse All</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      {MASTER_CATEGORIES.map((cat) => {
-                        const Icon = cat.icon;
-                        return (
-                          <Link
-                            key={cat.slug}
-                            to={`/requirements?category=${cat.slug}`}
-                            onClick={() => setCategoriesOpen(false)}
-                            className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-neutral-50 border border-transparent hover:border-neutral-200 transition group"
-                          >
-                            <div className="w-9 h-9 rounded-xl bg-emerald-50 group-hover:bg-emerald-100/70 text-emerald-700 flex items-center justify-center shrink-0 transition">
-                              <Icon className="w-4 h-4" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="font-bold text-xs text-neutral-900 group-hover:text-emerald-700 truncate">
-                                {cat.name}
-                              </div>
-                              <div className="text-[10px] text-neutral-500 line-clamp-1 mt-0.5">
-                                {cat.desc}
-                              </div>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
-
-                    <div className="mt-3 pt-3 border-t border-neutral-100 flex items-center justify-between bg-neutral-50/80 rounded-xl px-3 py-2">
-                      <div className="flex items-center gap-2 text-[11px] text-neutral-600">
-                        <Zap className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                        <span>Need a custom quote? Post a request in under 2 minutes</span>
-                      </div>
-                      <Link
-                        to="/post-requirement"
-                        onClick={() => setCategoriesOpen(false)}
-                        className="text-[11px] font-extrabold text-black hover:underline shrink-0"
-                      >
-                        Post Now &rarr;
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Find Professionals Directory */}
-              <Link
-                to="/professionals"
-                className={`flex h-full items-center gap-1.5 border-b-2 px-3 transition-colors ${
-                  isActive('/professionals')
-                    ? 'border-[#719453] text-[#355e3e] font-semibold'
-                    : 'border-transparent text-[#444d47] hover:text-[#578329]'
-                }`}
-              >
-                <UserCheck className="w-4 h-4 text-emerald-600" />
-                <span>Find Professionals</span>
-              </Link>
-
-              {/* Browse Jobs */}
-              <Link
-                to={isProfessional ? '/dashboard?tab=jobs' : '/requirements'}
-                className={`flex h-full items-center gap-1.5 border-b-2 px-3 transition-colors ${
-                  isActive(isProfessional ? '/dashboard' : '/requirements')
-                    ? 'border-[#719453] text-[#355e3e] font-semibold'
-                    : 'border-transparent text-[#444d47] hover:text-[#578329]'
-                }`}
-              >
-                <Briefcase className="w-4 h-4 text-neutral-500" />
-                <span>{isProfessional ? 'My Jobs' : 'Browse Jobs'}</span>
-              </Link>
-
-              <Link
-                to="/workflow-preview"
-                className={`flex h-full items-center gap-1.5 border-b-2 px-3 transition-colors ${
-                  isActive('/workflow-preview')
-                    ? 'border-[#719453] text-[#355e3e] font-semibold'
-                    : 'border-transparent text-[#444d47] hover:text-[#578329]'
-                }`}
-              >
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>How It Works</span>
-              </Link>
-
-              {/* Highlighted Become a Pro for Logged-In Customers */}
-              {user && !isProfessional && !isAdmin && (
-                <button
-                  type="button"
-                  onClick={() => openAuthModal('PROFESSIONAL', undefined, 'SIGNUP')}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-extrabold text-xs text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 shadow-xs transition-all hover:scale-[1.02] active:scale-98 cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Become a Pro</span>
-                  <span className="text-[10px] bg-emerald-600 text-white font-black px-1.5 py-0.5 rounded-full">
-                    Free +10
-                  </span>
-                </button>
-              )}
-
-              {/* Admin Console */}
-              {isAdmin && (
-                <Link
-                  to="/admin"
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 text-white hover:bg-black font-bold text-xs shadow-sm transition"
-                >
-                  <Sliders className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Admin Console</span>
-                </Link>
-              )}
-            </nav>
-
-            {/* Right: Search Box, Actions, Balance, Notifications & Profile */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Upwork-Style Integrated Header Search Box */}
-              <div className="hidden lg:flex items-center">
-                <form onSubmit={handleHeaderSearchSubmit} className="relative flex items-center">
-                  <div className="flex items-center bg-neutral-100/90 hover:bg-neutral-200/70 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500/25 border border-neutral-300/80 rounded-full transition pl-2.5 pr-1 py-1 shadow-2xs">
-                    {/* Mode Selector Dropdown (Professional vs Jobs) */}
-                    <div className="relative" ref={headerSearchRef}>
-                      <button
-                        type="button"
-                        onClick={() => setHeaderSearchDropdownOpen(!headerSearchDropdownOpen)}
-                        className="flex items-center gap-1 text-[11px] font-extrabold text-neutral-800 pr-2 border-r border-neutral-300 hover:text-emerald-700 cursor-pointer select-none"
-                        title="Switch search mode"
-                      >
-                        <span>{headerSearchMode === 'PROFESSIONAL' ? 'Professional' : 'Jobs'}</span>
-                        <ChevronDown className="w-3 h-3 text-neutral-500" />
-                      </button>
-
-                      {headerSearchDropdownOpen && (
-                        <div className="absolute left-0 mt-2 w-32 bg-white rounded-xl shadow-lg border border-neutral-200 py-1 z-50">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setHeaderSearchMode('PROFESSIONAL');
-                              setHeaderSearchDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
-                              headerSearchMode === 'PROFESSIONAL'
-                                ? 'text-emerald-700 bg-emerald-50'
-                                : 'text-neutral-700 hover:bg-neutral-50'
-                            }`}
-                          >
-                            Professional
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setHeaderSearchMode('JOBS');
-                              setHeaderSearchDropdownOpen(false);
-                            }}
-                            className={`w-full text-left px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
-                              headerSearchMode === 'JOBS'
-                                ? 'text-emerald-700 bg-emerald-50'
-                                : 'text-neutral-700 hover:bg-neutral-50'
-                            }`}
-                          >
-                            Jobs
-                          </button>
+                        <div className="w-8 h-8 rounded-lg bg-neutral-100 group-hover:bg-emerald-50 text-neutral-600 group-hover:text-[#108a00] flex items-center justify-center shrink-0 transition">
+                          <Briefcase className="w-4 h-4" />
                         </div>
+                        <div>
+                          <div className="font-bold text-xs text-neutral-900 group-hover:text-[#108a00]">
+                            Browse Jobs
+                          </div>
+                          <div className="text-[11px] text-neutral-500 mt-0.5">
+                            Find customer requests across Delhi NCR
+                          </div>
+                        </div>
+                      </Link>
+
+                      {!isProfessional && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveNavDropdown(null);
+                            openAuthModal('PROFESSIONAL', undefined, 'SIGNUP');
+                          }}
+                          className="w-full text-left flex items-start gap-3 p-2.5 rounded-xl hover:bg-emerald-50/70 transition group cursor-pointer"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-emerald-100/70 text-[#108a00] flex items-center justify-center shrink-0">
+                            <Sparkles className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-xs text-[#108a00] flex items-center gap-1.5">
+                              <span>Become a Professional</span>
+                              <span className="text-[9px] bg-[#108a00] text-white font-extrabold px-1.5 py-0.2 rounded-full">
+                                +10 Cr
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-neutral-500 mt-0.5">
+                              Direct leads with zero commission
+                            </div>
+                          </div>
+                        </button>
+                      )}
+
+                      {isProfessional && (
+                        <Link
+                          to="/credits"
+                          onClick={() => setActiveNavDropdown(null)}
+                          className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-neutral-50 transition group"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                            <Coins className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-xs text-neutral-900 group-hover:text-amber-800">
+                              Proposal Credits Wallet
+                            </div>
+                            <div className="text-[11px] text-neutral-500 mt-0.5">
+                              Balance: {effectiveCredits} credits
+                            </div>
+                          </div>
+                        </Link>
                       )}
                     </div>
+                  )}
+                </div>
 
-                    {/* Search Input */}
-                    <Search className="w-3.5 h-3.5 text-neutral-400 ml-2 shrink-0" />
-                    <input
-                      type="text"
-                      value={headerSearchQuery}
-                      onChange={(e) => setHeaderSearchQuery(e.target.value)}
-                      placeholder={headerSearchMode === 'PROFESSIONAL' ? 'Search professionals...' : 'Search jobs...'}
-                      className="w-24 xl:w-36 text-xs font-medium text-neutral-800 placeholder:text-neutral-400 bg-transparent focus:outline-none px-2 py-0.5"
+                {/* 3. Why Vaziro ▾ */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setActiveNavDropdown((prev) => (prev === 'WHY' ? null : 'WHY'))}
+                    className={`flex items-center gap-1 px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                      activeNavDropdown === 'WHY'
+                        ? 'text-[#108a00] bg-neutral-100/70 font-semibold'
+                        : 'hover:text-[#108a00] hover:bg-neutral-50'
+                    }`}
+                  >
+                    <span>Why Vaziro</span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${
+                        activeNavDropdown === 'WHY' ? 'rotate-180 text-[#108a00]' : ''
+                      }`}
                     />
+                  </button>
 
-                    {headerSearchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setHeaderSearchQuery('')}
-                        className="p-0.5 text-neutral-400 hover:text-neutral-600 mr-1 cursor-pointer"
+                  {/* Why Vaziro Dropdown Menu */}
+                  {activeNavDropdown === 'WHY' && (
+                    <div className="absolute left-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-neutral-200/90 p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      <Link
+                        to="/workflow-preview"
+                        onClick={() => setActiveNavDropdown(null)}
+                        className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-neutral-50 transition group"
                       >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
+                        <div className="w-8 h-8 rounded-lg bg-emerald-50 text-[#108a00] flex items-center justify-center shrink-0">
+                          <ShieldCheck className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-xs text-neutral-900 group-hover:text-[#108a00]">
+                            How It Works
+                          </div>
+                          <div className="text-[11px] text-neutral-500 mt-0.5">
+                            Explore our milestone-protected 4-step workflow
+                          </div>
+                        </div>
+                      </Link>
 
-                    {/* Search Submit Button */}
+                      <div className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-neutral-50 transition group">
+                        <div className="w-8 h-8 rounded-lg bg-neutral-100 text-neutral-700 flex items-center justify-center shrink-0">
+                          <Shield className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-xs text-neutral-900">
+                            100% Escrow Protection
+                          </div>
+                          <div className="text-[11px] text-neutral-500 mt-0.5">
+                            Funds held securely until service satisfaction
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-neutral-50 transition group">
+                        <div className="w-8 h-8 rounded-lg bg-neutral-100 text-neutral-700 flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="font-bold text-xs text-neutral-900">
+                            DigiLocker Verified Pros
+                          </div>
+                          <div className="text-[11px] text-neutral-500 mt-0.5">
+                            Government ID and background verification
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Enterprise / Admin Console (if Admin) */}
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-900 text-white hover:bg-black font-bold text-xs shadow-xs transition"
+                  >
+                    <Sliders className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Admin Console</span>
+                  </Link>
+                )}
+              </nav>
+            </div>
+
+            {/* CENTER / RIGHT: Upwork-Style Pill Search Box (Desktop) */}
+            <div className="flex items-center gap-3 xl:gap-5">
+              <form onSubmit={handleSearchSubmit} className="hidden lg:flex items-center">
+                <div className="flex items-center bg-white hover:bg-neutral-50/80 focus-within:bg-white border border-neutral-300 focus-within:border-neutral-900 rounded-full pl-3.5 pr-1.5 py-1.5 shadow-2xs transition-all w-[270px] xl:w-[340px]">
+                  {/* Left Search Icon */}
+                  <Search className="w-4 h-4 text-neutral-400 shrink-0" />
+
+                  {/* Search Input */}
+                  <input
+                    type="text"
+                    value={headerSearchQuery}
+                    onChange={(e) => setHeaderSearchQuery(e.target.value)}
+                    placeholder="Search"
+                    className="flex-1 text-xs xl:text-sm font-normal text-neutral-900 placeholder:text-neutral-400 bg-transparent focus:outline-none px-2 min-w-0"
+                  />
+
+                  {headerSearchQuery && (
                     <button
-                      type="submit"
-                      aria-label="Search"
-                      className="p-1 rounded-full bg-[#108a00] hover:bg-[#14a800] text-white shrink-0 cursor-pointer shadow-xs transition"
+                      type="button"
+                      onClick={() => setHeaderSearchQuery('')}
+                      className="p-0.5 text-neutral-400 hover:text-neutral-600 mr-1 cursor-pointer"
                     >
-                      <Search className="w-3 h-3" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
+                  )}
+
+                  {/* Vertical Divider */}
+                  <div className="w-px h-4 bg-neutral-200 mx-1 shrink-0" />
+
+                  {/* Mode Dropdown Trigger (Professional vs Jobs) */}
+                  <div className="relative shrink-0" ref={headerSearchRef}>
+                    <button
+                      type="button"
+                      onClick={() => setHeaderSearchDropdownOpen(!headerSearchDropdownOpen)}
+                      className="flex items-center gap-1 text-xs font-semibold text-neutral-800 hover:text-[#108a00] px-1.5 py-1 rounded-full cursor-pointer select-none"
+                    >
+                      <span>{headerSearchMode === 'PROFESSIONAL' ? 'Professional' : 'Jobs'}</span>
+                      <ChevronDown
+                        className={`w-3 h-3 text-neutral-500 transition-transform ${
+                          headerSearchDropdownOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {/* Search Mode Dropdown Menu */}
+                    {headerSearchDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-40 bg-white rounded-xl shadow-xl border border-neutral-200 py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHeaderSearchMode('PROFESSIONAL');
+                            setHeaderSearchDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-xs font-semibold transition cursor-pointer flex items-center justify-between ${
+                            headerSearchMode === 'PROFESSIONAL'
+                              ? 'text-[#108a00] bg-emerald-50/70 font-bold'
+                              : 'text-neutral-700 hover:bg-neutral-50'
+                          }`}
+                        >
+                          <span>Professionals</span>
+                          {headerSearchMode === 'PROFESSIONAL' && (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#108a00]" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHeaderSearchMode('JOBS');
+                            setHeaderSearchDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-xs font-semibold transition cursor-pointer flex items-center justify-between ${
+                            headerSearchMode === 'JOBS'
+                              ? 'text-[#108a00] bg-emerald-50/70 font-bold'
+                              : 'text-neutral-700 hover:bg-neutral-50'
+                          }`}
+                        >
+                          <span>Jobs</span>
+                          {headerSearchMode === 'JOBS' && (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#108a00]" />
+                          )}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </form>
-              </div>
 
-              {/* Primary Action Button (Desktop) - Customers & Guests */}
-              {(!isProfessional || isAdmin) ? (
-                <Link
-                  to="/post-requirement"
-                  className="hidden min-h-10 lg:inline-flex items-center gap-2 rounded-md bg-[#203c32] px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-[#2d5144]"
-                >
-                  <PlusCircle className="w-3.5 h-3.5 text-[#c9f27d]" />
-                  <span>Post a request</span>
-                </Link>
+                  {/* Green Search Submit Button (Upwork Signature) */}
+                  <button
+                    type="submit"
+                    aria-label="Submit search"
+                    className="w-7 h-7 rounded-full bg-[#108a00] hover:bg-[#14a800] text-white flex items-center justify-center shrink-0 cursor-pointer shadow-xs transition ml-1"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </form>
+
+              {/* FAR RIGHT: Guest CTAs OR Logged-In User Actions */}
+              {!user ? (
+                /* Guest Desktop View: Log In + Green Sign Up Button */
+                <div className="hidden lg:flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openAuthModal('CUSTOMER', undefined, 'LOGIN')}
+                    className="text-sm font-semibold text-neutral-800 hover:text-[#108a00] px-3.5 py-2 cursor-pointer transition"
+                  >
+                    Log in
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openAuthModal('CUSTOMER', undefined, 'SIGNUP')}
+                    className="bg-[#108a00] hover:bg-[#14a800] text-white font-semibold text-sm px-5 py-2.5 rounded-full cursor-pointer transition shadow-xs"
+                  >
+                    Sign up
+                  </button>
+                </div>
               ) : (
-                <Link to="/requirements" className="hidden min-h-10 lg:inline-flex items-center gap-2 rounded-md bg-[#c9f27d] px-4 text-xs font-bold text-[#1c3227] transition hover:bg-[#d7f8a0]">
-                  <Search className="h-3.5 w-3.5" /> Find work
-                </Link>
-              )}
+                /* Logged-In Desktop View */
+                <div className="hidden lg:flex items-center gap-2.5">
+                  {/* Post a request (for Customers) */}
+                  {(!isProfessional || isAdmin) && (
+                    <Link
+                      to="/post-requirement"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-neutral-900 hover:bg-black text-white text-xs font-bold transition shadow-xs"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Post a request</span>
+                    </Link>
+                  )}
 
-              {/* Logged-In User Actions */}
-              {user ? (
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  {/* Messages Icon Button (Logged-In Users Only) */}
+                  {/* Pro Credit Balance Pill */}
+                  {isProfessional && !isAdmin && (
+                    <Link
+                      to="/credits"
+                      className="flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 transition hover:bg-amber-100/80 cursor-pointer"
+                      title="Credit Balance — Click to recharge"
+                    >
+                      <Zap className="w-3.5 h-3.5 text-amber-600" />
+                      <span>{effectiveCredits} Cr</span>
+                    </Link>
+                  )}
+
+                  {/* Messages Icon */}
                   <Link
                     to="/chat"
-                    className={`relative hidden h-10 w-10 items-center justify-center rounded-md transition lg:flex ${
-                      isActive('/chat')
-                        ? 'bg-[#edf2e8] text-[#355e3e]'
-                        : 'text-[#59645b] hover:bg-[#f1f2e9] hover:text-[#355e3e]'
-                    }`}
-                    title="Messages & Quotations"
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-neutral-600 hover:text-[#108a00] hover:bg-neutral-100 transition"
+                    title="Messages & Proposals"
                     aria-label="Messages"
                   >
-                    <MessageSquare className="w-4 h-4" />
+                    <MessageSquare className="w-5 h-5" />
                   </Link>
 
-                  {/* Notification Center */}
+                  {/* Notifications Center */}
                   <div className="relative" ref={notificationRef}>
                     <button
                       type="button"
-                      onClick={() => {
-                        setNotificationOpen(!notificationOpen);
-                        setDropdownOpen(false);
-                        setCategoriesOpen(false);
-                      }}
-                      className="relative flex h-11 w-11 items-center justify-center rounded-md text-[#59645b] transition hover:bg-[#f1f2e9] hover:text-[#355e3e] cursor-pointer"
+                      onClick={() => setNotificationOpen(!notificationOpen)}
+                      className="relative w-10 h-10 rounded-full flex items-center justify-center text-neutral-600 hover:text-[#108a00] hover:bg-neutral-100 transition cursor-pointer"
                       aria-label="Notifications"
                     >
-                      <Bell className="w-4 h-4" />
+                      <Bell className="w-5 h-5" />
                       {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white font-black text-[9px] rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 shadow-sm animate-pulse">
+                        <span className="absolute top-1.5 right-1.5 bg-[#108a00] text-white font-extrabold text-[9px] rounded-full min-w-[17px] h-[17px] flex items-center justify-center px-1 shadow-sm">
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                       )}
                     </button>
 
-                    {/* Notifications Dropdown Panel */}
+                    {/* Notifications Panel */}
                     {notificationOpen && (
-                      <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-96 rounded-xl border border-neutral-200 bg-white py-3 text-xs shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 sm:w-96 sm:rounded-2xl">
+                      <div className="absolute right-0 mt-2 w-88 rounded-2xl border border-neutral-200 bg-white py-3 text-xs shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
                         <div className="px-4 pb-2.5 border-b border-neutral-100 flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="font-black text-sm text-black">Notifications</span>
+                            <span className="font-extrabold text-sm text-neutral-900">Notifications</span>
                             {unreadCount > 0 && (
-                              <span className="bg-red-100 text-red-700 font-extrabold text-[10px] px-2 py-0.5 rounded-full">
+                              <span className="bg-emerald-100 text-emerald-800 font-extrabold text-[10px] px-2 py-0.5 rounded-full">
                                 {unreadCount} new
                               </span>
                             )}
@@ -564,7 +724,7 @@ export const Navbar: React.FC = () => {
                           {unreadCount > 0 && (
                             <button
                               onClick={handleMarkAllAsRead}
-                              className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline cursor-pointer"
+                              className="text-[11px] font-bold text-[#108a00] hover:underline cursor-pointer"
                             >
                               Mark all as read
                             </button>
@@ -577,7 +737,7 @@ export const Navbar: React.FC = () => {
                               <Bell className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
                               <p className="font-bold text-neutral-700 text-xs">No notifications yet</p>
                               <p className="text-[11px] text-neutral-400 mt-0.5">
-                                We'll alert you about quotations, jobs, and payments.
+                                We'll alert you about quotes, jobs, and payments.
                               </p>
                             </div>
                           ) : (
@@ -594,7 +754,7 @@ export const Navbar: React.FC = () => {
                                   <div className="flex items-center justify-between gap-1">
                                     <span
                                       className={`truncate text-xs ${
-                                        !item.isRead ? 'font-black text-black' : 'font-semibold text-neutral-800'
+                                        !item.isRead ? 'font-bold text-neutral-900' : 'font-semibold text-neutral-700'
                                       }`}
                                     >
                                       {item.title}
@@ -607,9 +767,6 @@ export const Navbar: React.FC = () => {
                                     {item.message}
                                   </p>
                                 </div>
-                                {!item.isRead && (
-                                  <div className="w-2 h-2 rounded-full bg-emerald-600 shrink-0 mt-1.5" />
-                                )}
                               </div>
                             ))
                           )}
@@ -618,55 +775,37 @@ export const Navbar: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Pro Credit Balance Pill (Placed near username dropdown trigger) */}
-                  {isProfessional && !isAdmin && (
-                    <Link
-                      to="/credits"
-                      className="hidden items-center gap-1.5 rounded-xl border border-amber-300/80 bg-amber-50 px-2.5 py-1.5 text-xs font-extrabold text-amber-900 shadow-xs transition group cursor-pointer sm:flex sm:px-3"
-                      title="Active Credit Balance — Click to manage credits"
-                    >
-                      <Zap className="w-3.5 h-3.5 text-amber-600 group-hover:scale-110 transition-transform" />
-                      <span>{effectiveCredits}</span>
-                      <span className="hidden sm:inline text-[10px] text-amber-700 font-semibold">Credits</span>
-                    </Link>
-                  )}
-
-                  {/* Desktop Profile Dropdown Trigger */}
-                  <div className="relative hidden lg:block" ref={dropdownRef}>
+                  {/* Profile Avatar Trigger & Dropdown */}
+                  <div className="relative" ref={profileDropdownRef}>
                     <button
                       type="button"
-                      onClick={() => {
-                        setDropdownOpen(!dropdownOpen);
-                        setNotificationOpen(false);
-                        setCategoriesOpen(false);
-                      }}
-                      className="flex items-center gap-2 p-1.5 pr-2.5 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-black font-bold text-xs transition cursor-pointer"
+                      onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                      className="flex items-center gap-1.5 p-1 rounded-full hover:bg-neutral-100 transition cursor-pointer"
                     >
-                      <div className="w-7 h-7 rounded-lg bg-black text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                      <div className="w-8 h-8 rounded-full bg-neutral-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                         {user.firstName ? user.firstName[0].toUpperCase() : 'U'}
                       </div>
-                      <span className="truncate max-w-[90px]">{user.firstName}</span>
                       <ChevronDown
                         className={`w-3.5 h-3.5 text-neutral-500 transition-transform ${
-                          dropdownOpen ? 'rotate-180' : ''
+                          profileDropdownOpen ? 'rotate-180' : ''
                         }`}
                       />
                     </button>
 
-                    {/* Desktop Profile Dropdown Panel */}
-                    {dropdownOpen && (
-                      <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-neutral-200 py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-150">
+                    {/* Profile Dropdown Menu */}
+                    {profileDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-neutral-200 py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-150">
                         <div className="px-4 py-3 border-b border-neutral-100">
                           <div className="text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
                             Signed in as
                           </div>
-                          <div className="font-extrabold text-black text-sm truncate mt-0.5">
+                          <div className="font-extrabold text-neutral-900 text-sm truncate mt-0.5">
                             {user.firstName} {user.lastName}
                           </div>
                           <div className="text-[11px] text-neutral-500 truncate">
                             {user.phone || user.email}
                           </div>
-                          <div className="mt-2 flex flex-wrap gap-1">
+                          <div className="mt-1.5 flex flex-wrap gap-1">
                             {user.roles?.map((r) => (
                               <span
                                 key={r}
@@ -684,80 +823,79 @@ export const Navbar: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Find Leads (For Professionals) */}
-                        {isProfessional && (
+                        {/* Dropdown Links */}
+                        <div className="py-1">
                           <Link
-                            to="/requirements"
-                            onClick={() => setDropdownOpen(false)}
-                            className="flex items-center gap-2.5 px-4 py-2.5 text-emerald-800 hover:bg-emerald-50/80 font-bold transition border-b border-neutral-100"
+                            to="/dashboard"
+                            onClick={() => setProfileDropdownOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-neutral-700 hover:bg-neutral-50 font-semibold"
                           >
-                            <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700">
-                              <Briefcase className="w-3.5 h-3.5" />
-                            </div>
-                            <span>Find Leads</span>
+                            <Home className="w-4 h-4 text-neutral-500" />
+                            <span>My Dashboard</span>
                           </Link>
-                        )}
 
-                        {/* Credit Wallet (In Username Dropdown) */}
-                        {(isProfessional || isAdmin) && (
+                          {isProfessional && (
+                            <Link
+                              to="/requirements"
+                              onClick={() => setProfileDropdownOpen(false)}
+                              className="flex items-center gap-2.5 px-4 py-2.5 text-[#108a00] hover:bg-emerald-50/70 font-semibold"
+                            >
+                              <Briefcase className="w-4 h-4 text-[#108a00]" />
+                              <span>Find Job Leads</span>
+                            </Link>
+                          )}
+
+                          {(isProfessional || isAdmin) && (
+                            <Link
+                              to="/credits"
+                              onClick={() => setProfileDropdownOpen(false)}
+                              className="flex items-center justify-between px-4 py-2.5 text-neutral-800 hover:bg-amber-50/60 font-semibold"
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <Coins className="w-4 h-4 text-amber-500" />
+                                <span>Credit Wallet</span>
+                              </div>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900">
+                                {effectiveCredits} Cr
+                              </span>
+                            </Link>
+                          )}
+
                           <Link
-                            to="/credits"
-                            onClick={() => setDropdownOpen(false)}
-                            className="flex items-center justify-between px-4 py-2.5 text-neutral-800 hover:bg-amber-50/70 font-semibold transition"
+                            to="/chat"
+                            onClick={() => setProfileDropdownOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-neutral-700 hover:bg-neutral-50 font-semibold"
                           >
-                            <div className="flex items-center gap-2.5">
-                              <Coins className="w-4 h-4 text-amber-500" />
-                              <span>Credit Wallet</span>
-                            </div>
-                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
-                              {effectiveCredits} Cr
-                            </span>
+                            <MessageSquare className="w-4 h-4 text-neutral-500" />
+                            <span>Messages & Quotations</span>
                           </Link>
-                        )}
 
-                        <Link
-                          to="/dashboard"
-                          onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2.5 text-neutral-700 hover:bg-neutral-50 font-semibold"
-                        >
-                          <Briefcase className="w-4 h-4 text-neutral-600" />
-                          <span>My Dashboard & Jobs</span>
-                        </Link>
-
-                        <Link
-                          to="/profile"
-                          onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2.5 text-neutral-700 hover:bg-neutral-50 font-semibold"
-                        >
-                          <User className="w-4 h-4 text-emerald-600" />
-                          <span>Edit Profile & Password</span>
-                        </Link>
-
-                        <Link
-                          to="/chat"
-                          onClick={() => setDropdownOpen(false)}
-                          className="flex items-center gap-2.5 px-4 py-2.5 text-neutral-700 hover:bg-neutral-50 font-semibold"
-                        >
-                          <MessageSquare className="w-4 h-4 text-neutral-600" />
-                          <span>Messages</span>
-                        </Link>
-
-                        {isAdmin && (
                           <Link
-                            to="/admin"
-                            onClick={() => setDropdownOpen(false)}
-                            className="flex items-center gap-2.5 px-4 py-2.5 text-black bg-neutral-100/70 hover:bg-neutral-100 font-bold"
+                            to="/profile"
+                            onClick={() => setProfileDropdownOpen(false)}
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-neutral-700 hover:bg-neutral-50 font-semibold"
                           >
-                            <Sliders className="w-4 h-4 text-black" />
-                            <span>Admin Governance</span>
+                            <User className="w-4 h-4 text-neutral-500" />
+                            <span>Profile & Account</span>
                           </Link>
-                        )}
 
-                        <div className="border-t border-neutral-100 my-1 pt-1">
+                          {isAdmin && (
+                            <Link
+                              to="/admin"
+                              onClick={() => setProfileDropdownOpen(false)}
+                              className="flex items-center gap-2.5 px-4 py-2.5 text-neutral-900 bg-neutral-100 hover:bg-neutral-200/80 font-bold"
+                            >
+                              <Sliders className="w-4 h-4 text-neutral-900" />
+                              <span>Admin Governance</span>
+                            </Link>
+                          )}
+                        </div>
+
+                        <div className="border-t border-neutral-100 pt-1">
                           <button
                             type="button"
                             onClick={handleSignOut}
-                            className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 font-bold cursor-pointer transition-colors"
+                            className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 font-bold cursor-pointer transition"
                           >
                             <LogOut className="w-4 h-4" />
                             <span>Sign Out</span>
@@ -767,87 +905,297 @@ export const Navbar: React.FC = () => {
                     )}
                   </div>
                 </div>
-              ) : (
-                /* Visitor / Guest Desktop Action Buttons */
-                <div className="hidden lg:flex items-center gap-1">
-                  {/* Highlighted Become a Pro Button */}
-                  <button
-                    type="button"
-                    onClick={() => openAuthModal('PROFESSIONAL', undefined, 'SIGNUP')}
-                    className="flex min-h-10 items-center gap-1.5 rounded-md px-3 text-xs font-semibold text-[#40583d] transition hover:bg-[#f1f2e9] cursor-pointer"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Become a Pro</span>
-                  </button>
-
-                  {/* Unified Sign In Button Styled Like Post Requirement */}
-                  <button
-                    type="button"
-                    onClick={() => openAuthModal('CUSTOMER', undefined, 'LOGIN')}
-                    className="hidden min-h-10 lg:inline-flex items-center gap-2 rounded-md border border-[#d8ddd3] bg-white px-4 text-xs font-semibold text-[#344137] transition hover:bg-[#f7f7f1] cursor-pointer"
-                  >
-                    <span>Sign In</span>
-                  </button>
-                </div>
               )}
 
-              {/* Mobile Menu Hamburger Toggle Button (< md) */}
-              <button
-                type="button"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden flex h-11 w-11 items-center justify-center rounded-md border border-[#e7e8df] bg-white text-[#344137] transition hover:bg-[#f1f2e9] cursor-pointer"
-                aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-                aria-expanded={mobileMenuOpen}
-              >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
+              {/* MOBILE HEADER ACTIONS (< lg) */}
+              <div className="flex items-center gap-1 sm:gap-2 lg:hidden">
+                {!user ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => openAuthModal('CUSTOMER', undefined, 'SIGNUP')}
+                      className="text-xs sm:text-sm font-semibold text-neutral-900 hover:text-[#108a00] px-2 py-1 cursor-pointer transition"
+                    >
+                      Sign up
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+                      className="p-2 text-neutral-800 hover:text-black rounded-full cursor-pointer transition"
+                      aria-label="Toggle search"
+                    >
+                      <Search className="w-5 h-5" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+                      className="p-2 text-neutral-800 hover:text-black rounded-full cursor-pointer"
+                      aria-label="Toggle search"
+                    >
+                      <Search className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNotificationOpen(!notificationOpen)}
+                      className="relative p-2 text-neutral-800 hover:text-black rounded-full cursor-pointer"
+                      aria-label="Notifications"
+                    >
+                      <Bell className="w-5 h-5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#108a00]" />
+                      )}
+                    </button>
+                  </>
+                )}
+
+                {/* Hamburger Menu Toggle (Clean 3 lines) */}
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="p-2 -mr-1 text-neutral-800 hover:text-black rounded-lg transition cursor-pointer"
+                  aria-label="Open menu"
+                >
+                  <Menu className="w-6 h-6" />
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+          {/* ================================================================== */}
+          {/* MOBILE QUICK INLINE SEARCH (Expands on Search Icon Click)          */}
+          {/* ================================================================== */}
+          {mobileSearchOpen && (
+            <div className="lg:hidden pb-3 pt-1 border-t border-neutral-100 animate-in fade-in slide-in-from-top-1 duration-150">
+              <form onSubmit={handleSearchSubmit} className="flex items-center">
+                <div className="flex items-center w-full bg-neutral-100 rounded-full border border-neutral-300 px-3 py-1.5 gap-2">
+                  <select
+                    value={headerSearchMode}
+                    onChange={(e) => setHeaderSearchMode(e.target.value as 'PROFESSIONAL' | 'JOBS')}
+                    className="text-xs font-bold text-neutral-800 bg-transparent focus:outline-none cursor-pointer pr-1"
+                  >
+                    <option value="PROFESSIONAL">Professional</option>
+                    <option value="JOBS">Jobs</option>
+                  </select>
+                  <div className="w-px h-4 bg-neutral-300" />
+                  <input
+                    type="text"
+                    value={headerSearchQuery}
+                    onChange={(e) => setHeaderSearchQuery(e.target.value)}
+                    placeholder={headerSearchMode === 'PROFESSIONAL' ? 'Search professionals...' : 'Search jobs...'}
+                    autoFocus
+                    className="flex-1 text-xs font-medium text-neutral-900 bg-transparent placeholder:text-neutral-400 focus:outline-none"
+                  />
+                  {headerSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setHeaderSearchQuery('')}
+                      className="p-1 text-neutral-400"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    className="w-7 h-7 rounded-full bg-[#108a00] text-white flex items-center justify-center shrink-0 cursor-pointer"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+        </div>
+
+        {/* ==================================================================== */}
+        {/* 2. SUB-HEADER ROW: CATEGORY NAVIGATION (Upwork media_1791484212919) */}
+        {/* ==================================================================== */}
+        <div className="hidden lg:block border-t border-neutral-200/70 bg-white">
+          <div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-8">
+            <div className="flex h-11 items-center justify-between text-[13px] font-normal text-neutral-600">
+              {/* Category links row */}
+              <div className="flex items-center gap-6 xl:gap-8 overflow-x-auto no-scrollbar py-1">
+                {MASTER_CATEGORIES.map((cat) => {
+                  const isCurrent = location.search.includes(cat.slug);
+                  return (
+                    <Link
+                      key={cat.slug}
+                      to={`/professionals?category=${cat.slug}`}
+                      className={`whitespace-nowrap transition-colors hover:text-[#108a00] ${
+                        isCurrent
+                          ? 'text-[#108a00] font-semibold border-b-2 border-[#108a00] pb-2.5'
+                          : ''
+                      }`}
+                    >
+                      {cat.name}
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {/* "More ▾" Dropdown */}
+              <div className="relative pl-4 border-l border-neutral-200 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setActiveNavDropdown((prev) => (prev === 'MORE' ? null : 'MORE'))}
+                  className="flex items-center gap-1 hover:text-[#108a00] cursor-pointer whitespace-nowrap font-medium"
+                >
+                  <span>More</span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform ${
+                      activeNavDropdown === 'MORE' ? 'rotate-180 text-[#108a00]' : ''
+                    }`}
+                  />
+                </button>
+
+                {/* More Mega Menu */}
+                {activeNavDropdown === 'MORE' && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-xl border border-neutral-200 p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="text-[11px] font-bold text-neutral-400 uppercase tracking-wider mb-2 px-1">
+                      All Service Categories
+                    </div>
+                    <div className="space-y-1">
+                      {MASTER_CATEGORIES.map((cat) => {
+                        const Icon = cat.icon;
+                        return (
+                          <Link
+                            key={cat.slug}
+                            to={`/professionals?category=${cat.slug}`}
+                            onClick={() => setActiveNavDropdown(null)}
+                            className="flex items-center justify-between px-2.5 py-2 rounded-xl hover:bg-neutral-50 transition"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <Icon className="w-4 h-4 text-[#108a00]" />
+                              <span className="text-xs font-semibold text-neutral-800">{cat.name}</span>
+                            </div>
+                            <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
+                          </Link>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-neutral-100 px-1">
+                      <Link
+                        to="/professionals"
+                        onClick={() => setActiveNavDropdown(null)}
+                        className="text-xs font-bold text-[#108a00] hover:underline block text-center"
+                      >
+                        Explore all professionals directory &rarr;
+                      </Link>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* ============================================================ */}
-      {/* MOBILE FULL-SCREEN SLIDE-OVER DRAWER MENU                    */}
-      {/* ============================================================ */}
+      {/* ==================================================================== */}
+      {/* 3. MOBILE SLIDE-OVER DRAWER MENU (Upwork Style)                     */}
+      {/* ==================================================================== */}
       {mobileMenuOpen && (
-          <div className="fixed inset-0 z-50 lg:hidden animate-in fade-in duration-200">
-            {/* Backdrop Overlay */}
-          <button type="button" aria-label="Close navigation menu" className="fixed inset-0 bg-[#183e33]/45 backdrop-blur-sm transition-opacity" onClick={() => setMobileMenuOpen(false)} />
+        <div className="fixed inset-0 z-50 lg:hidden animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-neutral-900/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
 
-          {/* Slide-over Drawer Panel */}
-          <div role="dialog" aria-modal="true" aria-label="Site navigation" className="fixed inset-y-0 right-0 z-50 flex w-full max-w-full flex-col bg-[#fcfbf8] pt-[env(safe-area-inset-top)] shadow-2xl animate-in slide-in-from-right duration-250 sm:w-[390px]">
-            {/* Drawer Top Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200/80 bg-white shrink-0">
-              <Link to="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2">
-                <img src="/logo.png" alt="Vaziro" className="h-8 w-auto object-contain" />
+          {/* Slide-over Drawer Panel (Slides in from Left, clean modern Upwork style) */}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
+            className="fixed inset-y-0 left-0 z-50 flex w-full max-w-[340px] sm:max-w-[380px] flex-col bg-white shadow-2xl animate-in slide-in-from-left duration-250"
+          >
+            {/* Drawer Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200 shrink-0">
+              <Link to="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center">
+                <img src="/logo.png" alt="Vaziro" className="h-7 w-auto object-contain" />
               </Link>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex h-11 w-11 items-center justify-center rounded-md bg-neutral-100 text-neutral-700 transition hover:bg-neutral-200 cursor-pointer"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-neutral-600 hover:text-black hover:bg-neutral-100 transition cursor-pointer"
                 aria-label="Close menu"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Drawer Scrollable Content */}
-            <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-              {/* User Card (Logged In vs Guest) */}
-              {user ? (
-                <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/80">
+            {/* Drawer Scrollable Body */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+              
+              {/* Drawer Search Box */}
+              <form onSubmit={handleSearchSubmit} className="pt-1">
+                <div className="flex items-center bg-neutral-100 rounded-full border border-neutral-300 p-1.5 shadow-2xs gap-1.5">
+                  <select
+                    value={headerSearchMode}
+                    onChange={(e) => setHeaderSearchMode(e.target.value as 'PROFESSIONAL' | 'JOBS')}
+                    className="text-xs font-bold text-neutral-800 bg-transparent px-2 py-1 focus:outline-none cursor-pointer"
+                  >
+                    <option value="PROFESSIONAL">Professional</option>
+                    <option value="JOBS">Jobs</option>
+                  </select>
+                  <div className="w-px h-4 bg-neutral-300" />
+                  <input
+                    type="text"
+                    value={headerSearchQuery}
+                    onChange={(e) => setHeaderSearchQuery(e.target.value)}
+                    placeholder={headerSearchMode === 'PROFESSIONAL' ? 'Search professionals...' : 'Search jobs...'}
+                    className="flex-1 text-xs font-medium text-neutral-900 bg-transparent placeholder:text-neutral-400 focus:outline-none px-1"
+                  />
+                  <button
+                    type="submit"
+                    aria-label="Search"
+                    className="w-7 h-7 rounded-full bg-[#108a00] text-white flex items-center justify-center shrink-0 cursor-pointer"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </form>
+
+              {/* Guest CTA Buttons OR Logged-In User Profile Card */}
+              {!user ? (
+                <div className="space-y-2.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      openAuthModal('CUSTOMER', undefined, 'SIGNUP');
+                    }}
+                    className="w-full py-3 bg-[#108a00] hover:bg-[#14a800] text-white font-semibold text-sm rounded-full text-center shadow-xs transition cursor-pointer"
+                  >
+                    Sign up
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      openAuthModal('CUSTOMER', undefined, 'LOGIN');
+                    }}
+                    className="w-full py-3 border border-neutral-300 hover:bg-neutral-50 text-neutral-900 font-semibold text-sm rounded-full text-center transition cursor-pointer"
+                  >
+                    Log in
+                  </button>
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-black text-white flex items-center justify-center font-black text-base shadow-sm">
+                    <div className="w-10 h-10 rounded-full bg-neutral-900 text-white flex items-center justify-center font-bold text-sm shadow-xs">
                       {user.firstName ? user.firstName[0].toUpperCase() : 'U'}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="font-extrabold text-sm text-black truncate">
+                      <div className="font-extrabold text-sm text-neutral-900 truncate">
                         {user.firstName} {user.lastName}
                       </div>
-                      <div className="text-xs text-neutral-500 truncate mt-0.5">
+                      <div className="text-xs text-neutral-500 truncate">
                         {user.phone || user.email}
                       </div>
-                      <div className="mt-1.5 flex flex-wrap gap-1">
+                      <div className="mt-1 flex flex-wrap gap-1">
                         {user.roles?.map((r) => (
                           <span
                             key={r}
@@ -866,307 +1214,230 @@ export const Navbar: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Professional Wallet Pill in Mobile Drawer */}
+                  {/* Professional Wallet Info */}
                   {isProfessional && (
-                    <div className="mt-3 pt-3 border-t border-neutral-200/70 flex items-center justify-between">
-                      <div className="flex items-center gap-1.5 text-xs text-amber-900 font-bold">
-                        <Zap className="w-4 h-4 text-amber-500" />
-                        <span>Credit Wallet:</span>
-                        <span className="font-black text-sm">{effectiveCredits}</span>
+                    <div className="mt-3 pt-3 border-t border-neutral-200 flex items-center justify-between text-xs">
+                      <span className="font-semibold text-neutral-700">Credit Balance:</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-amber-900">{effectiveCredits} Cr</span>
+                        <Link
+                          to="/credits"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="text-[11px] font-bold text-[#108a00] hover:underline"
+                        >
+                          Recharge
+                        </Link>
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Main Navigation Accordions */}
+              <div className="space-y-1 border-t border-neutral-100 pt-3">
+                {/* 1. Find Professionals Accordion */}
+                <div className="border-b border-neutral-100 pb-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleMobileAccordion('PRO')}
+                    className="w-full flex items-center justify-between py-2.5 text-left text-sm font-semibold text-neutral-900 cursor-pointer"
+                  >
+                    <span>Find Professionals</span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-neutral-400 transition-transform ${
+                        mobileActiveAccordion === 'PRO' ? 'rotate-180 text-[#108a00]' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {mobileActiveAccordion === 'PRO' && (
+                    <div className="pl-3 pb-2 space-y-1.5 animate-in fade-in duration-150">
                       <Link
-                        to="/credits"
+                        to="/professionals"
                         onClick={() => setMobileMenuOpen(false)}
-                        className="text-[11px] font-extrabold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 hover:bg-emerald-100"
+                        className="block py-1.5 text-xs font-semibold text-[#108a00]"
                       >
-                        Recharge &rarr;
+                        Browse All Professionals &rarr;
+                      </Link>
+                      <Link
+                        to="/post-requirement"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block py-1.5 text-xs text-neutral-700 hover:text-black"
+                      >
+                        Post a Service Requirement
+                      </Link>
+                      <div className="pt-1 text-[11px] font-bold text-neutral-400 uppercase">
+                        Top Categories
+                      </div>
+                      {MASTER_CATEGORIES.map((cat) => (
+                        <Link
+                          key={cat.slug}
+                          to={`/professionals?category=${cat.slug}`}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="block py-1 text-xs text-neutral-600 hover:text-[#108a00]"
+                        >
+                          {cat.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Find Work Accordion */}
+                <div className="border-b border-neutral-100 pb-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleMobileAccordion('WORK')}
+                    className="w-full flex items-center justify-between py-2.5 text-left text-sm font-semibold text-neutral-900 cursor-pointer"
+                  >
+                    <span>Find Work</span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-neutral-400 transition-transform ${
+                        mobileActiveAccordion === 'WORK' ? 'rotate-180 text-[#108a00]' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {mobileActiveAccordion === 'WORK' && (
+                    <div className="pl-3 pb-2 space-y-1.5 animate-in fade-in duration-150">
+                      <Link
+                        to="/requirements"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block py-1.5 text-xs font-semibold text-neutral-800 hover:text-[#108a00]"
+                      >
+                        Browse Jobs / Requests
+                      </Link>
+                      {!isProfessional && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMobileMenuOpen(false);
+                            openAuthModal('PROFESSIONAL', undefined, 'SIGNUP');
+                          }}
+                          className="block py-1.5 text-xs font-bold text-[#108a00] text-left cursor-pointer"
+                        >
+                          Become a Professional (+10 Free Credits)
+                        </button>
+                      )}
+                      {isProfessional && (
+                        <Link
+                          to="/credits"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="block py-1.5 text-xs text-neutral-700 hover:text-black"
+                        >
+                          Credit Wallet
+                        </Link>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Why Vaziro Accordion */}
+                <div className="border-b border-neutral-100 pb-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleMobileAccordion('WHY')}
+                    className="w-full flex items-center justify-between py-2.5 text-left text-sm font-semibold text-neutral-900 cursor-pointer"
+                  >
+                    <span>Why Vaziro</span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-neutral-400 transition-transform ${
+                        mobileActiveAccordion === 'WHY' ? 'rotate-180 text-[#108a00]' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {mobileActiveAccordion === 'WHY' && (
+                    <div className="pl-3 pb-2 space-y-1.5 animate-in fade-in duration-150">
+                      <Link
+                        to="/workflow-preview"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block py-1.5 text-xs font-semibold text-neutral-800 hover:text-[#108a00]"
+                      >
+                        How the Workflow Works
+                      </Link>
+                      <Link
+                        to="/about"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="block py-1.5 text-xs text-neutral-700 hover:text-black"
+                      >
+                        Escrow Protection & Verification
                       </Link>
                     </div>
                   )}
                 </div>
-              ) : (
-                /* Guest Welcome Card */
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-neutral-900 to-neutral-800 text-white shadow-sm">
-                  <div className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
-                    Welcome to Vaziro
-                  </div>
-                  <div className="text-sm font-black mt-1">India's Trusted Marketplace</div>
-                    <p className="text-xs text-neutral-300 mt-1 leading-relaxed">
-                    Find the right local professional or join as an independent service provider.
-                  </p>
 
-                  <div className="grid grid-cols-2 gap-2 mt-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        openAuthModal('CUSTOMER', undefined, 'LOGIN');
-                      }}
-                      className="min-h-11 rounded-md bg-white/10 px-3 text-sm font-semibold text-white border border-white/20 transition hover:bg-white/20 text-center cursor-pointer"
-                    >
-                      Sign In
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        openAuthModal('CUSTOMER', undefined, 'SIGNUP');
-                      }}
-                      className="min-h-11 rounded-md bg-[#c9f27d] px-3 text-sm font-semibold text-[#203c32] transition hover:bg-[#d7f8a0] text-center shadow-sm cursor-pointer"
-                    >
-                      Sign Up
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Mobile Upwork Search Box */}
-              <form onSubmit={handleHeaderSearchSubmit} className="pt-1">
-                <div className="flex items-center bg-white rounded-2xl border border-neutral-300 p-1.5 shadow-xs gap-2">
-                  <select
-                    value={headerSearchMode}
-                    onChange={(e) => setHeaderSearchMode(e.target.value as 'PROFESSIONAL' | 'JOBS')}
-                    className="text-xs font-bold text-neutral-800 bg-neutral-100 rounded-xl px-2 py-1.5 border border-neutral-200 focus:outline-none cursor-pointer"
-                  >
-                    <option value="PROFESSIONAL">Professional</option>
-                    <option value="JOBS">Jobs</option>
-                  </select>
-                  <input
-                    type="text"
-                    value={headerSearchQuery}
-                    onChange={(e) => setHeaderSearchQuery(e.target.value)}
-                    placeholder={headerSearchMode === 'PROFESSIONAL' ? 'Search professionals...' : 'Search jobs...'}
-                    className="flex-1 text-xs font-semibold text-neutral-900 placeholder:text-neutral-400 focus:outline-none"
-                  />
-                  <button
-                    type="submit"
-                    aria-label="Submit search"
-                    className="p-2 rounded-xl bg-[#108a00] text-white shrink-0 cursor-pointer"
-                  >
-                    <Search className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </form>
-
-              {/* Primary Mobile Action Cards */}
-              <div className="space-y-2">
-                {/* Find Professionals Card */}
-                <Link
-                  to="/professionals"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex min-h-[68px] items-center justify-between rounded-md border border-[#e7e8df] bg-white p-3.5 transition group hover:bg-[#f7f7f1]"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-700 shadow-xs">
-                      <UserCheck className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="font-extrabold text-xs text-neutral-900">Find Professionals</div>
-                      <div className="text-[10px] text-neutral-500">Browse verified independent partners</div>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
-                </Link>
-
-                {(!isProfessional || isAdmin) && (
-                  <Link
-                    to="/post-requirement"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex min-h-[68px] items-center justify-between rounded-md bg-[#203c32] p-3.5 text-white shadow-sm transition group hover:bg-[#2d5144]"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center text-emerald-400">
-                        <PlusCircle className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <div className="font-extrabold text-xs text-white">Post Requirement</div>
-                        <div className="text-xs text-neutral-300">Free to post · No obligation to hire</div>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
-                  </Link>
-                )}
-
-                <Link
-                  to="/requirements"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex min-h-[68px] items-center justify-between rounded-md border border-[#e7e8df] bg-white p-3.5 transition group hover:bg-[#f7f7f1]"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-emerald-700 shadow-sm">
-                      <Briefcase className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="font-extrabold text-xs text-neutral-900">{isProfessional ? 'Find Work' : 'Browse Service Requests'}</div>
-                      <div className="text-[10px] text-neutral-500">{isProfessional ? 'Explore customer requests' : 'Explore local service requests'}</div>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    window.dispatchEvent(new CustomEvent('vaziro:open_ai_chat'));
-                  }}
-                  className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-neutral-900 to-neutral-800 text-white shadow-sm active:scale-98 transition group cursor-pointer text-left"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-indigo-600 flex items-center justify-center text-amber-300 shadow-sm">
-                      <Sparkles className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="font-extrabold text-xs text-white">
-                        <span>Ask Isha</span>
-                      </div>
-                      <div className="text-[10px] text-neutral-300">24/7 Verified Support & Policies</div>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-0.5 transition-transform" />
-                </button>
-              </div>
-
-              {/* Collapsible Explore Categories Section */}
-              <div className="border border-neutral-200/80 rounded-2xl overflow-hidden bg-white">
-                <button
-                  type="button"
-                  onClick={() => setMobileCategoriesExpanded(!mobileCategoriesExpanded)}
-                  className="w-full flex items-center justify-between p-3.5 bg-neutral-50 text-left font-bold text-xs text-neutral-900 cursor-pointer"
-                >
-                  <div className="flex items-center gap-2">
-                    <Compass className="w-4 h-4 text-emerald-600" />
-                    <span>{isProfessional ? 'Find Work by Category' : 'Explore Service Categories'}</span>
-                  </div>
-                  <ChevronDown
-                    className={`w-4 h-4 text-neutral-400 transition-transform duration-200 ${
-                      mobileCategoriesExpanded ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-
-                {mobileCategoriesExpanded && (
-                  <div className="p-2 divide-y divide-neutral-100 bg-white">
-                    {MASTER_CATEGORIES.map((cat) => {
-                      const Icon = cat.icon;
-                      return (
-                        <Link
-                          key={cat.slug}
-                          to={`/requirements?category=${cat.slug}`}
-                          onClick={() => setMobileMenuOpen(false)}
-                          className="flex min-h-11 items-center justify-between rounded-md px-3 py-2.5 transition hover:bg-neutral-50"
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center">
-                              <Icon className="w-3.5 h-3.5" />
-                            </div>
-                            <span className="text-xs font-semibold text-neutral-800">{cat.name}</span>
-                          </div>
-                          <ChevronRight className="w-3.5 h-3.5 text-neutral-300" />
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Navigation Links List */}
-              <div className="space-y-1">
-                <div className="px-1 text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">
-                  Navigation
-                </div>
-
-                <Link
-                  to="/workflow-preview"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 p-3 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold text-xs transition"
-                >
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>How the Vaziro workflow works</span>
-                </Link>
-
-                {/* Dashboard & Messages (Visible Only to Logged-In Users) */}
+                {/* Logged-In User Navigation Links */}
                 {user && (
-                  <>
+                  <div className="pt-2 space-y-1">
                     <Link
-                      to={isProfessional ? '/dashboard?tab=overview' : '/dashboard'}
+                      to="/dashboard"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 p-3 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold text-xs transition"
+                      className="flex items-center gap-3 py-2 text-xs font-semibold text-neutral-700 hover:text-black"
                     >
                       <Home className="w-4 h-4 text-neutral-500" />
-                      <span>{isProfessional ? 'Overview' : 'Dashboard & Active Jobs'}</span>
+                      <span>Dashboard & Contracts</span>
                     </Link>
-
-                    {isProfessional && (
-                      <Link
-                        to="/dashboard?tab=jobs"
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex items-center gap-3 p-3 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold text-xs transition"
-                      >
-                        <Briefcase className="w-4 h-4 text-neutral-500" />
-                        <span>My Jobs</span>
-                      </Link>
-                    )}
 
                     <Link
                       to="/chat"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center gap-3 p-3 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold text-xs transition"
+                      className="flex items-center gap-3 py-2 text-xs font-semibold text-neutral-700 hover:text-black"
                     >
                       <MessageSquare className="w-4 h-4 text-neutral-500" />
                       <span>Messages & Quotations</span>
                     </Link>
-                  </>
-                )}
 
-                {(isProfessional || isAdmin) && (
-                  <Link
-                    to="/credits"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center justify-between p-3 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold text-xs transition"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Coins className="w-4 h-4 text-amber-500" />
-                      <span>Credit Wallet & Packs</span>
-                    </div>
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-amber-100 text-amber-900">
-                      {effectiveCredits} Cr
-                    </span>
-                  </Link>
-                )}
+                    <Link
+                      to="/profile"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 py-2 text-xs font-semibold text-neutral-700 hover:text-black"
+                    >
+                      <User className="w-4 h-4 text-neutral-500" />
+                      <span>Profile & Account Settings</span>
+                    </Link>
 
-                {user && (
-                  <Link
-                    to="/profile"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 p-3 rounded-xl text-neutral-700 hover:bg-neutral-50 font-semibold text-xs transition"
-                  >
-                    <User className="w-4 h-4 text-emerald-600" />
-                    <span>My Profile & Settings</span>
-                  </Link>
-                )}
-
-                {isAdmin && (
-                  <Link
-                    to="/admin"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 p-3 rounded-xl bg-neutral-900 text-white font-bold text-xs transition"
-                  >
-                    <Sliders className="w-4 h-4 text-amber-400" />
-                    <span>Admin Control Center</span>
-                  </Link>
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 py-2 text-xs font-bold text-neutral-900"
+                      >
+                        <Sliders className="w-4 h-4 text-amber-500" />
+                        <span>Admin Console</span>
+                      </Link>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {/* Professional Onboarding Banner for Guests/Customers */}
-              {!isProfessional && (
-                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200/80">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-emerald-700 shrink-0" />
-                    <span className="font-black text-xs text-emerald-900">Are you a Service Professional?</span>
+              {/* Ask Isha AI Support Tile */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  window.dispatchEvent(new CustomEvent('vaziro:open_ai_chat'));
+                }}
+                className="w-full flex items-center justify-between p-3.5 rounded-2xl bg-neutral-900 text-white shadow-xs transition cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-[#108a00] flex items-center justify-center text-white shrink-0">
+                    <Sparkles className="w-4 h-4" />
                   </div>
-                  <p className="text-[11px] text-emerald-800 mt-1 leading-snug">
-                    Get direct customer leads with zero commission. Get 10 free credits upon signup.
+                  <div>
+                    <div className="font-bold text-xs text-white">Ask Isha AI Assistant</div>
+                    <div className="text-[10px] text-neutral-300">24/7 Verified Support & Guidelines</div>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-neutral-400" />
+              </button>
+
+              {/* Pro Onboarding Card for Non-pros */}
+              {!isProfessional && (
+                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
+                  <div className="text-xs font-bold text-emerald-950">Are you a Service Professional?</div>
+                  <p className="text-[11px] text-emerald-800 mt-1">
+                    Join Vaziro to get direct customer inquiries with zero commission and free welcome credits.
                   </p>
                   <button
                     type="button"
@@ -1174,25 +1445,25 @@ export const Navbar: React.FC = () => {
                       setMobileMenuOpen(false);
                       openAuthModal('PROFESSIONAL', undefined, 'SIGNUP');
                     }}
-                    className="mt-2.5 w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow-sm transition cursor-pointer"
+                    className="mt-2.5 w-full py-2 bg-[#108a00] hover:bg-[#14a800] text-white font-bold text-xs rounded-full transition cursor-pointer"
                   >
                     Register as Professional
                   </button>
                 </div>
               )}
 
-              {/* Trust & Support Footer Links */}
-              <div className="pt-2 border-t border-neutral-100 space-y-2 text-[11px] text-neutral-500">
+              {/* Drawer Trust & Policy Footer */}
+              <div className="pt-3 border-t border-neutral-100 space-y-2 text-[11px] text-neutral-500">
                 <div className="flex items-center justify-between py-1">
-                  <span className="flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span className="flex items-center gap-1.5 font-semibold text-neutral-700">
+                    <ShieldCheck className="w-3.5 h-3.5 text-[#108a00]" />
                     <span>100% Escrow Protection</span>
                   </span>
-                  <span>🇮🇳 INR (₹)</span>
+                  <span>🇮🇳 Delhi NCR</span>
                 </div>
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-neutral-400">
                   <Link to="/about" onClick={() => setMobileMenuOpen(false)} className="hover:underline">
-                    About Us
+                    About
                   </Link>
                   <Link to="/terms" onClick={() => setMobileMenuOpen(false)} className="hover:underline">
                     Terms
@@ -1207,16 +1478,16 @@ export const Navbar: React.FC = () => {
               </div>
             </div>
 
-            {/* Drawer Bottom Actions */}
+            {/* Drawer Bottom Actions (Sign Out if logged in) */}
             {user && (
               <div className="p-4 border-t border-neutral-200 bg-neutral-50 shrink-0">
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs border border-red-200 transition cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs border border-red-200 transition cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out of Vaziro</span>
+                  <span>Sign Out</span>
                 </button>
               </div>
             )}
