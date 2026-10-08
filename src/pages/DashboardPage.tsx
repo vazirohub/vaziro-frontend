@@ -21,6 +21,7 @@ import {
   Sparkles,
   ArrowUpRight,
   ArrowRight,
+  FileText,
 } from 'lucide-react';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { ProfileVerificationCard } from '../components/ProfileVerificationCard';
