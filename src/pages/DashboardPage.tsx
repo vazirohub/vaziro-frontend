@@ -45,6 +45,7 @@ export const DashboardPage: React.FC = () => {
   const [verificationSuccess, setVerificationSuccess] = useState(false);
 
   const isProfessional = user?.roles?.includes('PROFESSIONAL');
+  const showJobsView = Boolean(isProfessional && searchParams.get('tab') === 'jobs');
 
   const loadDashboardData = async () => {
     try {
@@ -158,7 +159,7 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
-      {isProfessional ? (
+      {isProfessional && !showJobsView ? (
         <section className="relative isolate mb-6 overflow-hidden rounded-[2rem] bg-[#10241e] px-5 py-6 text-white shadow-xl sm:px-8 sm:py-8 lg:px-10">
           <div className="pointer-events-none absolute -right-20 -top-32 -z-10 h-80 w-80 rounded-full bg-emerald-400/15 blur-3xl" />
           <div className="pointer-events-none absolute bottom-0 right-1/3 -z-10 h-48 w-48 rounded-full bg-lime-300/10 blur-3xl" />
@@ -211,6 +212,17 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
         </section>
+      ) : showJobsView ? (
+        <section className="mb-6 flex flex-col gap-4 rounded-2xl border border-[#dce6df] bg-[#f1f4e9] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#718044]">Professional workspace</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[#29382e] sm:text-3xl">Your jobs</h1>
+            <p className="mt-1 text-sm text-[#68716b]">Follow active service contracts and open the tracker for the next step.</p>
+          </div>
+          <Link to="/requirements" className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-md bg-[#203c32] px-4 text-sm font-semibold text-white transition hover:bg-[#2d5144] sm:self-auto">
+            Find more work <ArrowRight className="h-4 w-4" />
+          </Link>
+        </section>
       ) : (
         <div className="mb-6 flex flex-col items-start justify-between gap-5 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:p-7">
           <div className="flex items-center gap-3.5">
@@ -238,11 +250,11 @@ export const DashboardPage: React.FC = () => {
       )}
 
       {/* Professional: Profile Verification Card */}
-      {isProfessional && (
+      {isProfessional && !showJobsView && (
         <ProfileVerificationCard className="mb-6" />
       )}
 
-      <MarketplaceWorkflow
+      {!showJobsView && <MarketplaceWorkflow
         isProfessional={Boolean(isProfessional)}
         isVerified={Boolean(user.professionalProfile?.isVerified || verificationSuccess)}
         requirements={requirements}
@@ -251,10 +263,10 @@ export const DashboardPage: React.FC = () => {
         loading={loading}
         quotationError={quotationError}
         onRefresh={loadDashboardData}
-      />
+      />}
 
       {/* Professional: Profile Strength & Trust Score */}
-      {isProfessional && (
+      {isProfessional && !showJobsView && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1">
@@ -294,7 +306,7 @@ export const DashboardPage: React.FC = () => {
       )}
 
       {/* Professional: Prominent Wallet Card */}
-      {isProfessional && (
+      {isProfessional && !showJobsView && (
         <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl mb-8 border border-emerald-800/30">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div>
@@ -366,7 +378,7 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      {isProfessional && (
+      {isProfessional && !showJobsView && (
         <section className="mb-10" aria-labelledby="proposal-activity-title">
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -426,15 +438,17 @@ export const DashboardPage: React.FC = () => {
       <div className="mb-10">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Active Service Contracts ({jobs.length})</h2>
-            <p className="text-xs text-gray-500">Track milestones, escrow protection, and partner messages</p>
+            <h2 className="text-lg font-bold text-gray-900">{showJobsView ? `My Jobs (${jobs.length})` : `Active Service Contracts (${jobs.length})`}</h2>
+            <p className="text-xs text-gray-500">{showJobsView ? 'Open a job to review progress, coordinate, and manage the service.' : 'Track milestones, payment protection, and partner messages.'}</p>
           </div>
         </div>
 
         {jobs.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center text-xs text-gray-400">
-            No active jobs in execution currently.
-          </div>
+            <div className="rounded-2xl border border-dashed border-[#dce6df] bg-white p-8 text-center">
+              <h3 className="text-base font-semibold text-[#344137]">{showJobsView ? 'No jobs yet' : 'No active jobs right now'}</h3>
+              <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-[#737c73]">{showJobsView ? 'When a customer hires you, the service contract and tracker will appear here.' : 'Accepted service contracts will appear here so you can follow work progress.'}</p>
+              {isProfessional && showJobsView && <Link to="/requirements" className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#203c32] px-4 text-sm font-semibold text-white hover:bg-[#2d5144]">Browse customer requests <ArrowRight className="h-4 w-4" /></Link>}
+            </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {jobs.map((job) => (
