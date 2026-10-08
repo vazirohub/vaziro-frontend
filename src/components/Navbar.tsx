@@ -26,6 +26,7 @@ import {
   GraduationCap,
   Baby,
   Activity,
+  Search,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -231,14 +232,10 @@ export const Navbar: React.FC = () => {
                 />
               </Link>
 
-              <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-100/80 border border-neutral-200/60 text-[11px] font-semibold text-neutral-600">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Good people. Good work.</span>
-              </div>
             </div>
 
             {/* Center: Desktop Navigation Links */}
-            <nav className="hidden md:flex items-center gap-1 lg:gap-2 text-sm font-semibold text-neutral-700">
+            <nav aria-label="Main navigation" className="hidden md:flex h-full items-center gap-1 lg:gap-2 text-[13px] font-medium text-[#444d47]">
               {/* Explore Categories Mega Dropdown */}
               <div className="relative" ref={categoriesRef}>
                 <button
@@ -248,10 +245,11 @@ export const Navbar: React.FC = () => {
                     setDropdownOpen(false);
                     setNotificationOpen(false);
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all cursor-pointer ${
+                  aria-expanded={categoriesOpen}
+                  className={`relative flex h-full items-center gap-1.5 border-b-2 px-3 transition-colors cursor-pointer ${
                     categoriesOpen
-                      ? 'bg-neutral-100 text-black font-bold'
-                      : 'text-neutral-700 hover:text-black hover:bg-neutral-50'
+                      ? 'border-[#719453] text-[#355e3e] font-semibold'
+                      : 'border-transparent text-[#444d47] hover:text-[#578329]'
                   }`}
                 >
                   <Compass className="w-4 h-4 text-emerald-600" />
@@ -326,10 +324,10 @@ export const Navbar: React.FC = () => {
               {/* Browse Jobs */}
               <Link
                 to={isProfessional ? '/dashboard?tab=jobs' : '/requirements'}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all ${
+                className={`flex h-full items-center gap-1.5 border-b-2 px-3 transition-colors ${
                   isActive(isProfessional ? '/dashboard' : '/requirements')
-                    ? 'bg-neutral-100 text-black font-bold'
-                    : 'text-neutral-700 hover:text-black hover:bg-neutral-50'
+                    ? 'border-[#719453] text-[#355e3e] font-semibold'
+                    : 'border-transparent text-[#444d47] hover:text-[#578329]'
                 }`}
               >
                 <Briefcase className="w-4 h-4 text-neutral-500" />
@@ -338,10 +336,10 @@ export const Navbar: React.FC = () => {
 
               <Link
                 to="/workflow-preview"
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl transition-all ${
+                className={`flex h-full items-center gap-1.5 border-b-2 px-3 transition-colors ${
                   isActive('/workflow-preview')
-                    ? 'bg-neutral-100 text-black font-bold'
-                    : 'text-neutral-700 hover:text-black hover:bg-neutral-50'
+                    ? 'border-[#719453] text-[#355e3e] font-semibold'
+                    : 'border-transparent text-[#444d47] hover:text-[#578329]'
                 }`}
               >
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
@@ -378,13 +376,17 @@ export const Navbar: React.FC = () => {
             {/* Right: Actions, Balance, Notifications & Profile */}
             <div className="flex items-center gap-2 sm:gap-3">
               {/* Primary Action Button (Desktop) - Customers & Guests */}
-              {(!isProfessional || isAdmin) && (
+              {(!isProfessional || isAdmin) ? (
                 <Link
                   to="/post-requirement"
-                  className="hidden md:inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition active:scale-98"
+                  className="hidden min-h-10 md:inline-flex items-center gap-2 rounded-md bg-[#203c32] px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-[#2d5144]"
                 >
-                  <PlusCircle className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Post Requirement</span>
+                  <PlusCircle className="w-3.5 h-3.5 text-[#c9f27d]" />
+                  <span>Post a request</span>
+                </Link>
+              ) : (
+                <Link to="/requirements" className="hidden min-h-10 md:inline-flex items-center gap-2 rounded-md bg-[#c9f27d] px-4 text-xs font-bold text-[#1c3227] transition hover:bg-[#d7f8a0]">
+                  <Search className="h-3.5 w-3.5" /> Find work
                 </Link>
               )}
 
@@ -394,10 +396,10 @@ export const Navbar: React.FC = () => {
                   {/* Messages Icon Button (Logged-In Users Only) */}
                   <Link
                     to="/chat"
-                    className={`p-2.5 rounded-xl transition flex items-center justify-center relative ${
+                    className={`relative flex h-10 w-10 items-center justify-center rounded-md transition ${
                       isActive('/chat')
-                        ? 'bg-black text-white shadow-sm'
-                        : 'bg-neutral-100 hover:bg-neutral-200 text-neutral-700 hover:text-black'
+                        ? 'bg-[#edf2e8] text-[#355e3e]'
+                        : 'text-[#59645b] hover:bg-[#f1f2e9] hover:text-[#355e3e]'
                     }`}
                     title="Messages & Quotations"
                     aria-label="Messages"
@@ -645,27 +647,23 @@ export const Navbar: React.FC = () => {
                 </div>
               ) : (
                 /* Visitor / Guest Desktop Action Buttons */
-                <div className="hidden md:flex items-center gap-2.5">
+                <div className="hidden md:flex items-center gap-1">
                   {/* Highlighted Become a Pro Button */}
                   <button
                     type="button"
                     onClick={() => openAuthModal('PROFESSIONAL', undefined, 'SIGNUP')}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-extrabold text-xs text-emerald-800 bg-emerald-50 hover:bg-emerald-100/90 border border-emerald-300 shadow-xs transition-all hover:scale-[1.02] active:scale-98 cursor-pointer"
+                    className="flex min-h-10 items-center gap-1.5 rounded-md px-3 text-xs font-semibold text-[#40583d] transition hover:bg-[#f1f2e9] cursor-pointer"
                   >
                     <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Become a Pro</span>
-                    <span className="text-[10px] bg-emerald-600 text-white font-black px-2 py-0.5 rounded-full shadow-xs">
-                      Free +10
-                    </span>
                   </button>
 
                   {/* Unified Sign In Button Styled Like Post Requirement */}
                   <button
                     type="button"
                     onClick={() => openAuthModal('CUSTOMER', undefined, 'LOGIN')}
-                    className="hidden md:inline-flex items-center gap-2 bg-black hover:bg-neutral-800 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-sm transition active:scale-98 cursor-pointer"
+                    className="hidden min-h-10 md:inline-flex items-center gap-2 rounded-md border border-[#d8ddd3] bg-white px-4 text-xs font-semibold text-[#344137] transition hover:bg-[#f7f7f1] cursor-pointer"
                   >
-                    <User className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Sign In</span>
                   </button>
                 </div>
@@ -675,8 +673,9 @@ export const Navbar: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-900 transition flex items-center justify-center cursor-pointer min-h-[40px] min-w-[40px]"
-                aria-label="Toggle Navigation Menu"
+                className="md:hidden flex h-11 w-11 items-center justify-center rounded-md border border-[#e7e8df] bg-white text-[#344137] transition hover:bg-[#f1f2e9] cursor-pointer"
+                aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                aria-expanded={mobileMenuOpen}
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
@@ -697,7 +696,7 @@ export const Navbar: React.FC = () => {
           />
 
           {/* Slide-over Drawer Panel */}
-          <div className="fixed inset-y-0 right-0 max-w-full w-full sm:w-80 bg-white shadow-2xl flex flex-col z-50 animate-in slide-in-from-right duration-250">
+          <div className="fixed inset-y-0 right-0 max-w-full w-full sm:w-[390px] bg-[#fcfbf8] shadow-2xl flex flex-col z-50 animate-in slide-in-from-right duration-250">
             {/* Drawer Top Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200/80 bg-white shrink-0">
               <Link to="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2">
