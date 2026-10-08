@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { api } from '../services/api';
-import { Requirement, Quotation, BoostPackage, DetailedCreditWallet } from '../types';
+import { Requirement, Quotation, BoostPackage, DetailedCreditWallet, Job } from '../types';
 import { useAuth } from '../context/AuthContext';
 import {
   ShieldCheck,
@@ -24,6 +24,10 @@ import {
   Coins,
   Send,
   Calendar,
+  ArrowRight,
+  RefreshCw,
+  Award,
+  Loader2,
 } from 'lucide-react';
 import { openRazorpayCheckout } from '../utils/razorpay';
 import { CategoryIcon } from '../components/CategoryIcon';
@@ -35,6 +39,7 @@ export const RequirementDetailPage: React.FC = () => {
   const { user } = useAuth();
 
   const [requirement, setRequirement] = useState<Requirement | null>(null);
+  const [relatedJob, setRelatedJob] = useState<Job | null>(null);
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [boostPackages, setBoostPackages] = useState<BoostPackage[]>([]);
   const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
@@ -42,9 +47,12 @@ export const RequirementDetailPage: React.FC = () => {
   const [boosting, setBoosting] = useState(false);
   const [boostSuccess, setBoostSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [hiring, setHiring] = useState<string | null>(null);
   const [usePaymentProtection, setUsePaymentProtection] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [quoteActionId, setQuoteActionId] = useState<string | null>(null);
+  const [quoteSort, setQuoteSort] = useState<'RECOMMENDED' | 'PRICE_LOW' | 'EXPERIENCE' | 'RATING'>('RECOMMENDED');
 
   // Professional Quotation & Credit Top-Up State
   const [wallet, setWallet] = useState<DetailedCreditWallet | null>(null);
@@ -59,10 +67,12 @@ export const RequirementDetailPage: React.FC = () => {
   const [quoteError, setQuoteError] = useState<string | null>(null);
   const [quoteSuccess, setQuoteSuccess] = useState<string | null>(null);
 
-  const fetchDetails = async () => {
+  const fetchDetails = async (silent = false) => {
     if (!id) return;
     try {
-      setLoading(true);
+      if (silent) setRefreshing(true);
+      if (!silent) setLoading(true);
+      setError(null);
       const [reqRes, quotesRes, boostRes] = await Promise.all([
         api.getRequirementById(id),
         api.getQuotationsForRequirement(id),
@@ -70,7 +80,14 @@ export const RequirementDetailPage: React.FC = () => {
       ]);
 
       if (reqRes.data?.data) {
-        setRequirement(reqRes.data.data);
+        const loadedRequirement = reqRes.data.data;
+        setRequirement(loadedRequirement);
+        setRelatedJob(null);
+        if (user?.id === (loadedRequirement as any).customer?.userId) {
+          const jobsRes = await api.getMyJobs().catch(() => null);
+          const matchingJob = jobsRes?.data?.data?.find((job) => job.requirementId === loadedRequirement.id);
+          setRelatedJob(matchingJob || null);
+        }
       }
       if (quotesRes.data?.data) {
         setQuotations(quotesRes.data.data);
@@ -81,7 +98,8 @@ export const RequirementDetailPage: React.FC = () => {
     } catch (err: any) {
       setError('Failed to load requirement details or quotations.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
+      if (silent) setRefreshing(false);
     }
   };
 
@@ -100,7 +118,7 @@ export const RequirementDetailPage: React.FC = () => {
 
   useEffect(() => {
     fetchDetails();
-  }, [id]);
+  }, [id, user?.id]);
 
   useEffect(() => {
     fetchWallet();
@@ -154,6 +172,10 @@ export const RequirementDetailPage: React.FC = () => {
   };
 
   const handleHire = async (quotationId: string) => {
+    const quotation = quotations.find((item) => item.id === quotationId);
+    const professionalName = quotation?.professional?.user?.firstName || 'this professional';
+    const protectionNote = usePaymentProtection ? ' Payment protection is on and includes a 6% platform fee.' : '';
+    if (!window.confirm(`Hire ${professionalName} for ₹${(quotation?.proposedPrice || 0).toLocaleString('en-IN')}? This creates a service contract.${protectionNote}`)) return;
     try {
       setHiring(quotationId);
       setError(null);
@@ -161,6 +183,8 @@ export const RequirementDetailPage: React.FC = () => {
       const res = await api.hireProfessional(quotationId, usePaymentProtection);
       if (res.data?.success && res.data?.data) {
         navigate(`/jobs/${res.data.data.id}`);
+      } else {
+        setError('We could not create the service contract. Please refresh and try again.');
       }
     } catch (err: any) {
       setError(err.response?.data?.error?.message || err.message || 'Failed to hire professional.');
@@ -186,19 +210,28 @@ export const RequirementDetailPage: React.FC = () => {
 
   const handleShortlist = async (quoteId: string) => {
     try {
+      setQuoteActionId(quoteId);
+      setError(null);
       await api.shortlistQuotation(quoteId);
-      fetchDetails();
+      await fetchDetails(true);
     } catch (err: any) {
-      console.error(err);
+      setError(err.response?.data?.error?.message || err.message || 'Could not shortlist this proposal. Try again.');
+    } finally {
+      setQuoteActionId(null);
     }
   };
 
   const handleReject = async (quoteId: string) => {
+    if (!window.confirm('Reject this professional’s proposal? You can no longer hire them for this request.')) return;
     try {
+      setQuoteActionId(quoteId);
+      setError(null);
       await api.rejectQuotation(quoteId);
-      fetchDetails();
+      await fetchDetails(true);
     } catch (err: any) {
-      console.error(err);
+      setError(err.response?.data?.error?.message || err.message || 'Could not update this proposal. Try again.');
+    } finally {
+      setQuoteActionId(null);
     }
   };
 
@@ -284,7 +317,15 @@ export const RequirementDetailPage: React.FC = () => {
       (user?.professionalProfile && q.professionalProfileId === (user.professionalProfile as any)?.id) ||
       (wallet?.professionalProfileId && q.professionalProfileId === wallet.professionalProfileId)
   );
-  const currentBalance = wallet?.balance ?? 10;
+  const currentBalance = wallet?.balance ?? user?.professionalProfile?.creditWallet?.balance ?? 0;
+  const isHired = Boolean(relatedJob) || ['HIRED', 'IN_PROGRESS', 'COMPLETED', 'CLOSED'].includes(requirement.status.toUpperCase()) || quotations.some((quote) => ['HIRED', 'ACCEPTED'].includes(quote.status.toUpperCase()));
+  const customerJourneyStep = isHired ? 3 : 1;
+  const sortedQuotations = [...quotations].sort((a, b) => {
+    if (quoteSort === 'PRICE_LOW') return a.proposedPrice - b.proposedPrice;
+    if (quoteSort === 'EXPERIENCE') return (b.professional?.yearsOfExperience || 0) - (a.professional?.yearsOfExperience || 0);
+    if (quoteSort === 'RATING') return (b.professional?.rating || 0) - (a.professional?.rating || 0);
+    return (b.aiMatch?.score || 0) - (a.aiMatch?.score || 0) || (b.professional?.rating || 0) - (a.professional?.rating || 0) || (b.professional?.yearsOfExperience || 0) - (a.professional?.yearsOfExperience || 0);
+  });
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -433,7 +474,7 @@ export const RequirementDetailPage: React.FC = () => {
         )}
 
         {/* Payment Protection Option Toggle (Section 34) */}
-        <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-emerald-50/50 p-4 rounded-xl border border-emerald-200">
+        {isCustomerOwner && <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-emerald-50/50 p-4 rounded-xl border border-emerald-200">
           <div className="flex items-start gap-3">
             <ShieldCheck className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
             <div>
@@ -457,8 +498,52 @@ export const RequirementDetailPage: React.FC = () => {
             />
             <span className="text-xs font-bold text-emerald-950">Enable Protection</span>
           </label>
-        </div>
+        </div>}
       </div>
+
+      {isCustomerOwner && (
+        <section className="mb-8 overflow-hidden rounded-[10px] border border-[#dce0d3] bg-[#fffefa]" aria-labelledby="customer-journey-title">
+          <div className="flex flex-col gap-4 border-b border-[#e7e8df] bg-[#f1f2e9] p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#718044]">{isHired ? 'Service progress' : 'Your request is live'}</p>
+              <h2 id="customer-journey-title" className="mt-1 text-lg font-semibold tracking-tight text-[#29382e]">
+                {isHired ? 'You’ve chosen a professional' : quotations.length ? `${quotations.length} ${quotations.length === 1 ? 'proposal' : 'proposals'} to review` : 'We’re finding the right professionals'}
+              </h2>
+              <p className="mt-1 text-sm leading-5 text-[#68716b]">
+                {isHired ? 'Your next step is in the service tracker.' : quotations.length ? 'Compare each offer, shortlist your favourites, then hire when you’re ready.' : 'New proposals will appear here. You can leave this page and return any time.'}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 self-start sm:flex-row sm:self-auto">
+              {!isHired && quotations.length > 0 && <a href="#received-quotations" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-[#203c32] px-4 text-sm font-semibold text-white transition hover:bg-[#2d5144]">Review proposals <ArrowRight className="h-4 w-4" /></a>}
+              {isHired && relatedJob && <Link to={`/jobs/${relatedJob.id}`} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md bg-[#203c32] px-4 text-sm font-semibold text-white transition hover:bg-[#2d5144]">Open service tracker <ArrowRight className="h-4 w-4" /></Link>}
+              <button type="button" onClick={() => fetchDetails(true)} disabled={refreshing || loading} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md border border-[#d8ddd3] bg-white px-4 text-sm font-semibold text-[#40583d] transition hover:bg-[#f7f7f1] disabled:cursor-wait disabled:opacity-60">
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> {refreshing ? 'Checking...' : 'Refresh proposals'}
+              </button>
+            </div>
+          </div>
+          <ol className="grid grid-cols-1 divide-y divide-[#e7e8df] sm:grid-cols-3 sm:divide-y-0">
+            {[
+              { title: 'Request posted', detail: new Date(requirement.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) },
+              { title: 'Compare proposals', detail: quotations.length ? `${quotations.length} received` : 'Waiting for offers' },
+              { title: 'Hire & track', detail: isHired ? 'Open your tracker' : 'When you’re ready' },
+            ].map((item, index) => {
+              const complete = index < customerJourneyStep;
+              const current = index === customerJourneyStep;
+              return (
+                <li key={item.title} aria-current={current ? 'step' : undefined} className={`flex items-center gap-3 px-5 py-4 sm:px-6 ${current ? 'bg-[#f8faf4]' : ''}`}>
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${complete ? 'bg-[#dce9ce] text-[#48633e]' : current ? 'bg-[#203c32] text-white' : 'bg-[#f1f2e9] text-[#8c9388]'}`}>
+                    {complete ? <Check className="h-4 w-4" aria-hidden="true" /> : index + 1}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-[#354137]">{item.title}</span>
+                    <span className="mt-0.5 block text-xs text-[#7a8279]">{item.detail}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      )}
 
       {boostSuccess && (
         <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm font-semibold flex items-center gap-2">
@@ -468,143 +553,159 @@ export const RequirementDetailPage: React.FC = () => {
       )}
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded text-red-700 text-sm">
+        <div role="alert" className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded text-red-700 text-sm">
           {error}
         </div>
       )}
 
-      {/* Quotation Comparison Section (Section 24 & 25) */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
+      {/* Quotation Comparison Section */}
+      <div id="received-quotations" className="mb-8 scroll-mt-24">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">
-              Received Quotations ({quotations.length})
+            <p className="text-[10px] font-bold uppercase tracking-[1.5px] text-[#718044]">{isCustomerOwner ? 'Review your options' : 'Request proposals'}</p>
+            <h2 className="mt-1 text-xl font-semibold tracking-tight text-[#29382e]">
+              {isCustomerOwner ? `Proposals (${quotations.length})` : `Quotations (${quotations.length})`}
             </h2>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Side-by-side comparison powered by DigiLocker credentials and AI Match Scores.
+            <p className="mt-1 text-sm text-[#737c73]">
+              {isCustomerOwner ? 'Compare price, experience and availability. Hire only when you’re ready.' : 'Review offers from professionals who have responded to this request.'}
             </p>
           </div>
+          {quotations.length > 1 && (
+            <label className="flex min-h-11 items-center gap-2 self-start rounded-md border border-[#dfe2d9] bg-white px-3 text-xs font-semibold text-[#59645b] sm:self-auto">
+              <span>Sort by</span>
+              <select aria-label="Sort proposals" value={quoteSort} onChange={(event) => setQuoteSort(event.target.value as typeof quoteSort)} className="min-h-10 bg-transparent text-sm font-semibold text-[#344137] outline-none">
+                <option value="RECOMMENDED">Best match</option>
+                <option value="PRICE_LOW">Lowest price</option>
+                <option value="EXPERIENCE">Most experience</option>
+                <option value="RATING">Highest rating</option>
+              </select>
+            </label>
+          )}
         </div>
 
         {quotations.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-            <Clock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <h3 className="text-lg font-bold text-gray-900">Waiting for Quotations</h3>
-            <p className="text-sm text-gray-500 mt-1 max-w-sm mx-auto">
-              Local professionals in your area are evaluating your requirement. You will receive quotation proposals shortly.
+          <div className="rounded-[10px] border border-dashed border-[#cfd8c7] bg-[#fffefa] px-5 py-10 text-center sm:px-8">
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#e9efdd] text-[#668044]"><Clock className="h-5 w-5" /></span>
+            <h3 className="mt-4 text-lg font-semibold text-[#344137]">Your request is open</h3>
+            <p className="mx-auto mt-1 max-w-md text-sm leading-6 text-[#737c73]">
+              When professionals respond, their quotations will appear here. You can refresh this page to check for new proposals.
             </p>
+            <button type="button" onClick={() => fetchDetails(true)} disabled={refreshing || loading} className="mt-4 inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-[#d8ddd3] bg-white px-4 text-sm font-semibold text-[#40583d] transition hover:bg-[#f7f7f1] disabled:opacity-60">
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> {refreshing ? 'Checking...' : 'Check for proposals'}
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {quotations.map((q) => {
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            {sortedQuotations.map((q) => {
               const prof = q.professional;
-              const ai = q.aiMatch;
 
               return (
                 <div
                   key={q.id}
-                  className={`bg-white rounded-2xl border p-6 flex flex-col justify-between shadow-sm transition ${
+                  className={`rounded-[10px] border bg-[#fffefa] p-5 flex flex-col justify-between shadow-[0_10px_30px_-26px_rgba(48,67,45,0.4)] transition sm:p-6 ${
                     q.status === 'SHORTLISTED'
-                      ? 'border-emerald-500 ring-2 ring-emerald-500/20'
+                      ? 'border-[#78935f] ring-2 ring-[#78935f]/15'
                       : q.status === 'REJECTED'
-                      ? 'border-gray-200 opacity-60'
-                      : 'border-gray-200 hover:border-emerald-300'
+                      ? 'border-[#e7e8df] opacity-65'
+                      : 'border-[#e7e8df] hover:border-[#c5d5a8]'
                   }`}
                 >
                   <div>
-                    {/* Professional Header & DigiLocker Badge */}
-                    <div className="flex items-start justify-between gap-4 mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-base">
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#e9efdd] text-base font-semibold text-[#48633e]">
                           {prof?.user?.firstName?.[0] || 'P'}
                         </div>
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <h3 className="font-bold text-gray-900 text-base">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <h3 className="text-base font-semibold text-[#29382e]">
                               {prof?.user?.firstName} {prof?.user?.lastName ? prof.user.lastName[0] + '.' : ''}
                             </h3>
                             {prof?.isVerified && (
-                              <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                                ✓ Verified via DigiLocker
+                              <span className="inline-flex items-center gap-1 rounded-full border border-[#dce8ce] bg-[#f1f4e9] px-2 py-0.5 text-[11px] font-semibold text-[#48633e]">
+                                <ShieldCheck className="h-3.5 w-3.5" /> Verified
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-500">{prof?.title || 'Professional Service Partner'}</p>
-                        </div>
-                      </div>
-
-                      {/* AI Match Score Badge (Section 26) */}
-                      {ai && (
-                        <div className="text-right">
-                          <div className="inline-flex items-center gap-1 bg-violet-50 text-violet-800 border border-violet-200 px-2.5 py-1 rounded-full text-xs font-bold">
-                            <Sparkles className="w-3.5 h-3.5 text-violet-600" />
-                            {ai.score}% AI Match
+                          <p className="mt-0.5 truncate text-sm text-[#737c73]">{prof?.title || 'Professional'}</p>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#737c73]">
+                            <span className="inline-flex items-center gap-1"><Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" />{prof?.rating ? prof.rating.toFixed(1) : 'New'}{prof?.reviewsCount ? ` (${prof.reviewsCount})` : ''}</span>
+                            <span className="inline-flex items-center gap-1"><Award className="h-3.5 w-3.5 text-[#718044]" />{prof?.yearsOfExperience || 0} yrs experience</span>
+                            {Boolean(prof?.completedJobsCount) && <span>{prof?.completedJobsCount} completed</span>}
                           </div>
                         </div>
-                      )}
+                      </div>
+
+                      <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${q.status === 'SHORTLISTED' ? 'border-[#dce8ce] bg-[#f1f4e9] text-[#48633e]' : q.status === 'REJECTED' ? 'border-[#e7e8df] bg-[#f7f7f1] text-[#737c73]' : 'border-[#e7e8df] bg-white text-[#737c73]'}`}>{q.status.replace(/_/g, ' ')}</span>
                     </div>
 
-                    {/* Proposed Price & Timeline */}
-                    <div className="bg-gray-50 p-4 rounded-xl mb-4 flex items-center justify-between border border-gray-100">
+                    <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-[#e7e8df] bg-[#f7f7f1] p-4">
                       <div>
-                        <span className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider block">Proposed Quote</span>
-                        <span className="text-2xl font-black text-gray-900">₹{q.proposedPrice.toLocaleString('en-IN')}</span>
+                        <span className="block text-xs font-semibold text-[#737c73]">Proposed price</span>
+                        <span className="mt-0.5 block text-2xl font-semibold tracking-tight text-[#29382e]">₹{q.proposedPrice.toLocaleString('en-IN')}</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider block">Est. Timeline</span>
-                        <span className="text-sm font-bold text-gray-800">{q.estimatedTimeline}</span>
+                        <span className="block text-xs font-semibold text-[#737c73]">Estimated time</span>
+                        <span className="mt-1 block text-sm font-semibold text-[#354137]">{q.estimatedTimeline}</span>
+                        {q.proposedStartDate && <span className="mt-1 block text-xs text-[#737c73]">Starts {new Date(`${q.proposedStartDate.slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>}
                       </div>
                     </div>
 
                     {/* Message & Scope */}
                     <div className="space-y-2 mb-4">
                       <div>
-                        <span className="text-xs font-bold text-gray-700 block">Proposal Message:</span>
-                        <p className="text-xs text-gray-600 leading-relaxed bg-white p-3 rounded-lg border border-gray-100">
-                          {q.message}
+                        <span className="text-sm font-semibold text-[#465248]">Message</span>
+                        <p className="mt-1 rounded-md border border-[#e7e8df] bg-white p-3 text-sm leading-6 text-[#626e64]">
+                          {q.message || 'No message provided.'}
                         </p>
                       </div>
                       {q.scopeSummary && (
                         <div>
-                          <span className="text-xs font-bold text-gray-700 block">Scope Summary:</span>
-                          <p className="text-xs text-gray-600 leading-relaxed">{q.scopeSummary}</p>
+                            <span className="text-sm font-semibold text-[#465248]">Scope summary</span>
+                            <p className="mt-1 text-sm leading-6 text-[#737c73]">{q.scopeSummary}</p>
                         </div>
                       )}
                     </div>
                   </div>
 
                   {/* Actions (Section 27: Hire) */}
-                  <div className="pt-4 border-t border-gray-100 flex flex-wrap items-center gap-2">
-                    {q.status !== 'REJECTED' && (
+                  <div className="flex flex-wrap items-center gap-2 border-t border-[#e7e8df] pt-4">
+                    {prof?.id && <Link to={`/professionals/${prof.id}`} className="inline-flex min-h-11 items-center justify-center rounded-md border border-[#d8ddd3] px-3 text-sm font-semibold text-[#40583d] transition hover:bg-[#f7f7f1]">View profile</Link>}
+                    {canManageRequirement && q.status !== 'REJECTED' && !isHired && (
                       <>
                         <button
                           onClick={() => handleShortlist(q.id)}
-                          className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 text-xs font-semibold flex items-center gap-1 cursor-pointer"
-                          title="Shortlist"
+                          disabled={quoteActionId === q.id}
+                          className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-[#d8ddd3] px-3 text-sm font-semibold text-[#40583d] transition hover:bg-[#f7f7f1] disabled:cursor-wait disabled:opacity-60"
                         >
-                          <ThumbsUp className="w-3.5 h-3.5 text-emerald-600" />
-                          Shortlist
+                          {quoteActionId === q.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ThumbsUp className="h-4 w-4 text-[#668044]" />}
+                          {q.status === 'SHORTLISTED' ? 'Shortlisted' : 'Shortlist'}
                         </button>
 
                         <button
                           onClick={() => handleReject(q.id)}
-                          className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-600 text-xs font-semibold flex items-center gap-1 cursor-pointer"
-                          title="Reject"
+                          disabled={quoteActionId === q.id}
+                          aria-label={`Reject proposal from ${prof?.user?.firstName || 'professional'}`}
+                          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md border border-[#e7e8df] px-3 text-sm font-semibold text-[#737c73] transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:opacity-60"
                         >
-                          <XCircle className="w-3.5 h-3.5 text-red-500" />
+                          <XCircle className="h-4 w-4" /> Decline
                         </button>
                       </>
                     )}
 
-                    <button
-                      onClick={() => handleHire(q.id)}
-                      disabled={hiring === q.id || q.status === 'REJECTED' || requirement.status === 'HIRED'}
-                      className="ml-auto bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow-sm transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      {hiring === q.id ? 'Hiring...' : 'Hire Professional'}
-                    </button>
+                    {canManageRequirement && !isHired && q.status !== 'REJECTED' && (
+                      <button
+                        onClick={() => handleHire(q.id)}
+                        disabled={Boolean(hiring) || quoteActionId === q.id}
+                        className="ml-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#203c32] px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-[#2d5144] disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {hiring === q.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                        {hiring === q.id ? 'Creating contract...' : 'Hire professional'}
+                      </button>
+                    )}
+                    {isHired && ['HIRED', 'ACCEPTED'].includes(q.status.toUpperCase()) && relatedJob && (
+                      <Link to={`/jobs/${relatedJob.id}`} className="ml-auto inline-flex min-h-11 items-center justify-center gap-2 rounded-md bg-[#203c32] px-4 text-sm font-semibold text-white transition hover:bg-[#2d5144]">Track service <ArrowRight className="h-4 w-4" /></Link>
+                    )}
                   </div>
                 </div>
               );
