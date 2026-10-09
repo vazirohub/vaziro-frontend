@@ -597,7 +597,19 @@ export const PhoneOtpModal: React.FC = () => {
 
         {errorMessage && (
           <div role="alert" className="mb-4 rounded-md border border-red-200 bg-red-50 p-3.5 text-sm font-medium leading-relaxed text-red-800 animate-in fade-in">
-            {errorMessage}
+            <div>{errorMessage}</div>
+            {viewMode === 'SIGNUP' && signupStep === 'VERIFY_OTP' && signupVerifyChannel === 'MOBILE' && (
+              <div className="mt-2 pt-2 border-t border-red-200/60">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchSignupChannel('EMAIL')}
+                  className="text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-3 py-1.5 rounded-md transition inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  <span>Switch to Email OTP Verification (Instant)</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -51,7 +51,7 @@ const AppShell: React.FC = () => {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/professionals" element={<BrowseProfessionalsPage />} />
-              <Route path="/talent" element={<BrowseProfessionalsPage />} />
+              <Route path="/talent" element={<Navigate to="/professionals" replace />} />
               <Route path="/professionals/:idOrSlug" element={<PublicProfessionalProfilePage />} />
               <Route path="/professional/:idOrSlug" element={<PublicProfessionalProfilePage />} />
               <Route path="/admin" element={<AdminDashboardPage />} />

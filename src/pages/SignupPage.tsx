@@ -309,7 +309,21 @@ export const SignupPage: React.FC = () => {
             className="mb-5 rounded-md border border-red-200 bg-red-50 p-3.5 text-sm font-medium leading-relaxed text-red-800 animate-in fade-in flex items-start gap-2.5"
           >
             <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-            <span>{errorMessage}</span>
+            <div className="flex-1">
+              <div>{errorMessage}</div>
+              {signupStep === 'VERIFY_OTP' && verifyChannel === 'MOBILE' && (
+                <div className="mt-2.5 pt-2 border-t border-red-200/60">
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchChannel('EMAIL')}
+                    className="text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-3 py-1.5 rounded-md transition inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>Switch to Email OTP Verification (Instant)</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
