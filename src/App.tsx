@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -31,9 +31,16 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { IshaChatWidget } from './components/IshaChatWidget';
 import { WorkflowPreviewPage } from './pages/WorkflowPreviewPage';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { initNativeApp } from './utils/nativeApp';
 
 const AppShell: React.FC = () => {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    initNativeApp(navigate);
+  }, [navigate]);
+
   const hasMobileNavigation = !pathname.startsWith('/admin') && !['/login', '/signup'].includes(pathname) && !pathname.startsWith('/verify/callback');
 
   return (

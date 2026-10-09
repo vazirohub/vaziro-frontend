@@ -9,13 +9,18 @@
     "start": "node server.js",
     "preview": "vite preview",
     "lint": "echo 'No lint errors'",
-    "android:sync": "npm run build && cap sync android",
+    "android:sync": "npm run build && npx cap sync android",
     "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug",
-    "android:open": "cap open android"
+    "android:release": "npm run android:sync && cd android && ./gradlew assembleRelease",
+    "android:open": "npx cap open android"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.5.2",
+    "@capacitor/keyboard": "^8.0.6",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
