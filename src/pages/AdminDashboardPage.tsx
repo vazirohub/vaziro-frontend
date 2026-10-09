@@ -178,6 +178,7 @@ export const AdminDashboardPage: React.FC = () => {
   const [userStatusFilter, setUserStatusFilter] = useState('ALL');
   const [reqSearch, setReqSearch] = useState('');
   const [reqStatusFilter, setReqStatusFilter] = useState('ALL');
+  const [jobSearch, setJobSearch] = useState('');
   const [jobStatusFilter, setJobStatusFilter] = useState('ALL');
   const [verificationFilterStatus, setVerificationFilterStatus] = useState<string>('ALL');
   const [verificationSearch, setVerificationSearch] = useState<string>('');
@@ -692,12 +693,27 @@ export const AdminDashboardPage: React.FC = () => {
   // Filtered Requirements
   const filteredRequirements = useMemo(() => {
     return requirements.filter((r) => {
-      const q = reqSearch.toLowerCase();
+      const q = reqSearch.toLowerCase().trim();
+      const clientName = (
+        r.customer?.user
+          ? `${r.customer.user.firstName || ''} ${r.customer.user.lastName || ''}`
+          : `${r.client?.firstName || ''} ${r.client?.lastName || ''}`
+      ).toLowerCase();
+      const cityName = (
+        typeof r.city === 'object' && r.city !== null
+          ? r.city.name || ''
+          : typeof r.city === 'string'
+          ? r.city
+          : ''
+      ).toLowerCase();
+      const categoryName = (r.category?.name || '').toLowerCase();
       const matchQ =
         !q ||
-        r.title?.toLowerCase().includes(q) ||
-        r.client?.firstName?.toLowerCase().includes(q) ||
-        r.city?.toLowerCase().includes(q);
+        (r.title && r.title.toLowerCase().includes(q)) ||
+        (r.description && r.description.toLowerCase().includes(q)) ||
+        clientName.includes(q) ||
+        cityName.includes(q) ||
+        categoryName.includes(q);
       const matchStatus = reqStatusFilter === 'ALL' || r.status === reqStatusFilter;
       return matchQ && matchStatus;
     });
@@ -706,9 +722,31 @@ export const AdminDashboardPage: React.FC = () => {
   // Filtered Jobs
   const filteredJobs = useMemo(() => {
     return jobs.filter((j) => {
-      return jobStatusFilter === 'ALL' || j.status === jobStatusFilter;
+      const q = jobSearch.toLowerCase().trim();
+      const clientName = (
+        j.customer?.user
+          ? `${j.customer.user.firstName || ''} ${j.customer.user.lastName || ''}`
+          : `${j.client?.firstName || ''} ${j.client?.lastName || ''}`
+      ).toLowerCase();
+      const profName = (
+        j.professional?.user
+          ? `${j.professional.user.firstName || ''} ${j.professional.user.lastName || ''}`
+          : ''
+      ).toLowerCase();
+      const reqTitle = (j.requirement?.title || '').toLowerCase();
+      const jobId = (j.id || '').toLowerCase();
+
+      const matchQ =
+        !q ||
+        clientName.includes(q) ||
+        profName.includes(q) ||
+        reqTitle.includes(q) ||
+        jobId.includes(q);
+      const matchStatus = jobStatusFilter === 'ALL' || j.status === jobStatusFilter;
+
+      return matchQ && matchStatus;
     });
-  }, [jobs, jobStatusFilter]);
+  }, [jobs, jobSearch, jobStatusFilter]);
 
   // Filtered Verifications
   const filteredVerifications = useMemo(() => {
@@ -1093,10 +1131,20 @@ export const AdminDashboardPage: React.FC = () => {
       { header: 'Requirement ID', accessor: (r: any) => r.id },
       { header: 'Title', accessor: (r: any) => r.title || '' },
       { header: 'Category', accessor: (r: any) => r.category?.name || '' },
-      { header: 'Client Name', accessor: (r: any) => `${r.client?.firstName || ''} ${r.client?.lastName || ''}`.trim() || 'Client' },
+      {
+        header: 'Client Name',
+        accessor: (r: any) =>
+          (r.customer?.user
+            ? `${r.customer.user.firstName || ''} ${r.customer.user.lastName || ''}`.trim()
+            : `${r.client?.firstName || ''} ${r.client?.lastName || ''}`.trim()) || 'Client',
+      },
       { header: 'Min Budget (INR)', accessor: (r: any) => r.budgetMin ?? '' },
       { header: 'Max Budget (INR)', accessor: (r: any) => r.budgetMax ?? '' },
-      { header: 'City', accessor: (r: any) => r.city || '' },
+      {
+        header: 'City',
+        accessor: (r: any) =>
+          (typeof r.city === 'object' && r.city !== null ? r.city.name : typeof r.city === 'string' ? r.city : '') || '',
+      },
       { header: 'Status', accessor: (r: any) => r.status || 'OPEN' },
       { header: 'Posted Date', accessor: (r: any) => r.createdAt ? new Date(r.createdAt).toLocaleString('en-IN') : '' },
     ];
@@ -1114,12 +1162,22 @@ export const AdminDashboardPage: React.FC = () => {
     const columns = [
       { header: 'Job ID', accessor: (j: any) => j.id },
       { header: 'Requirement', accessor: (j: any) => j.requirement?.title || '' },
-      { header: 'Client', accessor: (j: any) => `${j.client?.firstName || ''} ${j.client?.lastName || ''}`.trim() },
-      { header: 'Professional', accessor: (j: any) => `${j.professional?.user?.firstName || ''} ${j.professional?.user?.lastName || ''}`.trim() },
-      { header: 'Agreed Price (INR)', accessor: (j: any) => j.agreedAmount || j.agreedPrice || 0 },
+      {
+        header: 'Client',
+        accessor: (j: any) =>
+          (j.customer?.user
+            ? `${j.customer.user.firstName || ''} ${j.customer.user.lastName || ''}`.trim()
+            : `${j.client?.firstName || ''} ${j.client?.lastName || ''}`.trim()) || 'Client',
+      },
+      {
+        header: 'Professional',
+        accessor: (j: any) =>
+          `${j.professional?.user?.firstName || ''} ${j.professional?.user?.lastName || ''}`.trim() || 'Professional',
+      },
+      { header: 'Agreed Price (INR)', accessor: (j: any) => j.agreedAmount || j.agreedPrice || j.quotation?.priceInr || 0 },
       { header: 'Job Status', accessor: (j: any) => j.status || '' },
       { header: 'Work Status', accessor: (j: any) => j.workStatus || '' },
-      { header: 'Escrow Secured', accessor: (j: any) => j.paymentSecured ? 'YES' : 'NO' },
+      { header: 'Escrow Secured', accessor: (j: any) => j.paymentSecured || j.paymentProtection ? 'YES' : 'NO' },
       { header: 'Created Date', accessor: (j: any) => j.createdAt ? new Date(j.createdAt).toLocaleString('en-IN') : '' },
     ];
 
@@ -1175,12 +1233,14 @@ export const AdminDashboardPage: React.FC = () => {
       r.id,
       r.title || '',
       r.category?.name || '',
-      `${r.client?.firstName || ''} ${r.client?.lastName || ''}`.trim(),
+      (r.customer?.user
+        ? `${r.customer.user.firstName || ''} ${r.customer.user.lastName || ''}`.trim()
+        : `${r.client?.firstName || ''} ${r.client?.lastName || ''}`.trim()) || 'Client',
       r.budgetMin ?? '',
       r.budgetMax ?? '',
-      r.city || '',
+      (typeof r.city === 'object' && r.city !== null ? r.city.name : typeof r.city === 'string' ? r.city : '') || '',
       r.status || 'OPEN',
-      r.createdAt || '',
+      r.createdAt ? new Date(r.createdAt).toLocaleString('en-IN') : '',
     ]);
     exportToCSV('vaziro-requirements', headers, rows);
     setFeedback({ type: 'success', message: `Exported ${targetData.length} requirements to CSV.` });
@@ -1194,12 +1254,14 @@ export const AdminDashboardPage: React.FC = () => {
     const rows = targetData.map((j) => [
       j.id,
       j.requirement?.title || '',
-      `${j.client?.firstName || ''} ${j.client?.lastName || ''}`.trim(),
-      `${j.professional?.user?.firstName || ''} ${j.professional?.user?.lastName || ''}`.trim(),
-      j.agreedAmount || j.agreedPrice || 0,
+      (j.customer?.user
+        ? `${j.customer.user.firstName || ''} ${j.customer.user.lastName || ''}`.trim()
+        : `${j.client?.firstName || ''} ${j.client?.lastName || ''}`.trim()) || 'Client',
+      `${j.professional?.user?.firstName || ''} ${j.professional?.user?.lastName || ''}`.trim() || 'Professional',
+      j.agreedAmount || j.agreedPrice || j.quotation?.priceInr || 0,
       j.status || '',
       j.workStatus || '',
-      j.createdAt || '',
+      j.createdAt ? new Date(j.createdAt).toLocaleString('en-IN') : '',
     ]);
     exportToCSV('vaziro-jobs', headers, rows);
     setFeedback({ type: 'success', message: `Exported ${targetData.length} jobs to CSV.` });
@@ -2682,7 +2744,7 @@ export const AdminDashboardPage: React.FC = () => {
                 <div className="bg-white p-3.5 rounded-2xl border border-neutral-200 flex items-center justify-between gap-3">
                   <input
                     type="text"
-                    placeholder="Search requirements by title, client, or city..."
+                    placeholder="Search requirements by title, description, client, or city..."
                     value={reqSearch}
                     onChange={(e) => setReqSearch(e.target.value)}
                     className="flex-1 px-3 py-1.5 text-xs font-semibold bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:bg-white"
@@ -2723,49 +2785,69 @@ export const AdminDashboardPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-neutral-100">
-                        {filteredRequirements.map((r) => {
-                          const isSelected = selectedRequirementIds.includes(r.id);
-                          return (
-                            <tr key={r.id} className={`hover:bg-neutral-50/60 transition ${isSelected ? 'bg-emerald-50/40' : ''}`}>
-                              <td className="p-4 w-10 text-center" onClick={(e) => e.stopPropagation()}>
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => toggleRequirementSelection(r.id)}
-                                  className="w-4 h-4 rounded text-[#108a00] focus:ring-[#108a00] border-neutral-300 cursor-pointer"
-                                />
-                              </td>
-                              <td className="p-4 max-w-xs">
-                                <div className="font-bold text-neutral-900 truncate">{r.title}</div>
-                                <div className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">{r.description}</div>
-                              </td>
-                              <td className="p-4">
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-[#108a00]">
-                                  {r.category?.name || 'General'}
-                                </span>
-                              </td>
-                              <td className="p-4 text-neutral-700">
-                                {r.client?.firstName} {r.client?.lastName}
-                              </td>
-                              <td className="p-4 font-bold text-neutral-900">
-                                ₹{r.budgetMin || 0} - ₹{r.budgetMax || 'Negotiable'}
-                              </td>
-                              <td className="p-4 text-neutral-600">{r.city || 'Delhi NCR'}</td>
-                              <td className="p-4">
-                                <select
-                                  value={r.status}
-                                  onChange={(e) => handleUpdateRequirementStatus(r.id, e.target.value)}
-                                  className="text-[11px] font-bold px-2 py-1 rounded-lg border border-neutral-200 bg-neutral-50 focus:outline-none cursor-pointer"
-                                >
-                                  <option value="OPEN">OPEN</option>
-                                  <option value="IN_PROGRESS">IN_PROGRESS</option>
-                                  <option value="CLOSED">CLOSED</option>
-                                  <option value="CANCELLED">CANCELLED</option>
-                                </select>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {filteredRequirements.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="p-8 text-center text-neutral-400 font-medium">
+                              No service requirements found matching your search and filter criteria.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredRequirements.map((r) => {
+                            const isSelected = selectedRequirementIds.includes(r.id);
+                            const clientDisplayName = r.customer?.user
+                              ? `${r.customer.user.firstName || ''} ${r.customer.user.lastName || ''}`.trim()
+                              : r.client
+                              ? `${r.client.firstName || ''} ${r.client.lastName || ''}`.trim()
+                              : 'Client';
+                            const cityName =
+                              typeof r.city === 'object' && r.city !== null
+                                ? r.city.name || 'Delhi NCR'
+                                : typeof r.city === 'string' && r.city
+                                ? r.city
+                                : 'Delhi NCR';
+
+                            return (
+                              <tr key={r.id} className={`hover:bg-neutral-50/60 transition ${isSelected ? 'bg-emerald-50/40' : ''}`}>
+                                <td className="p-4 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => toggleRequirementSelection(r.id)}
+                                    className="w-4 h-4 rounded text-[#108a00] focus:ring-[#108a00] border-neutral-300 cursor-pointer"
+                                  />
+                                </td>
+                                <td className="p-4 max-w-xs">
+                                  <div className="font-bold text-neutral-900 truncate">{r.title || 'Untitled Requirement'}</div>
+                                  <div className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">{r.description || 'No description provided'}</div>
+                                </td>
+                                <td className="p-4">
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-[#108a00]">
+                                    {r.category?.name || 'General'}
+                                  </span>
+                                </td>
+                                <td className="p-4 text-neutral-700 font-medium">
+                                  {clientDisplayName || 'Client'}
+                                </td>
+                                <td className="p-4 font-bold text-neutral-900">
+                                  ₹{r.budgetMin ?? 0} - ₹{r.budgetMax ?? 'Negotiable'}
+                                </td>
+                                <td className="p-4 text-neutral-600">{cityName}</td>
+                                <td className="p-4">
+                                  <select
+                                    value={r.status || 'OPEN'}
+                                    onChange={(e) => handleUpdateRequirementStatus(r.id, e.target.value)}
+                                    className="text-[11px] font-bold px-2 py-1 rounded-lg border border-neutral-200 bg-neutral-50 focus:outline-none cursor-pointer"
+                                  >
+                                    <option value="OPEN">OPEN</option>
+                                    <option value="IN_PROGRESS">IN_PROGRESS</option>
+                                    <option value="CLOSED">CLOSED</option>
+                                    <option value="CANCELLED">CANCELLED</option>
+                                  </select>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -2776,20 +2858,30 @@ export const AdminDashboardPage: React.FC = () => {
             {/* Jobs Sub-Tab */}
             {marketplaceSubTab === 'jobs' && (
               <div className="space-y-4">
-                <div className="bg-white p-3.5 rounded-2xl border border-neutral-200 flex items-center justify-between">
-                  <div className="text-xs font-bold text-neutral-700">Contract Status:</div>
-                  <select
-                    value={jobStatusFilter}
-                    onChange={(e) => setJobStatusFilter(e.target.value)}
-                    className="text-xs font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer"
-                  >
-                    <option value="ALL">All Statuses</option>
-                    <option value="HIRED">HIRED / ESCROW_HELD</option>
-                    <option value="SERVICE_STARTED">SERVICE_STARTED</option>
-                    <option value="SERVICE_COMPLETED">SERVICE_COMPLETED</option>
-                    <option value="PAYMENT_RELEASED">PAYMENT_RELEASED</option>
-                    <option value="DISPUTED">DISPUTED</option>
-                  </select>
+                <div className="bg-white p-3.5 rounded-2xl border border-neutral-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <input
+                    type="text"
+                    placeholder="Search contracts by client, professional, requirement title, or Job ID..."
+                    value={jobSearch}
+                    onChange={(e) => setJobSearch(e.target.value)}
+                    className="flex-1 px-3 py-1.5 text-xs font-semibold bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-none focus:bg-white"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-neutral-500 whitespace-nowrap">Status:</span>
+                    <select
+                      value={jobStatusFilter}
+                      onChange={(e) => setJobStatusFilter(e.target.value)}
+                      className="text-xs font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-1.5 focus:outline-none cursor-pointer"
+                    >
+                      <option value="ALL">All Statuses</option>
+                      <option value="HIRED">HIRED / ESCROW_HELD</option>
+                      <option value="SERVICE_STARTED">SERVICE_STARTED</option>
+                      <option value="SERVICE_COMPLETED">SERVICE_COMPLETED</option>
+                      <option value="PAYMENT_RELEASED">PAYMENT_RELEASED</option>
+                      <option value="DISPUTED">DISPUTED</option>
+                      <option value="CLOSED">CLOSED</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="bg-white rounded-3xl border border-neutral-200/90 shadow-2xs overflow-hidden">
@@ -2815,60 +2907,78 @@ export const AdminDashboardPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-neutral-100">
-                        {filteredJobs.map((j) => {
-                          const isSelected = selectedJobIds.includes(j.id);
-                          return (
-                            <tr key={j.id} className={`hover:bg-neutral-50/60 transition ${isSelected ? 'bg-emerald-50/40' : ''}`}>
-                              <td className="p-4 w-10 text-center" onClick={(e) => e.stopPropagation()}>
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => toggleJobSelection(j.id)}
-                                  className="w-4 h-4 rounded text-[#108a00] focus:ring-[#108a00] border-neutral-300 cursor-pointer"
-                                />
-                              </td>
-                              <td className="p-4 font-mono text-[11px] text-neutral-600">
-                                #{j.id.substring(0, 10)}
-                              </td>
-                              <td className="p-4 font-semibold text-neutral-900">
-                                {j.client?.firstName} {j.client?.lastName}
-                              </td>
-                              <td className="p-4 font-semibold text-neutral-900">
-                                {j.professional?.user?.firstName} {j.professional?.user?.lastName}
-                              </td>
-                              <td className="p-4 font-black text-neutral-900">
-                                ₹{j.agreedAmount || j.quotation?.priceInr || 0}
-                              </td>
-                              <td className="p-4">
-                                <span
-                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                    j.status === 'PAYMENT_RELEASED'
-                                      ? 'bg-emerald-100 text-emerald-800'
-                                      : j.status === 'DISPUTED'
-                                      ? 'bg-red-100 text-red-800'
-                                      : 'bg-amber-100 text-amber-800'
-                                  }`}
-                                >
-                                  {j.status}
-                                </span>
-                              </td>
-                              <td className="p-4 text-right">
-                                <select
-                                  value={j.status}
-                                  onChange={(e) => handleUpdateJobStatus(j.id, e.target.value)}
-                                  className="text-[11px] font-bold px-2 py-1 rounded-lg border border-neutral-200 bg-neutral-50 focus:outline-none cursor-pointer"
-                                >
-                                  <option value="HIRED">HIRED (Escrow)</option>
-                                  <option value="SERVICE_STARTED">STARTED</option>
-                                  <option value="SERVICE_COMPLETED">COMPLETED</option>
-                                  <option value="PAYMENT_RELEASED">PAYMENT_RELEASED</option>
-                                  <option value="DISPUTED">DISPUTED</option>
-                                  <option value="CLOSED">CLOSED</option>
-                                </select>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {filteredJobs.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="p-8 text-center text-neutral-400 font-medium">
+                              No job contracts found matching your search and filter criteria.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredJobs.map((j) => {
+                            const isSelected = selectedJobIds.includes(j.id);
+                            const clientDisplayName = j.customer?.user
+                              ? `${j.customer.user.firstName || ''} ${j.customer.user.lastName || ''}`.trim()
+                              : j.client
+                              ? `${j.client.firstName || ''} ${j.client.lastName || ''}`.trim()
+                              : 'Client';
+                            const profDisplayName = j.professional?.user
+                              ? `${j.professional.user.firstName || ''} ${j.professional.user.lastName || ''}`.trim()
+                              : 'Professional';
+                            const displayId = j.id ? (typeof j.id === 'string' && j.id.length > 10 ? j.id.substring(0, 10) : j.id) : '';
+
+                            return (
+                              <tr key={j.id} className={`hover:bg-neutral-50/60 transition ${isSelected ? 'bg-emerald-50/40' : ''}`}>
+                                <td className="p-4 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => toggleJobSelection(j.id)}
+                                    className="w-4 h-4 rounded text-[#108a00] focus:ring-[#108a00] border-neutral-300 cursor-pointer"
+                                  />
+                                </td>
+                                <td className="p-4 font-mono text-[11px] text-neutral-600">
+                                  #{displayId}
+                                </td>
+                                <td className="p-4 font-semibold text-neutral-900">
+                                  {clientDisplayName || 'Client'}
+                                </td>
+                                <td className="p-4 font-semibold text-neutral-900">
+                                  {profDisplayName || 'Professional'}
+                                </td>
+                                <td className="p-4 font-black text-neutral-900">
+                                  ₹{j.agreedAmount || j.agreedPrice || j.quotation?.priceInr || 0}
+                                </td>
+                                <td className="p-4">
+                                  <span
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                      j.status === 'PAYMENT_RELEASED'
+                                        ? 'bg-emerald-100 text-emerald-800'
+                                        : j.status === 'DISPUTED'
+                                        ? 'bg-red-100 text-red-800'
+                                        : 'bg-amber-100 text-amber-800'
+                                    }`}
+                                  >
+                                    {j.status || 'HIRED'}
+                                  </span>
+                                </td>
+                                <td className="p-4 text-right">
+                                  <select
+                                    value={j.status || 'HIRED'}
+                                    onChange={(e) => handleUpdateJobStatus(j.id, e.target.value)}
+                                    className="text-[11px] font-bold px-2 py-1 rounded-lg border border-neutral-200 bg-neutral-50 focus:outline-none cursor-pointer"
+                                  >
+                                    <option value="HIRED">HIRED (Escrow)</option>
+                                    <option value="SERVICE_STARTED">STARTED</option>
+                                    <option value="SERVICE_COMPLETED">COMPLETED</option>
+                                    <option value="PAYMENT_RELEASED">PAYMENT_RELEASED</option>
+                                    <option value="DISPUTED">DISPUTED</option>
+                                    <option value="CLOSED">CLOSED</option>
+                                  </select>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
                       </tbody>
                     </table>
                   </div>
