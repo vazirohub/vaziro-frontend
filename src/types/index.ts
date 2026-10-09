@@ -689,3 +689,21 @@ export interface ApiResponse<T> {
     details?: any;
   };
 }
+
+export type StaffRole = 'SUPER_ADMIN' | 'ADMIN' | 'SUPPORT' | 'FINANCE' | 'VERIFICATION_ADMIN';
+
+export interface Employee {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string | null;
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  roles: string[];
+  role: StaffRole;
+  emailVerifiedAt?: string | null;
+  phoneVerifiedAt?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+

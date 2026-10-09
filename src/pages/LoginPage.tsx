@@ -62,7 +62,7 @@ export const LoginPage: React.FC = () => {
         try {
           const parsed = JSON.parse(savedUser);
           const isProf = parsed.roles?.includes('PROFESSIONAL');
-          const isAdm = parsed.roles?.includes('ADMIN') || parsed.roles?.includes('SUPER_ADMIN');
+          const isAdm = parsed.roles?.some((r: string) => ['ADMIN', 'SUPER_ADMIN', 'SUPPORT', 'FINANCE', 'VERIFICATION_ADMIN'].includes(r));
           if (isAdm) targetPath = '/admin';
           else if (isProf) targetPath = '/requirements';
           else if (savedDraft) {

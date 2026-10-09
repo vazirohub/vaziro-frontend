@@ -26,6 +26,7 @@ import {
   ProfileStrengthResult,
   TrustScoreResult,
   PublicProfessionalProfile,
+  Employee,
 } from '../types';
 
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -352,6 +353,35 @@ export const api = {
 
   // Admin Console & Full Web App Control
   getAdminMetrics: () => apiClient.get<ApiResponse<any>>('/admin/metrics'),
+
+  // Staff & Employee Governance (SUPPORT, FINANCE, VERIFICATION_ADMIN, ADMIN, SUPER_ADMIN)
+  getAdminEmployees: () => apiClient.get<ApiResponse<Employee[]>>('/admin/employees'),
+  createAdminEmployee: (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    role: string;
+    password: string;
+  }) => apiClient.post<ApiResponse<Employee>>('/admin/employees', data),
+  updateAdminEmployee: (
+    id: string,
+    data: {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phone?: string;
+      role?: string;
+      status?: string;
+    }
+  ) => apiClient.put<ApiResponse<Employee>>(`/admin/employees/${id}`, data),
+  updateAdminEmployeeStatus: (id: string, status: string) =>
+    apiClient.patch<ApiResponse<any>>(`/admin/employees/${id}/status`, { status }),
+  resetAdminEmployeePassword: (id: string, data: { newPassword: string }) =>
+    apiClient.post<ApiResponse<any>>(`/admin/employees/${id}/reset-password`, data),
+  deleteAdminEmployee: (id: string) =>
+    apiClient.delete<ApiResponse<any>>(`/admin/employees/${id}`),
+
   getAdminUsers: () => apiClient.get<ApiResponse<any[]>>('/admin/users'),
   updateAdminUser: (id: string, data: any) => apiClient.put<ApiResponse<any>>(`/admin/users/${id}`, data),
   deleteAdminUser: (id: string) => apiClient.delete<ApiResponse<any>>(`/admin/users/${id}`),
@@ -413,7 +443,9 @@ export const api = {
 
   // Isha AI Assistant Endpoints
   aiChat: (message: string, history?: any[]) =>
-    apiClient.post<ApiResponse<{ reply: string; isAccountSpecific?: boolean; source?: string }>>('/ai/chat', { message, history }),
+    apiClient.post<ApiResponse<{ reply: string; isAccountSpecific?: boolean; source?: string; suggestHandover?: boolean }>>('/ai/chat', { message, history }),
+  requestSupportCallback: (data: { phone?: string; name?: string; email?: string; notes?: string; transcript?: string }) =>
+    apiClient.post<ApiResponse<{ message: string; phone?: string; name?: string; status: string }>>('/ai/request-callback', data),
   aiExtractRequirement: (text: string) =>
     apiClient.post<ApiResponse<{ category?: string; service?: string; location?: string; urgency?: string; requirements?: string[]; isAIExtracted: boolean }>>('/ai/extract-requirement', { text }),
   aiPolishRequirement: (data: { categoryName?: string; rawDescription: string; city?: string }) =>

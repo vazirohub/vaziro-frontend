@@ -8,6 +8,12 @@ import {
   User as UserIcon,
   ShieldCheck,
   Coins,
+  Headphones,
+  PhoneCall,
+  CheckCircle2,
+  Clock,
+  ArrowRight,
+  AlertCircle,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +24,7 @@ interface ChatMessage {
   text: string;
   timestamp: string;
   isAccountSpecific?: boolean;
+  suggestHandover?: boolean;
 }
 
 const DEFAULT_QUESTIONS = [
@@ -37,6 +44,14 @@ export const IshaChatWidget: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Human Support Handover States
+  const [showHandoverForm, setShowHandoverForm] = useState(false);
+  const [handoverPhone, setHandoverPhone] = useState('');
+  const [handoverName, setHandoverName] = useState('');
+  const [handoverNotes, setHandoverNotes] = useState('');
+  const [isSubmittingHandover, setIsSubmittingHandover] = useState(false);
+  const [handoverSuccess, setHandoverSuccess] = useState(false);
+
   // Auto-scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -49,7 +64,15 @@ export const IshaChatWidget: React.FC = () => {
         inputRef.current?.focus();
       }, 100);
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, showHandoverForm]);
+
+  // Sync user info into handover fields when user changes
+  useEffect(() => {
+    if (user) {
+      if (user.phone) setHandoverPhone(user.phone);
+      setHandoverName(`${user.firstName || ''} ${user.lastName || ''}`.trim());
+    }
+  }, [user]);
 
   // Global event listener to open Isha Chat from Navbar or other buttons
   useEffect(() => {
@@ -69,8 +92,8 @@ export const IshaChatWidget: React.FC = () => {
       setHasOpenedBefore(true);
       if (messages.length === 0) {
         const welcomeText = user
-          ? `👋 Hi ${user.firstName}! I'm Isha, your Vaziro Virtual Assistant.\n\nI can help you understand how payments, escrow protection, 0% commission, and credit refunds work. You can also ask me to check your account status, active jobs, or wallet balance!`
-          : `👋 Hello! I'm Isha, your Vaziro Virtual Assistant.\n\nI can answer questions about how Vaziro works, our 0% commission policy, escrow payment protection, and how to find verified professionals or post requirements. How can I help you today?`;
+          ? `👋 Hi ${user.firstName}! I'm Isha, your Vaziro Virtual Assistant.\n\nI can help you understand how payments, escrow protection, 0% commission, and credit refunds work. You can also ask me to check your account status, active jobs, or wallet balance!\n\nNeed to speak with our support team? You can also transfer to a human specialist anytime.`
+          : `👋 Hello! I'm Isha, your Vaziro Virtual Assistant.\n\nI can answer questions about how Vaziro works, our 0% commission policy, escrow payment protection, and how to find verified professionals or post requirements.\n\nYou can also request a transfer to a real support specialist at any point!`;
 
         setMessages([
           {
@@ -84,9 +107,73 @@ export const IshaChatWidget: React.FC = () => {
     }
   }, [isOpen, hasOpenedBefore, user, messages.length]);
 
+  const handleRequestHumanSupport = () => {
+    setShowHandoverForm(true);
+    const handoverPromptMsg: ChatMessage = {
+      id: `handover-prompt-${Date.now()}`,
+      sender: 'assistant',
+      text: 'Transferring to human support specialist...\n\nAll our support executives are currently assisting other members. Please confirm your details below and a senior executive will call you back shortly.',
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      suggestHandover: true,
+    };
+    setMessages((prev) => [...prev, handoverPromptMsg]);
+  };
+
+  const handleSubmitCallback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!handoverPhone.trim()) return;
+
+    setIsSubmittingHandover(true);
+    try {
+      const transcript = messages.map((m) => `${m.sender.toUpperCase()}: ${m.text}`).join('\n');
+      const res = await api.requestSupportCallback({
+        phone: handoverPhone.trim(),
+        name: handoverName.trim() || undefined,
+        notes: handoverNotes.trim() || undefined,
+        transcript,
+      });
+
+      const confirmationMsg: ChatMessage = {
+        id: `callback-confirmed-${Date.now()}`,
+        sender: 'assistant',
+        text: `✅ ${res.data?.message || 'All executives are currently busy assisting other members right now. Your priority callback request has been logged! You will receive a call back shortly at ' + handoverPhone + '.'}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prev) => [...prev, confirmationMsg]);
+      setHandoverSuccess(true);
+      setShowHandoverForm(false);
+      setHandoverNotes('');
+    } catch (err: any) {
+      const errorMsg: ChatMessage = {
+        id: `callback-fallback-${Date.now()}`,
+        sender: 'assistant',
+        text: `All our support executives are currently busy right now assisting other members. Your priority callback request for ${handoverPhone} has been noted. You will receive a call back in a short while.`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      setShowHandoverForm(false);
+    } finally {
+      setIsSubmittingHandover(false);
+    }
+  };
+
   const handleSendMessage = async (textToSend?: string) => {
     const text = (textToSend || inputMessage).trim();
     if (!text || isLoading) return;
+
+    // Check if user is asking for human agent
+    const lower = text.toLowerCase();
+    const isHumanRequest =
+      lower.includes('human') ||
+      lower.includes('real person') ||
+      lower.includes('agent') ||
+      lower.includes('executive') ||
+      lower.includes('transfer') ||
+      lower.includes('call back') ||
+      lower.includes('callback') ||
+      lower.includes('talk to someone') ||
+      lower.includes('support team') ||
+      lower.includes('customer care');
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -97,6 +184,12 @@ export const IshaChatWidget: React.FC = () => {
 
     setMessages((prev) => [...prev, userMsg]);
     setInputMessage('');
+
+    if (isHumanRequest) {
+      handleRequestHumanSupport();
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -115,8 +208,13 @@ export const IshaChatWidget: React.FC = () => {
           text: res.data.data.reply,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           isAccountSpecific: res.data.data.isAccountSpecific,
+          suggestHandover: res.data.data.suggestHandover,
         };
         setMessages((prev) => [...prev, assistantMsg]);
+
+        if (res.data.data.suggestHandover) {
+          setShowHandoverForm(true);
+        }
       } else {
         throw new Error('No reply from assistant service');
       }
@@ -136,6 +234,8 @@ export const IshaChatWidget: React.FC = () => {
   };
 
   const handleResetChat = () => {
+    setShowHandoverForm(false);
+    setHandoverSuccess(false);
     setMessages([
       {
         id: `welcome-${Date.now()}`,
@@ -175,9 +275,9 @@ export const IshaChatWidget: React.FC = () => {
 
       {/* Floating Chat Modal Window */}
       {isOpen && (
-        <div className="fixed bottom-20 md:bottom-6 right-2 sm:right-6 z-50 w-[calc(100vw-1rem)] sm:w-[420px] max-w-[420px] h-[560px] max-h-[calc(100vh-120px)] bg-white rounded-3xl shadow-2xl border border-neutral-200 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-200">
+        <div className="fixed bottom-20 md:bottom-6 right-2 sm:right-6 z-50 w-[calc(100vw-1rem)] sm:w-[420px] max-w-[420px] h-[580px] max-h-[calc(100vh-120px)] bg-white rounded-3xl shadow-2xl border border-neutral-200 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-6 duration-200">
           {/* Header */}
-          <div className="bg-neutral-900 text-white p-4 flex items-center justify-between border-b border-neutral-800 shrink-0">
+          <div className="bg-neutral-900 text-white p-3.5 sm:p-4 flex items-center justify-between border-b border-neutral-800 shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-emerald-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
                 <Sparkles className="w-5 h-5 text-amber-300" />
@@ -193,11 +293,22 @@ export const IshaChatWidget: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
+              {/* Transfer to Human Support button */}
+              <button
+                type="button"
+                onClick={handleRequestHumanSupport}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-emerald-400 hover:text-emerald-300 text-[11px] font-bold transition cursor-pointer"
+                title="Transfer chat to real person from support team"
+              >
+                <Headphones className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline sm:inline">Human Support</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleResetChat}
-                className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
+                className="p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
                 title="Restart conversation"
                 aria-label="Restart conversation"
               >
@@ -206,7 +317,7 @@ export const IshaChatWidget: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="p-2 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
+                className="p-1.5 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800 transition cursor-pointer"
                 title="Close chat"
                 aria-label="Close chat"
               >
@@ -253,6 +364,72 @@ export const IshaChatWidget: React.FC = () => {
               </div>
             ))}
 
+            {/* Support Executive Callback Form Card */}
+            {showHandoverForm && (
+              <div className="bg-white rounded-2xl p-4 border border-emerald-300 shadow-md space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex items-start gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-[#108a00] flex items-center justify-center shrink-0">
+                    <Headphones className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-xs text-neutral-900 flex items-center gap-1.5">
+                      <span>Priority Support Specialist Handover</span>
+                    </h4>
+                    <p className="text-[11px] text-neutral-500 mt-0.5 leading-relaxed">
+                      All our support executives are currently assisting other members. Please confirm your details below and an executive will call you back shortly.
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSubmitCallback} className="space-y-2.5 pt-1">
+                  <div>
+                    <label className="block text-[10px] font-bold text-neutral-600 uppercase tracking-wider mb-1">
+                      Your Mobile Number
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="+91 98765 43210"
+                      value={handoverPhone}
+                      onChange={(e) => setHandoverPhone(e.target.value)}
+                      className="w-full px-3 py-2 text-xs font-semibold border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-neutral-600 uppercase tracking-wider mb-1">
+                      Issue / Reason for Callback (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Payment inquiry, job contract, dispute, etc."
+                      value={handoverNotes}
+                      onChange={(e) => setHandoverNotes(e.target.value)}
+                      className="w-full px-3 py-2 text-xs font-medium border border-neutral-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowHandoverForm(false)}
+                      className="px-3 py-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-800 transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmittingHandover || !handoverPhone.trim()}
+                      className="px-4 py-1.5 bg-[#108a00] hover:bg-[#14a800] text-white text-xs font-bold rounded-xl transition shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      <PhoneCall className="w-3.5 h-3.5" />
+                      <span>{isSubmittingHandover ? 'Logging request...' : 'Request Callback'}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
             {isLoading && (
               <div className="flex gap-2.5 justify-start">
                 <div className="w-7 h-7 rounded-xl bg-neutral-900 text-amber-300 flex items-center justify-center shrink-0 mt-0.5">
@@ -273,8 +450,17 @@ export const IshaChatWidget: React.FC = () => {
           </div>
 
           {/* Quick Questions Pills */}
-          {messages.length <= 3 && !isLoading && (
+          {messages.length <= 4 && !isLoading && !showHandoverForm && (
             <div className="px-3 py-2 bg-white border-t border-neutral-100 flex flex-wrap gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleRequestHumanSupport}
+                className="text-[11px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2.5 py-1.5 rounded-xl transition text-left cursor-pointer active:scale-95 flex items-center gap-1"
+              >
+                <Headphones className="w-3 h-3 text-emerald-700" />
+                <span>Talk to Support Executive</span>
+              </button>
+
               {DEFAULT_QUESTIONS.map((q, idx) => (
                 <button
                   key={idx}
@@ -285,6 +471,7 @@ export const IshaChatWidget: React.FC = () => {
                   {q}
                 </button>
               ))}
+
               {user && (
                 <button
                   type="button"
@@ -312,7 +499,7 @@ export const IshaChatWidget: React.FC = () => {
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Ask about payments, escrow, credits, jobs..."
+                placeholder="Ask Isha or type 'talk to agent'..."
                 className="flex-1 bg-neutral-100 text-neutral-900 text-xs rounded-xl px-3.5 py-2.5 border border-transparent focus:border-emerald-500 focus:bg-white focus:outline-none transition"
                 disabled={isLoading}
               />
@@ -330,7 +517,14 @@ export const IshaChatWidget: React.FC = () => {
                 <ShieldCheck className="w-3 h-3 text-emerald-600" />
                 <span>Escrow & 0% Commission Protected</span>
               </span>
-              <span>Vaziro Assistant</span>
+              <button
+                type="button"
+                onClick={handleRequestHumanSupport}
+                className="text-emerald-700 hover:underline font-bold cursor-pointer flex items-center gap-0.5"
+              >
+                <Headphones className="w-3 h-3" />
+                <span>Support Handover</span>
+              </button>
             </div>
           </div>
         </div>
@@ -338,3 +532,5 @@ export const IshaChatWidget: React.FC = () => {
     </>
   );
 };
+
+export default IshaChatWidget;

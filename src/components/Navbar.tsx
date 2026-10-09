@@ -78,7 +78,7 @@ export const Navbar: React.FC = () => {
   const notificationRef = useRef<HTMLDivElement>(null);
   const navContainerRef = useRef<HTMLDivElement>(null);
 
-  const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
+  const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN', 'SUPPORT', 'FINANCE', 'VERIFICATION_ADMIN'].includes(r));
   const isProfessional = user?.roles?.includes('PROFESSIONAL');
   const effectiveCredits = proBalance !== null ? proBalance : (user?.professionalProfile?.creditWallet?.balance ?? 10);
 
@@ -914,7 +914,7 @@ export const Navbar: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => openAuthModal('CUSTOMER', undefined, 'SIGNUP')}
-                      className="text-xs sm:text-sm font-semibold text-neutral-900 hover:text-[#108a00] px-2 py-1 cursor-pointer transition"
+                      className="text-xs sm:text-sm font-semibold text-neutral-900 hover:text-[#108a00] px-2 py-1 cursor-pointer transition shrink-0 whitespace-nowrap"
                     >
                       Sign up
                     </button>
@@ -1135,18 +1135,18 @@ export const Navbar: React.FC = () => {
                   <select
                     value={headerSearchMode}
                     onChange={(e) => setHeaderSearchMode(e.target.value as 'PROFESSIONAL' | 'JOBS')}
-                    className="text-xs font-bold text-neutral-800 bg-transparent px-2 py-1 focus:outline-none cursor-pointer"
+                    className="text-xs font-bold text-neutral-800 bg-transparent px-2 py-1 focus:outline-none cursor-pointer shrink-0"
                   >
-                    <option value="PROFESSIONAL">Professional</option>
+                    <option value="PROFESSIONAL">Pro</option>
                     <option value="JOBS">Jobs</option>
                   </select>
-                  <div className="w-px h-4 bg-neutral-300" />
+                  <div className="w-px h-4 bg-neutral-300 shrink-0" />
                   <input
                     type="text"
                     value={headerSearchQuery}
                     onChange={(e) => setHeaderSearchQuery(e.target.value)}
                     placeholder={headerSearchMode === 'PROFESSIONAL' ? 'Search professionals...' : 'Search jobs...'}
-                    className="flex-1 text-xs font-medium text-neutral-900 bg-transparent placeholder:text-neutral-400 focus:outline-none px-1"
+                    className="flex-1 min-w-0 text-xs font-medium text-neutral-900 bg-transparent placeholder:text-neutral-400 focus:outline-none px-1"
                   />
                   <button
                     type="submit"
@@ -1314,9 +1314,12 @@ export const Navbar: React.FC = () => {
                             setMobileMenuOpen(false);
                             openAuthModal('PROFESSIONAL', undefined, 'SIGNUP');
                           }}
-                          className="block py-1.5 text-xs font-bold text-[#108a00] text-left cursor-pointer"
+                          className="w-full py-2 text-xs font-bold text-[#108a00] text-left cursor-pointer flex items-center justify-between gap-1.5"
                         >
-                          Become a Professional (+10 Free Credits)
+                          <span>Become a Professional</span>
+                          <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                            +10 Credits
+                          </span>
                         </button>
                       )}
                       {isProfessional && (

@@ -44,6 +44,7 @@ import {
   Tag,
   Flag,
   Eye,
+  EyeOff,
   ChevronDown,
   Zap,
   Sparkles,
@@ -51,8 +52,14 @@ import {
   CheckSquare,
   Square,
   MinusSquare,
+  UserPlus,
+  UserCheck,
+  Shield,
+  Headphones,
+  Wallet,
 } from 'lucide-react';
 import { exportToExcel, exportRawToExcel, exportToCSV } from '../utils/excel';
+import { Employee, StaffRole } from '../types';
 
 const defaultAdminLocations = [
   {
@@ -92,6 +99,7 @@ const defaultAdminLocations = [
 
 type TabType =
   | 'metrics'
+  | 'employees'
   | 'users'
   | 'marketplace'
   | 'verifications'
@@ -104,11 +112,19 @@ type TabType =
 
 export const AdminDashboardPage: React.FC = () => {
   const { user, isAuthenticated, isLoading: isAuthLoading, openAuthModal } = useAuth();
-  const isAdmin = user?.roles?.some((r) => ['ADMIN', 'SUPER_ADMIN'].includes(r));
+  const isStaff = user?.roles?.some((r) =>
+    ['ADMIN', 'SUPER_ADMIN', 'SUPPORT', 'FINANCE', 'VERIFICATION_ADMIN'].includes(r)
+  );
+  const isSuperAdmin = user?.roles?.includes('SUPER_ADMIN');
+  const isAdmin = user?.roles?.includes('ADMIN') || isSuperAdmin;
+  const isSupport = user?.roles?.includes('SUPPORT') || isAdmin;
+  const isFinance = user?.roles?.includes('FINANCE') || isAdmin;
+  const isVerificationAdmin = user?.roles?.includes('VERIFICATION_ADMIN') || isAdmin;
 
   // Platform Data States
   const [metrics, setMetrics] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [requirements, setRequirements] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [verifications, setVerifications] = useState<any[]>([]);
@@ -119,6 +135,29 @@ export const AdminDashboardPage: React.FC = () => {
   const [plans, setPlans] = useState<any[]>([]);
   const [boostPackages, setBoostPackages] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
+
+  // Employee Management States
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [employeeRoleFilter, setEmployeeRoleFilter] = useState('ALL');
+  const [employeeStatusFilter, setEmployeeStatusFilter] = useState('ALL');
+  const [addEmployeeModalOpen, setAddEmployeeModalOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [resetPasswordEmp, setResetPasswordEmp] = useState<Employee | null>(null);
+  const [deleteEmployeeCase, setDeleteEmployeeCase] = useState<Employee | null>(null);
+  const [newEmpPassword, setNewEmpPassword] = useState('');
+  const [showNewEmpPassword, setShowNewEmpPassword] = useState(false);
+  const [submittingResetEmpPass, setSubmittingResetEmpPass] = useState(false);
+
+  // Employee Form fields
+  const [empFirstName, setEmpFirstName] = useState('');
+  const [empLastName, setEmpLastName] = useState('');
+  const [empEmail, setEmpEmail] = useState('');
+  const [empPhone, setEmpPhone] = useState('');
+  const [empRole, setEmpRole] = useState<StaffRole>('SUPPORT');
+  const [empPassword, setEmpPassword] = useState('');
+  const [showEmpPassword, setShowEmpPassword] = useState(false);
+  const [empStatus, setEmpStatus] = useState<'ACTIVE' | 'SUSPENDED'>('ACTIVE');
+  const [submittingEmp, setSubmittingEmp] = useState(false);
 
   // Navigation & View States
   const [activeTab, setActiveTab] = useState<TabType>('metrics');
@@ -246,6 +285,7 @@ export const AdminDashboardPage: React.FC = () => {
         plansRes,
         boostRes,
         repRes,
+        empRes,
       ] = await Promise.all([
         api.getAdminMetrics().catch(() => null),
         api.getAdminUsers().catch(() => null),
@@ -259,10 +299,12 @@ export const AdminDashboardPage: React.FC = () => {
         api.getAdminPlans().catch(() => null),
         api.getAdminBoostPackages().catch(() => null),
         api.getAdminReports().catch(() => null),
+        isAdmin ? api.getAdminEmployees().catch(() => null) : Promise.resolve(null),
       ]);
 
       if (mRes?.data?.data) setMetrics(mRes.data.data);
       if (uRes?.data?.data) setUsers(uRes.data.data);
+      if (empRes?.data?.data) setEmployees(empRes.data.data);
       if (reqRes?.data?.data) setRequirements(reqRes.data.data);
       if (jobsRes?.data?.data) setJobs(jobsRes.data.data);
       if (vRes?.data?.data) setVerifications(vRes.data.data);
@@ -304,13 +346,13 @@ export const AdminDashboardPage: React.FC = () => {
 
   useEffect(() => {
     if (!isAuthLoading) {
-      if (isAuthenticated && isAdmin) {
+      if (isAuthenticated && (isAdmin || isStaff)) {
         fetchAdminData();
       } else {
         setLoading(false);
       }
     }
-  }, [isAuthenticated, isAdmin, isAuthLoading]);
+  }, [isAuthenticated, isAdmin, isStaff, isAuthLoading]);
 
   // User Actions Handlers
   const handleAdjustCredits = async (e: React.FormEvent) => {
@@ -1233,6 +1275,188 @@ export const AdminDashboardPage: React.FC = () => {
     setFeedback({ type: 'success', message: `Exported ${targetData.length} reports to Excel (.xlsx) successfully.` });
   };
 
+  // ============================================================================
+  // EMPLOYEE & STAFF DIRECTORY HANDLERS
+  // ============================================================================
+
+  const filteredEmployees = useMemo(() => {
+    return employees.filter((emp) => {
+      const q = employeeSearch.toLowerCase().trim();
+      const fullName = `${emp.firstName || ''} ${emp.lastName || ''}`.toLowerCase();
+      const email = (emp.email || '').toLowerCase();
+      const phone = (emp.phone || '').toLowerCase();
+      const matchesSearch = !q || fullName.includes(q) || email.includes(q) || phone.includes(q);
+
+      const matchesRole =
+        employeeRoleFilter === 'ALL' ||
+        emp.roles?.includes(employeeRoleFilter) ||
+        emp.role === employeeRoleFilter;
+
+      const matchesStatus =
+        employeeStatusFilter === 'ALL' || emp.status === employeeStatusFilter;
+
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [employees, employeeSearch, employeeRoleFilter, employeeStatusFilter]);
+
+  const handleCreateEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!empFirstName.trim()) {
+      setFeedback({ type: 'error', message: 'First name is required.' });
+      return;
+    }
+    if (!empEmail.trim()) {
+      setFeedback({ type: 'error', message: 'Work email is required.' });
+      return;
+    }
+    if (!empPassword || empPassword.length < 6) {
+      setFeedback({ type: 'error', message: 'Initial password must be at least 6 characters long.' });
+      return;
+    }
+
+    try {
+      setSubmittingEmp(true);
+      const res = await api.createAdminEmployee({
+        firstName: empFirstName.trim(),
+        lastName: empLastName.trim(),
+        email: empEmail.trim().toLowerCase(),
+        phone: empPhone.trim() || undefined,
+        role: empRole,
+        password: empPassword,
+      });
+
+      if (res.data?.success) {
+        setFeedback({ type: 'success', message: res.data.message || 'Employee created successfully.' });
+        setAddEmployeeModalOpen(false);
+        setEmpFirstName('');
+        setEmpLastName('');
+        setEmpEmail('');
+        setEmpPhone('');
+        setEmpPassword('');
+        setEmpRole('SUPPORT');
+        await fetchAdminData(true);
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Failed to create employee.' });
+    } finally {
+      setSubmittingEmp(false);
+    }
+  };
+
+  const handleOpenEditEmployee = (emp: Employee) => {
+    setEditingEmployee(emp);
+    setEmpFirstName(emp.firstName || '');
+    setEmpLastName(emp.lastName || '');
+    setEmpEmail(emp.email || '');
+    setEmpPhone(emp.phone ? emp.phone.replace('+91', '') : '');
+    setEmpRole(emp.role || (emp.roles?.[0] as StaffRole) || 'SUPPORT');
+    setEmpStatus(emp.status === 'SUSPENDED' ? 'SUSPENDED' : 'ACTIVE');
+  };
+
+  const handleUpdateEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEmployee) return;
+
+    try {
+      setSubmittingEmp(true);
+      const res = await api.updateAdminEmployee(editingEmployee.id, {
+        firstName: empFirstName.trim(),
+        lastName: empLastName.trim(),
+        email: empEmail.trim().toLowerCase(),
+        phone: empPhone.trim() || undefined,
+        role: empRole,
+        status: empStatus,
+      });
+
+      if (res.data?.success) {
+        setFeedback({ type: 'success', message: 'Employee profile updated successfully.' });
+        setEditingEmployee(null);
+        await fetchAdminData(true);
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || err.message || 'Failed to update employee.' });
+    } finally {
+      setSubmittingEmp(false);
+    }
+  };
+
+  const handleToggleEmployeeStatus = async (emp: Employee) => {
+    if (emp.id === user?.id) {
+      setFeedback({ type: 'error', message: 'You cannot change status of your own administrator account.' });
+      return;
+    }
+    const nextStatus = emp.status === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
+    try {
+      setSavingActionKey(`emp-status-${emp.id}`);
+      const res = await api.updateAdminEmployeeStatus(emp.id, nextStatus);
+      if (res.data?.success) {
+        setFeedback({ type: 'success', message: `Employee status changed to ${nextStatus}.` });
+        await fetchAdminData(true);
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || 'Failed to update employee status.' });
+    } finally {
+      setSavingActionKey(null);
+    }
+  };
+
+  const handleResetEmpPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetPasswordEmp) return;
+    if (!newEmpPassword || newEmpPassword.length < 6) {
+      setFeedback({ type: 'error', message: 'New password must be at least 6 characters long.' });
+      return;
+    }
+    try {
+      setSubmittingResetEmpPass(true);
+      const res = await api.resetAdminEmployeePassword(resetPasswordEmp.id, { newPassword: newEmpPassword });
+      if (res.data?.success) {
+        setFeedback({ type: 'success', message: 'Employee password reset successfully.' });
+        setResetPasswordEmp(null);
+        setNewEmpPassword('');
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || 'Failed to reset employee password.' });
+    } finally {
+      setSubmittingResetEmpPass(false);
+    }
+  };
+
+  const handleDeleteEmployeeSubmit = async () => {
+    if (!deleteEmployeeCase) return;
+    if (deleteEmployeeCase.id === user?.id) {
+      setFeedback({ type: 'error', message: 'You cannot delete your own administrator account.' });
+      setDeleteEmployeeCase(null);
+      return;
+    }
+    try {
+      setSavingActionKey(`del-emp-${deleteEmployeeCase.id}`);
+      const res = await api.deleteAdminEmployee(deleteEmployeeCase.id);
+      if (res.data?.success) {
+        setFeedback({ type: 'success', message: 'Employee removed successfully.' });
+        setDeleteEmployeeCase(null);
+        await fetchAdminData(true);
+      }
+    } catch (err: any) {
+      setFeedback({ type: 'error', message: err.response?.data?.error?.message || 'Failed to delete employee.' });
+    } finally {
+      setSavingActionKey(null);
+    }
+  };
+
+  const handleExportEmployeesExcel = () => {
+    const columns = [
+      { header: 'Full Name', accessor: (e: Employee) => `${e.firstName || ''} ${e.lastName || ''}`.trim() },
+      { header: 'Email', accessor: (e: Employee) => e.email || '' },
+      { header: 'Phone', accessor: (e: Employee) => e.phone || '' },
+      { header: 'Staff Role', accessor: (e: Employee) => e.role || e.roles?.[0] || 'SUPPORT' },
+      { header: 'Status', accessor: (e: Employee) => e.status || 'ACTIVE' },
+      { header: 'Created Date', accessor: (e: Employee) => e.createdAt ? new Date(e.createdAt).toLocaleDateString('en-IN') : '' },
+    ];
+    exportToExcel('vaziro-employees-directory', 'Employees', columns, filteredEmployees);
+    setFeedback({ type: 'success', message: `Exported ${filteredEmployees.length} employees to Excel (.xlsx) successfully.` });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#fcfbf8]">
@@ -1244,24 +1468,25 @@ export const AdminDashboardPage: React.FC = () => {
     );
   }
 
-  if (!isAuthenticated || !isAdmin) {
+  if (!isAuthenticated || !isStaff) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center bg-[#fcfbf8] px-4">
         <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-neutral-200 text-center shadow-xl">
           <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4">
             <Lock className="w-7 h-7" />
           </div>
-          <h2 className="text-xl font-black text-neutral-900">Restricted Administration Access</h2>
+          <h2 className="text-xl font-black text-neutral-900">Restricted Staff & Admin Console</h2>
           <p className="text-xs text-neutral-500 mt-2 leading-relaxed">
-            You must be signed in with an authorized <span className="font-bold text-neutral-800">ADMIN</span> or{' '}
-            <span className="font-bold text-neutral-800">SUPER_ADMIN</span> account to inspect governance dashboards.
+            You must be signed in with an authorized <span className="font-bold text-neutral-800">STAFF</span>,{' '}
+            <span className="font-bold text-neutral-800">SUPPORT</span>, <span className="font-bold text-neutral-800">FINANCE</span>, or{' '}
+            <span className="font-bold text-neutral-800">ADMIN</span> account to inspect governance dashboards.
           </p>
           <button
             type="button"
             onClick={() => openAuthModal('CUSTOMER')}
             className="mt-6 w-full py-3 bg-[#108a00] hover:bg-[#14a800] text-white font-bold text-xs rounded-xl shadow-xs transition cursor-pointer"
           >
-            Sign in as Administrator
+            Sign in as Staff Member
           </button>
         </div>
       </div>
@@ -1390,6 +1615,7 @@ export const AdminDashboardPage: React.FC = () => {
           aria-label="Admin Navigation"
           className="mb-7 flex items-center gap-1.5 overflow-x-auto no-scrollbar rounded-2xl bg-white p-1.5 border border-neutral-200/90 shadow-2xs"
         >
+          {/* 1. Overview / Metrics (All staff) */}
           <button
             type="button"
             onClick={() => setActiveTab('metrics')}
@@ -1403,147 +1629,193 @@ export const AdminDashboardPage: React.FC = () => {
             <span>Overview</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('users')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'users'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Users & Credits</span>
-            <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
-              {users.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('marketplace')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'marketplace'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            <span>Marketplace</span>
-            <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
-              {requirements.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('verifications')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'verifications'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span>Verification Queue</span>
-            {pendingVerificationCount > 0 && (
-              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-amber-400 text-neutral-950">
-                {pendingVerificationCount}
+          {/* 2. Employees & Team Management (Admin / Super Admin) */}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('employees')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'employees'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              }`}
+            >
+              <UserCheck className="w-4 h-4 text-emerald-400" />
+              <span>Employees & Roles</span>
+              <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-800">
+                {employees.length}
               </span>
-            )}
-          </button>
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('categories')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'categories'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-            }`}
-          >
-            <Tag className="w-4 h-4" />
-            <span>Categories</span>
-            <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
-              {categories.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('plans')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'plans'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-            }`}
-          >
-            <Package className="w-4 h-4" />
-            <span>Credit Packs</span>
-            <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
-              {plans.length}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('disputes')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'disputes'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-            }`}
-          >
-            <Flag className="w-4 h-4" />
-            <span>Disputes & Reports</span>
-            {pendingReportsCount > 0 && (
-              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-red-500 text-white">
-                {pendingReportsCount}
+          {/* 3. Users & Directory (Admin, Support, Verification) */}
+          {(isAdmin || isSupport || isVerificationAdmin) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('users')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'users'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Users & Directory</span>
+              <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
+                {users.length}
               </span>
-            )}
-          </button>
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('payments')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'payments'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-            }`}
-          >
-            <CreditCard className="w-4 h-4" />
-            <span>Escrow Vault</span>
-            <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
-              {payments.length}
-            </span>
-          </button>
+          {/* 4. Marketplace (Admin, Support) */}
+          {(isAdmin || isSupport) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('marketplace')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'marketplace'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              <span>Marketplace</span>
+              <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
+                {requirements.length}
+              </span>
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('locations')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'locations'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-            }`}
-          >
-            <MapPin className="w-4 h-4" />
-            <span>Locations</span>
-          </button>
+          {/* 5. Verification Queue (Admin, Verification Officers) */}
+          {(isAdmin || isVerificationAdmin) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('verifications')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'verifications'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>KYC Verifications</span>
+              {pendingVerificationCount > 0 && (
+                <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-amber-400 text-neutral-950">
+                  {pendingVerificationCount}
+                </span>
+              )}
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
-              activeTab === 'settings'
-                ? 'bg-neutral-900 text-white shadow-xs'
-                : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            <span>Settings</span>
-          </button>
+          {/* 6. Disputes & Support (Admin, Support Specialists) */}
+          {(isAdmin || isSupport) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('disputes')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'disputes'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              }`}
+            >
+              <Flag className="w-4 h-4" />
+              <span>Disputes & Reports</span>
+              {pendingReportsCount > 0 && (
+                <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-red-500 text-white">
+                  {pendingReportsCount}
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* 7. Payments & Escrow (Admin, Finance Managers) */}
+          {(isAdmin || isFinance) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('payments')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'payments'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              }`}
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Finance & Escrow</span>
+              <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
+                {payments.length}
+              </span>
+            </button>
+          )}
+
+          {/* 8. Credit Packs & Plans (Admin, Finance) */}
+          {(isAdmin || isFinance) && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('plans')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'plans'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              }`}
+            >
+              <Package className="w-4 h-4" />
+              <span>Plans & Boost</span>
+              <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
+                {plans.length}
+              </span>
+            </button>
+          )}
+
+          {/* 9. Categories Taxonomy (Admin) */}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('categories')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'categories'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              }`}
+            >
+              <Tag className="w-4 h-4" />
+              <span>Categories</span>
+              <span className="text-[10px] font-extrabold px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-800">
+                {categories.length}
+              </span>
+            </button>
+          )}
+
+          {/* 10. Locations (Admin) */}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('locations')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'locations'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              }`}
+            >
+              <MapPin className="w-4 h-4" />
+              <span>Locations</span>
+            </button>
+          )}
+
+          {/* 11. Settings (Admin / Super Admin) */}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setActiveTab('settings')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'settings'
+                  ? 'bg-neutral-900 text-white shadow-xs'
+                  : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              <span>Settings</span>
+            </button>
+          )}
         </nav>
 
         {/* =================================================================== */}
@@ -1658,6 +1930,417 @@ export const AdminDashboardPage: React.FC = () => {
                   <div className="text-[11px] text-neutral-500 mt-0.5">{categories.length} active categories</div>
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* =================================================================== */}
+        {/* TAB 1.5: EMPLOYEES & STAFF DIRECTORY (ROLES: SUPPORT, FINANCE, ETC.)*/}
+        {/* =================================================================== */}
+        {activeTab === 'employees' && isAdmin && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Control Bar: Search, Filters & Action Buttons */}
+            <div className="bg-white p-5 rounded-3xl border border-neutral-200/90 shadow-2xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-neutral-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search staff by employee name, email, or mobile..."
+                  value={employeeSearch}
+                  onChange={(e) => setEmployeeSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-neutral-50 border border-neutral-200 rounded-xl text-xs font-semibold focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#108a00]"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <select
+                  value={employeeRoleFilter}
+                  onChange={(e) => setEmployeeRoleFilter(e.target.value)}
+                  className="text-xs font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2.5 focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">All Roles ({employees.length})</option>
+                  <option value="SUPPORT">Support & Dispute Specialist</option>
+                  <option value="FINANCE">Finance & Billing Manager</option>
+                  <option value="VERIFICATION_ADMIN">KYC Verification Officer</option>
+                  <option value="ADMIN">Operations Administrator</option>
+                  <option value="SUPER_ADMIN">Super Administrator</option>
+                </select>
+
+                <select
+                  value={employeeStatusFilter}
+                  onChange={(e) => setEmployeeStatusFilter(e.target.value)}
+                  className="text-xs font-bold text-neutral-700 bg-neutral-50 border border-neutral-200 rounded-xl px-3.5 py-2.5 focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL">All Status</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="SUSPENDED">Suspended</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={handleExportEmployeesExcel}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-xs font-bold text-emerald-800 transition cursor-pointer"
+                  title="Export staff directory to Excel"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                  <span>Export Excel</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmpFirstName('');
+                    setEmpLastName('');
+                    setEmpEmail('');
+                    setEmpPhone('');
+                    setEmpRole('SUPPORT');
+                    setEmpPassword('');
+                    setAddEmployeeModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#108a00] hover:bg-[#14a800] text-xs font-bold text-white shadow-xs transition cursor-pointer"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>Add New Employee</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Quick KPI Stat Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+              <div className="bg-white p-4 rounded-2xl border border-neutral-200 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Total Staff</span>
+                  <div className="w-8 h-8 rounded-xl bg-neutral-100 text-neutral-800 flex items-center justify-center">
+                    <Users className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-neutral-900 mt-2">{employees.length}</div>
+                <div className="text-[10px] font-semibold text-neutral-400 mt-0.5">Active team members</div>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-amber-200/80 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">Support</span>
+                  <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+                    <Headphones className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-neutral-900 mt-2">
+                  {employees.filter((e) => e.roles?.includes('SUPPORT') || e.role === 'SUPPORT').length}
+                </div>
+                <div className="text-[10px] font-semibold text-neutral-500 mt-0.5">Dispute & arbitrations</div>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-emerald-200/80 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Finance</span>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-neutral-900 mt-2">
+                  {employees.filter((e) => e.roles?.includes('FINANCE') || e.role === 'FINANCE').length}
+                </div>
+                <div className="text-[10px] font-semibold text-neutral-500 mt-0.5">Escrow & billing audit</div>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-blue-200/80 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-blue-800 uppercase tracking-wider">KYC Officers</span>
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                    <Shield className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-neutral-900 mt-2">
+                  {employees.filter((e) => e.roles?.includes('VERIFICATION_ADMIN') || e.role === 'VERIFICATION_ADMIN').length}
+                </div>
+                <div className="text-[10px] font-semibold text-neutral-500 mt-0.5">DigiLocker verifications</div>
+              </div>
+
+              <div className="bg-white p-4 rounded-2xl border border-purple-200/80 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-purple-800 uppercase tracking-wider">Administrators</span>
+                  <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center">
+                    <ShieldAlert className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="text-2xl font-black text-neutral-900 mt-2">
+                  {employees.filter((e) => e.roles?.includes('ADMIN') || e.roles?.includes('SUPER_ADMIN')).length}
+                </div>
+                <div className="text-[10px] font-semibold text-neutral-500 mt-0.5">Platform governance</div>
+              </div>
+            </div>
+
+            {/* Role Governance & Permissions Reference Box */}
+            <div className="bg-gradient-to-r from-neutral-900 to-neutral-800 rounded-3xl p-6 text-white shadow-md">
+              <div className="flex items-center gap-2 mb-3">
+                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                <h3 className="font-extrabold text-sm tracking-tight text-white">Employee Role Access Matrix</h3>
+                <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Granular RBAC Active
+                </span>
+              </div>
+              <p className="text-xs text-neutral-300 leading-relaxed mb-4 max-w-4xl">
+                Each employee assigned to your website receives dedicated console permissions tailored strictly to their operational duty.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+                <div className="bg-white/10 rounded-2xl p-3.5 border border-white/10">
+                  <div className="flex items-center gap-1.5 font-black text-amber-300 mb-1">
+                    <Headphones className="w-3.5 h-3.5" />
+                    <span>Support & Disputes</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-300 leading-normal">
+                    Manages customer grievances, dispute mediation, job contract milestones, and user reports.
+                  </p>
+                </div>
+
+                <div className="bg-white/10 rounded-2xl p-3.5 border border-white/10">
+                  <div className="flex items-center gap-1.5 font-black text-emerald-300 mb-1">
+                    <Wallet className="w-3.5 h-3.5" />
+                    <span>Finance & Billing</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-300 leading-normal">
+                    Inspects escrow transactions, payment gateways, credit pack purchases, and audit ledgers.
+                  </p>
+                </div>
+
+                <div className="bg-white/10 rounded-2xl p-3.5 border border-white/10">
+                  <div className="flex items-center gap-1.5 font-black text-blue-300 mb-1">
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>KYC & Verification</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-300 leading-normal">
+                    Audits DigiLocker credentials, Aadhaar identity documents, and manual review overrides.
+                  </p>
+                </div>
+
+                <div className="bg-white/10 rounded-2xl p-3.5 border border-white/10">
+                  <div className="flex items-center gap-1.5 font-black text-purple-300 mb-1">
+                    <Layers className="w-3.5 h-3.5" />
+                    <span>Operations Admin</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-300 leading-normal">
+                    Oversees marketplace requirements, category catalogs, location coverage, and users.
+                  </p>
+                </div>
+
+                <div className="bg-white/10 rounded-2xl p-3.5 border border-white/10">
+                  <div className="flex items-center gap-1.5 font-black text-rose-300 mb-1">
+                    <Key className="w-3.5 h-3.5" />
+                    <span>Super Admin</span>
+                  </div>
+                  <p className="text-[11px] text-neutral-300 leading-normal">
+                    Unrestricted full access across employee credentials, platform settings, and all modules.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Employees Directory Table */}
+            <div className="bg-white rounded-3xl border border-neutral-200/90 shadow-2xs overflow-hidden">
+              <div className="p-5 border-b border-neutral-100 flex items-center justify-between">
+                <div>
+                  <h3 className="font-extrabold text-sm text-neutral-900">Active Staff Accounts</h3>
+                  <p className="text-xs text-neutral-500 mt-0.5">
+                    Showing {filteredEmployees.length} of {employees.length} team members
+                  </p>
+                </div>
+              </div>
+
+              {filteredEmployees.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-neutral-100 text-neutral-400 flex items-center justify-center mx-auto mb-3">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <h4 className="font-bold text-sm text-neutral-800">No staff accounts match your filter</h4>
+                  <p className="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">
+                    Try adjusting your search query or role filter, or click below to onboard a new employee.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmpFirstName('');
+                      setEmpLastName('');
+                      setEmpEmail('');
+                      setEmpPhone('');
+                      setEmpRole('SUPPORT');
+                      setEmpPassword('');
+                      setAddEmployeeModalOpen(true);
+                    }}
+                    className="mt-4 px-4 py-2 bg-[#108a00] hover:bg-[#14a800] text-white text-xs font-bold rounded-xl transition cursor-pointer"
+                  >
+                    + Add New Employee
+                  </button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-neutral-50/80 text-[11px] font-black uppercase tracking-wider text-neutral-500 border-b border-neutral-200/60">
+                        <th className="py-3 px-4">Staff Member</th>
+                        <th className="py-3 px-4">Designated Role</th>
+                        <th className="py-3 px-4">Contact & Mobile</th>
+                        <th className="py-3 px-4">Status</th>
+                        <th className="py-3 px-4">Added On</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-neutral-100 text-xs">
+                      {filteredEmployees.map((emp) => {
+                        const primaryRole = emp.role || (emp.roles?.[0] as StaffRole) || 'SUPPORT';
+                        const isCurrentUser = emp.id === user?.id;
+
+                        // Role Badge styling
+                        let roleBadge = {
+                          bg: 'bg-amber-50 text-amber-800 border-amber-200',
+                          label: '🎧 Support & Disputes',
+                        };
+                        if (primaryRole === 'FINANCE') {
+                          roleBadge = {
+                            bg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+                            label: '💰 Finance & Billing',
+                          };
+                        } else if (primaryRole === 'VERIFICATION_ADMIN') {
+                          roleBadge = {
+                            bg: 'bg-blue-50 text-blue-800 border-blue-200',
+                            label: '🛡️ KYC Verification',
+                          };
+                        } else if (primaryRole === 'ADMIN') {
+                          roleBadge = {
+                            bg: 'bg-purple-50 text-purple-800 border-purple-200',
+                            label: '⚡ Operations Admin',
+                          };
+                        } else if (primaryRole === 'SUPER_ADMIN') {
+                          roleBadge = {
+                            bg: 'bg-rose-50 text-rose-800 border-rose-200',
+                            label: '👑 Super Admin',
+                          };
+                        }
+
+                        return (
+                          <tr key={emp.id} className="hover:bg-neutral-50/70 transition">
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-neutral-900 text-white font-extrabold text-xs flex items-center justify-center shrink-0">
+                                  {(emp.firstName?.[0] || 'E').toUpperCase()}
+                                  {(emp.lastName?.[0] || '').toUpperCase()}
+                                </div>
+                                <div>
+                                  <div className="font-extrabold text-neutral-900 flex items-center gap-1.5">
+                                    <span>{emp.firstName} {emp.lastName}</span>
+                                    {isCurrentUser && (
+                                      <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-neutral-200 text-neutral-800">
+                                        You
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] text-neutral-500 font-mono mt-0.5">
+                                    {emp.email}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="py-3.5 px-4">
+                              <span
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${roleBadge.bg}`}
+                              >
+                                {roleBadge.label}
+                              </span>
+                            </td>
+
+                            <td className="py-3.5 px-4">
+                              <div className="font-semibold text-neutral-800">
+                                {emp.phone || <span className="text-neutral-400 italic">No phone added</span>}
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                {emp.emailVerifiedAt ? (
+                                  <span className="text-[10px] font-bold text-emerald-700 flex items-center gap-0.5">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Email Verified
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-neutral-400">Email Unverified</span>
+                                )}
+                              </div>
+                            </td>
+
+                            <td className="py-3.5 px-4">
+                              {emp.status === 'ACTIVE' ? (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-[#108a00] border border-emerald-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[#108a00]" />
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-700 border border-red-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+                                  Suspended
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="py-3.5 px-4 text-neutral-500 font-semibold text-[11px]">
+                              {emp.createdAt ? new Date(emp.createdAt).toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              }) : '—'}
+                            </td>
+
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEditEmployee(emp)}
+                                  className="p-1.5 hover:bg-neutral-100 rounded-lg text-neutral-600 hover:text-neutral-900 transition cursor-pointer"
+                                  title="Edit details or change role"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={isCurrentUser || savingActionKey === `emp-status-${emp.id}`}
+                                  onClick={() => handleToggleEmployeeStatus(emp)}
+                                  className="p-1.5 hover:bg-neutral-100 rounded-lg text-neutral-600 hover:text-neutral-900 transition cursor-pointer disabled:opacity-40"
+                                  title={emp.status === 'ACTIVE' ? 'Suspend employee' : 'Activate employee'}
+                                >
+                                  {emp.status === 'ACTIVE' ? (
+                                    <ToggleRight className="w-4 h-4 text-emerald-600" />
+                                  ) : (
+                                    <ToggleLeft className="w-4 h-4 text-red-500" />
+                                  )}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setResetPasswordEmp(emp);
+                                    setNewEmpPassword('');
+                                  }}
+                                  className="p-1.5 hover:bg-neutral-100 rounded-lg text-neutral-600 hover:text-amber-600 transition cursor-pointer"
+                                  title="Reset password"
+                                >
+                                  <Key className="w-3.5 h-3.5" />
+                                </button>
+
+                                <button
+                                  type="button"
+                                  disabled={isCurrentUser}
+                                  onClick={() => setDeleteEmployeeCase(emp)}
+                                  className="p-1.5 hover:bg-red-50 rounded-lg text-neutral-400 hover:text-red-600 transition cursor-pointer disabled:opacity-40"
+                                  title="Remove employee"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -3908,6 +4591,428 @@ export const AdminDashboardPage: React.FC = () => {
                 }`}
               >
                 {bulkActionLoading ? 'Processing...' : confirmModal.actionLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 10: ADD NEW EMPLOYEE MODAL                                      */}
+      {/* ===================================================================== */}
+      {addEmployeeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-neutral-200">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-neutral-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#108a00]/10 text-[#108a00] flex items-center justify-center">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-neutral-900">Add New Team Employee</h3>
+                  <p className="text-[11px] text-neutral-500">Provision dedicated credentials and operational role</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAddEmployeeModalOpen(false)}
+                className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateEmployee} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">First Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Rahul"
+                    value={empFirstName}
+                    onChange={(e) => setEmpFirstName(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-medium border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Verma"
+                    value={empLastName}
+                    onChange={(e) => setEmpLastName(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-medium border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Work Email</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="rahul@vaziro.in"
+                    value={empEmail}
+                    onChange={(e) => setEmpEmail(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-medium border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Mobile Number</label>
+                  <input
+                    type="tel"
+                    placeholder="+91 98765 43210"
+                    value={empPhone}
+                    onChange={(e) => setEmpPhone(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-medium border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Designated Role & Access Level</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[
+                    { role: 'SUPPORT', title: 'Support & Disputes', desc: 'Disputes, reports, complaints', icon: Headphones, badge: 'text-amber-700 bg-amber-50' },
+                    { role: 'FINANCE', title: 'Finance & Escrow', desc: 'Payments, billing, credits', icon: Wallet, badge: 'text-emerald-700 bg-emerald-50' },
+                    { role: 'VERIFICATION_ADMIN', title: 'KYC & DigiLocker', desc: 'Aadhaar / ID approvals', icon: Shield, badge: 'text-blue-700 bg-blue-50' },
+                    { role: 'ADMIN', title: 'Operations Admin', desc: 'Catalog, jobs, users, staff', icon: ShieldAlert, badge: 'text-purple-700 bg-purple-50' },
+                  ].map((item) => {
+                    const Icon = item.icon;
+                    const isSelected = empRole === item.role;
+                    return (
+                      <button
+                        key={item.role}
+                        type="button"
+                        onClick={() => setEmpRole(item.role as StaffRole)}
+                        className={`p-2.5 rounded-2xl text-left border transition cursor-pointer flex items-start gap-2.5 ${
+                          isSelected
+                            ? 'border-[#108a00] bg-emerald-50/50 shadow-2xs'
+                            : 'border-neutral-200 hover:border-neutral-300 bg-white'
+                        }`}
+                      >
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${item.badge}`}>
+                          <Icon className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-extrabold text-xs text-neutral-900">{item.title}</div>
+                          <div className="text-[10px] text-neutral-500 leading-tight mt-0.5">{item.desc}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Temporary Initial Password</label>
+                <div className="relative">
+                  <input
+                    type={showEmpPassword ? 'text' : 'password'}
+                    required
+                    minLength={8}
+                    placeholder="Minimum 8 characters"
+                    value={empPassword}
+                    onChange={(e) => setEmpPassword(e.target.value)}
+                    className="w-full pl-3 pr-10 py-2 text-xs font-medium border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowEmpPassword(!showEmpPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                  >
+                    {showEmpPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-neutral-400 mt-1">
+                  The employee can reset their password upon initial login.
+                </p>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-neutral-100">
+                <button
+                  type="button"
+                  onClick={() => setAddEmployeeModalOpen(false)}
+                  className="px-4 py-2 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingEmp}
+                  className="px-5 py-2 bg-[#108a00] hover:bg-[#14a800] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>{submittingEmp ? 'Provisioning...' : 'Create Employee Account'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 11: EDIT EMPLOYEE MODAL                                         */}
+      {/* ===================================================================== */}
+      {editingEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-neutral-200">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-neutral-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center">
+                  <Edit2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-neutral-900">Edit Employee Profile</h3>
+                  <p className="text-[11px] text-neutral-500">Update staff contact details, role, or status</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingEmployee(null)}
+                className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateEmployee} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">First Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={empFirstName}
+                    onChange={(e) => setEmpFirstName(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-medium border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Last Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={empLastName}
+                    onChange={(e) => setEmpLastName(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-medium border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Work Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={empEmail}
+                    onChange={(e) => setEmpEmail(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-medium border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-neutral-700 mb-1">Mobile Number</label>
+                  <input
+                    type="tel"
+                    value={empPhone}
+                    onChange={(e) => setEmpPhone(e.target.value)}
+                    className="w-full px-3 py-2 text-xs font-medium border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Designated Role</label>
+                <select
+                  value={empRole}
+                  onChange={(e) => setEmpRole(e.target.value as StaffRole)}
+                  className="w-full px-3 py-2 text-xs font-bold text-neutral-800 border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00] cursor-pointer"
+                >
+                  <option value="SUPPORT">🎧 SUPPORT — Dispute mediation & ticket arbitration</option>
+                  <option value="FINANCE">💰 FINANCE — Escrow vault, billing, credit purchases</option>
+                  <option value="VERIFICATION_ADMIN">🛡️ VERIFICATION_ADMIN — DigiLocker & KYC reviews</option>
+                  <option value="ADMIN">⚡ ADMIN — Full platform operations & management</option>
+                  <option value="SUPER_ADMIN">👑 SUPER_ADMIN — Master credentials & executive</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">Account Operational Status</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEmpStatus('ACTIVE')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                      empStatus === 'ACTIVE'
+                        ? 'bg-emerald-50 text-[#108a00] border-emerald-300'
+                        : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-[#108a00]" />
+                    Active (Authorized)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEmpStatus('SUSPENDED')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
+                      empStatus === 'SUSPENDED'
+                        ? 'bg-red-50 text-red-600 border-red-300'
+                        : 'border-neutral-200 text-neutral-600 hover:bg-neutral-50'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-red-600" />
+                    Suspended (Blocked)
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-neutral-100">
+                <button
+                  type="button"
+                  onClick={() => setEditingEmployee(null)}
+                  className="px-4 py-2 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingEmp}
+                  className="px-5 py-2 bg-neutral-900 hover:bg-black text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {submittingEmp ? 'Saving...' : 'Update Employee'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 12: RESET EMPLOYEE PASSWORD MODAL                               */}
+      {/* ===================================================================== */}
+      {resetPasswordEmp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-neutral-200">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-neutral-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm text-neutral-900">Reset Staff Password</h3>
+                  <p className="text-[11px] text-neutral-500">
+                    For {resetPasswordEmp.firstName} {resetPasswordEmp.lastName}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResetPasswordEmp(null)}
+                className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleResetEmpPasswordSubmit} className="space-y-4">
+              <div className="p-3 bg-neutral-50 rounded-2xl text-xs space-y-1">
+                <div className="font-bold text-neutral-900">
+                  {resetPasswordEmp.firstName} {resetPasswordEmp.lastName}
+                </div>
+                <div className="text-neutral-500 font-mono text-[11px]">{resetPasswordEmp.email}</div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-neutral-700 mb-1">New Secure Password</label>
+                <div className="relative">
+                  <input
+                    type={showNewEmpPassword ? 'text' : 'password'}
+                    required
+                    minLength={8}
+                    placeholder="Enter new password (min. 8 characters)"
+                    value={newEmpPassword}
+                    onChange={(e) => setNewEmpPassword(e.target.value)}
+                    className="w-full pl-3 pr-10 py-2 text-xs font-medium border border-neutral-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#108a00]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewEmpPassword(!showNewEmpPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 cursor-pointer"
+                  >
+                    {showNewEmpPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-neutral-100">
+                <button
+                  type="button"
+                  onClick={() => setResetPasswordEmp(null)}
+                  className="px-4 py-2 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingResetEmpPass}
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer disabled:opacity-50"
+                >
+                  {submittingResetEmpPass ? 'Resetting...' : 'Confirm Reset Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 13: DELETE EMPLOYEE CONFIRMATION MODAL                          */}
+      {/* ===================================================================== */}
+      {deleteEmployeeCase && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-neutral-200">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-neutral-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
+                  <Trash2 className="w-4 h-4" />
+                </div>
+                <h3 className="font-extrabold text-sm text-neutral-900">Remove Staff Privileges</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteEmployeeCase(null)}
+                className="p-1 hover:bg-neutral-100 rounded-lg text-neutral-500 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-neutral-600 leading-relaxed mb-4">
+              Are you sure you want to deactivate and remove staff access for{' '}
+              <strong className="text-neutral-900 font-extrabold">
+                {deleteEmployeeCase.firstName} {deleteEmployeeCase.lastName}
+              </strong>{' '}
+              ({deleteEmployeeCase.email})? This employee will immediately lose access to the administration dashboard.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-neutral-100">
+              <button
+                type="button"
+                onClick={() => setDeleteEmployeeCase(null)}
+                className="px-4 py-2 border border-neutral-300 rounded-xl text-xs font-bold text-neutral-700 hover:bg-neutral-50 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteEmployeeSubmit}
+                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
+              >
+                Deactivate & Remove Staff
               </button>
             </div>
           </div>
